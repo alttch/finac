@@ -640,8 +640,7 @@ def transaction_purge(_lock=True):
 def account_statement(account,
                       start=None,
                       end=None,
-                      pending=False,
-                      lock_token=None):
+                      pending=False):
     """
     Args:
         account: account code
@@ -661,25 +660,21 @@ def account_statement(account,
         dte = parse_date(end)
         cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(
             d_field, dte)
-    token = account_lock(account, lock_token)
-    try:
-        r = get_db().execute(sql("""
-        select transact.id, d_created, d,
-                amount, tag, note, account.code as cparty
-            from transact left join account on
-                account_credit_id=account.id where account_debit_id=
-                    (select id from account where code=:account) and {cond}
-        union
-        select transact.id, d_created, d,
-                amount * -1, tag, note, account.code as cparty
-            from transact left join account on
-                account_debit_id=account.id where account_credit_id=
-                    (select id from account where code=:account) and {cond}
-            order by d, d_created
-        """.format(cond=cond)),
-                             account=account)
-    finally:
-        account_unlock(account, token)
+    r = get_db().execute(sql("""
+    select transact.id, d_created, d,
+            amount, tag, note, account.code as cparty
+        from transact left join account on
+            account_credit_id=account.id where account_debit_id=
+                (select id from account where code=:account) and {cond}
+    union
+    select transact.id, d_created, d,
+            amount * -1, tag, note, account.code as cparty
+        from transact left join account on
+            account_debit_id=account.id where account_credit_id=
+                (select id from account where code=:account) and {cond}
+        order by d, d_created
+    """.format(cond=cond)),
+                         account=account)
     while True:
         d = r.fetchone()
         if not d: break
@@ -731,6 +726,11 @@ def purge():
     with lock_purge:
         result = {'transaction': transaction_purge(_lock=False)}
         return result
+
+
+def account_list(date=None, tp=None):
+    """
+    """
 
 
 def account_credit(account=None,
