@@ -71,6 +71,7 @@ config = SimpleNamespace(db=None,
                          rate_allow_reverse=True,
                          colorize=True,
                          rate_allow_cross=True,
+                         base_currency='USD',
                          date_format='%Y-%m-%d %H:%M:%S')
 
 lock_purge = threading.Lock()
@@ -637,10 +638,7 @@ def transaction_purge(_lock=True):
         if _lock: lock_purge.release()
 
 
-def account_statement(account,
-                      start=None,
-                      end=None,
-                      pending=False):
+def account_statement(account, start=None, end=None, pending=False):
     """
     Args:
         account: account code
@@ -728,9 +726,95 @@ def purge():
         return result
 
 
-def account_list(date=None, tp=None):
+def account_list(currency=None,
+                 tp=None,
+                 date=None,
+                 order_by=['tp', 'currency', 'account', 'balance'],
+                 hide_empty=False):
     """
     """
+    cond = "where d_created > 0"
+    if tp:
+        if isinstance(tp, int):
+            tp_id = tp
+        else:
+            tp_id = ACCOUNT_TYPE_IDS[tp]
+        cond += (' and ' if cond else '') + 'account.tp = {}'.format(tp_id)
+    if currency:
+        cond += (' and '
+                 if cond else '') + 'currency.code = "{}"'.format(currency)
+    else:
+        cond += (' and ' if cond else '') + 'account.tp < 1000'
+    if date:
+        dts = parse_date(date)
+        cond += (' and ' if cond else '') + 'transact.d <= "{}"'.format(dts)
+    oby = ''
+    if order_by:
+        if isinstance(order_by, list):
+            oby = ','.join(order_by)
+        else:
+            oby = order_by
+    r = get_db().execute(
+        sql("""
+            select sum(balance) as balance, account, currency, tp from 
+                (
+                select sum(amount) as balance,
+                    account.code as account,
+                    currency.code as currency,
+                    account.tp as tp
+                    from transact
+                    left join account on account.id=transact.account_debit_id
+                    join currency on currency.id=account.currency_id
+                    {cond_d}
+                        group by account.code
+                union
+                select -1*sum(amount) as balance,
+                    account.code as account,
+                    currency.code as currency,
+                    account.tp as tp
+                    from transact
+                    left join account on account.id=transact.account_credit_id
+                    join currency on currency.id=account.currency_id
+                    {cond}
+                            group by account.code
+                ) group by account
+            {oby}
+            """.format(cond=cond,
+                       cond_d=cond.replace('_created', ''),
+                       oby=('order by ' + oby) if oby else '')))
+    while True:
+        d = r.fetchone()
+        if not d: break
+        if hide_empty is False or d.balance:
+            row = OrderedDict()
+            for i in ('account', 'type', 'currency', 'balance'):
+                if i == 'type':
+                    row['type'] = ACCOUNT_TYPE_NAMES[d.tp]
+                else:
+                    row[i] = getattr(d, i)
+            yield row
+
+
+def account_list_summary(currency,
+                         tp=None,
+                         date=None,
+                         order_by=['tp', 'currency', 'account', 'balance'],
+                         hide_empty=False):
+    accounts = list(
+        account_list(currency=currency,
+                     tp=tp,
+                     date=date,
+                     order_by=order_by,
+                     hide_empty=hide_empty))
+    return {
+        'accounts':
+            accounts,
+        'total':
+            sum(d['balance'] if d['currency'] ==
+                config.base_currency else d['balance'] *
+                currency_rate(d['currency'], config.base_currency, date=date)
+                for d in accounts)
+    }
 
 
 def account_credit(account=None,
@@ -809,7 +893,7 @@ def _account_summary(balance_type,
         if isinstance(tp, int):
             tp_id = tp
         else:
-            tp_id = ACCOUNT_TYPE_NAMES.index(tp)
+            tp_id = ACCOUNT_TYPE_IDS[tp]
         cond += (' and ' if cond else '') + 'account.tp = {}'.format(tp_id)
     oby = ''
     if order_by:

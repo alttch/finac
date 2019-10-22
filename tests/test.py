@@ -200,8 +200,8 @@ class Test(unittest.TestCase):
                          1.8)
 
     def test070_test_targets(self):
-        finac.account_create('TT1', 'TEST')
-        finac.account_create('TT2', 'TEST')
+        finac.account_create('TT1', 'TEST', tp='credit')
+        finac.account_create('TT2', 'TEST', tp='saving')
         finac.transaction_create('TT1', 1000)
         finac.transaction_create('TT2', 1000)
         self.assertEqual(finac.account_balance('TT1'), 1000)
@@ -220,6 +220,16 @@ class Test(unittest.TestCase):
         finac.ls('TT2')
         print()
 
+    def test071_test_list(self):
+        for c in list(finac.account_list()):
+            if c['account'] == 'TT1':
+                self.assertEqual(c['balance'], 300)
+            elif c['account'] == 'TT2':
+                self.assertEqual(c['balance'], 2000)
+        print()
+        finac.ls()
+        print()
+
     def test099_delete_currency(self):
         finac.currency_delete('TEST')
 
@@ -232,6 +242,7 @@ if __name__ == '__main__':
     except:
         pass
     finac.init(db=TEST_DB, keep_integrity=True)
+    finac.config.base_currency = 'TEST'
     os.system('sqlite3 {} < ../db.sql'.format(TEST_DB))
     try:
         finac.currency_delete('TEST')
