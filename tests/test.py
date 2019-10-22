@@ -29,8 +29,8 @@ class Test(unittest.TestCase):
         finac.currency_create('TEST')
 
     def test002_create_account(self):
-        finac.account_create('TEST', 'TEST.TEST', 'Test account', 'current')
-        finac.account_create('TEST', 'TEST2.TEST', 'Test account 2', 'current')
+        finac.account_create('TEST.TEST', 'TEST', 'Test account', 'current')
+        finac.account_create('TEST2.TEST', 'TEST', 'Test account 2', 'current')
 
     def test003_create_transaction(self):
         result.transaction1_id = finac.transaction_create('TEST.TEST',
@@ -40,14 +40,10 @@ class Test(unittest.TestCase):
                                                           mark_completed=False)
         self.assertEqual(finac.account_balance('TEST.TEST'), 0)
         statement = list(
-            finac.account_statement('TEST.TEST',
-                                    '2019-01-01',
-                                    pending=False))
+            finac.account_statement('TEST.TEST', '2019-01-01', pending=False))
         self.assertEqual(len(statement), 0)
         statement = list(
-            finac.account_statement('TEST.TEST',
-                                    '2019-01-01',
-                                    pending=True))
+            finac.account_statement('TEST.TEST', '2019-01-01', pending=True))
         self.assertEqual(len(statement), 1)
 
     def test004_transaction_complete(self):
@@ -71,8 +67,7 @@ class Test(unittest.TestCase):
         statement = list(
             finac.account_statement('TEST.TEST', '2019-01-01', '2119-05-22'))
         self.assertEqual(len(statement), 2)
-        statement = list(
-            finac.account_statement('TEST.TEST', end='2119-05-22'))
+        statement = list(finac.account_statement('TEST.TEST', end='2119-05-22'))
         self.assertEqual(len(statement), 2)
         ss = finac.account_statement_summary('TEST.TEST', end='2119-05-22')
         self.assertEqual(ss['credit'], 25)
@@ -96,8 +91,8 @@ class Test(unittest.TestCase):
     def test040_overdraft(self):
 
         # allow overdraft
-        finac.account_create('TEST',
-                             'TEST3.TEST',
+        finac.account_create('TEST3.TEST',
+                             'TEST',
                              'Test account',
                              'current',
                              max_overdraft=900)
@@ -106,8 +101,8 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('TEST3.TEST'), -900)
 
         # forbid overdraft
-        finac.account_create('TEST',
-                             'TEST4.TEST',
+        finac.account_create('TEST4.TEST',
+                             'TEST',
                              'Test account',
                              'current',
                              max_overdraft=200)
@@ -119,8 +114,8 @@ class Test(unittest.TestCase):
             self.assertEqual(finac.account_balance('TEST3.TEST'), 300)
 
     def test041_max_balance(self):
-        finac.account_create('TEST', 'TEST5.TEST', max_balance=100)
-        finac.account_create('TEST', 'TEST6.TEST', max_balance=100)
+        finac.account_create('TEST5.TEST', 'TEST', max_balance=100)
+        finac.account_create('TEST6.TEST', 'TEST', max_balance=100)
         finac.transaction_create('TEST5.TEST', 10)
         try:
             finac.transaction_create('TEST5.TEST', 101)
@@ -136,7 +131,7 @@ class Test(unittest.TestCase):
             self.assertEqual(finac.account_balance('TEST6.TEST'), 100)
 
     def test042_overdraft_and_delete(self):
-        finac.account_create('TEST', 'TEST42.TEST', max_overdraft=100)
+        finac.account_create('TEST42.TEST', 'TEST', max_overdraft=100)
         finac.transaction_create('TEST42.TEST', 10)
         tid = finac.transaction_create('TEST42.TEST',
                                        -100,
@@ -149,7 +144,7 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('TEST42.TEST'), 10)
 
     def test050_hack_overdraft(self):
-        finac.account_create('TEST', 'TEST.HO', max_overdraft=100)
+        finac.account_create('TEST.HO', 'TEST', max_overdraft=100)
         tid = finac.transaction_create('TEST.HO', -100, mark_completed=False)
         self.assertEqual(finac.account_balance('TEST.HO'), -100)
         try:
@@ -161,7 +156,7 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('TEST.HO'), -100)
 
     def test051_hack_overlimit(self):
-        finac.account_create('TEST', 'TEST.HL', max_balance=100)
+        finac.account_create('TEST.HL', 'TEST', max_balance=100)
         t1 = finac.transaction_create('TEST.HL', 100, mark_completed=False)
         try:
             t2 = finac.transaction_create('TEST.HL', 100, mark_completed=False)
@@ -205,8 +200,8 @@ class Test(unittest.TestCase):
                          1.8)
 
     def test070_test_targets(self):
-        finac.account_create('TEST', 'TT1')
-        finac.account_create('TEST', 'TT2')
+        finac.account_create('TT1', 'TEST')
+        finac.account_create('TT2', 'TEST')
         finac.transaction_create('TT1', 1000)
         finac.transaction_create('TT2', 1000)
         self.assertEqual(finac.account_balance('TT1'), 1000)

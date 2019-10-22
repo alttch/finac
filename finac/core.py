@@ -269,8 +269,8 @@ def currency_rate(currency_from, currency_to, date=None):
     return value
 
 
-def account_create(currency,
-                   account,
+def account_create(account,
+                   currency,
                    name='',
                    tp='current',
                    max_overdraft=None,
