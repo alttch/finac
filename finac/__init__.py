@@ -75,5 +75,5 @@ def ls(account, start=None, end=None, pending=False):
     print('Net profit/loss: ', end='')
     neotermcolor.cprint('{} {}'.format(
         format_money(result['debit'] - result['credit']), acc_info['currency']),
-                        attrs='bold',
-                        end=' ')
+                        attrs='bold')
+    print()
