@@ -602,7 +602,8 @@ def transaction_delete(transaction_id):
     try:
         if not get_db().execute(sql("""
         update transact set
-        deleted=true where id=:id or chain_transact_id=:id"""),
+        deleted=:ts where id=:id or chain_transact_id=:id"""),
+                                ts=time.time(),
                                 id=transaction_id).rowcount:
             logging.error('Transaction {} not found'.format(transaction_id))
             raise ResourceNotFound
@@ -622,10 +623,11 @@ def transaction_purge(_lock=True):
         try:
             db.execute(
                 sql("""delete from transact where
-                    account_credit_id == null or account_debit_id == null""")
+                    account_credit_id is null and account_debit_id is null""")
             ).rowcount
             result = db.execute(
-                sql("""delete from transact where deleted = true""")).rowcount
+                sql("""delete from transact where deleted is not null""")
+            ).rowcount
             dbt.commit()
             return result
         except:
@@ -649,7 +651,7 @@ def account_statement(account,
     Returns:
         generator object
     """
-    cond = 'transact.deleted == false and d_created != 0'
+    cond = 'transact.deleted is null and d_created != 0'
     d_field = 'd_created' if pending else 'd'
     if start:
         dts = parse_date(start)
@@ -792,7 +794,7 @@ def _account_summary(balance_type,
                      tp=None,
                      order_by=['tp', 'account', 'currency'],
                      hide_empty=False):
-    cond = 'where {} transact.deleted == false'.format(
+    cond = 'where {} transact.deleted is null'.format(
         'transact.d is not null and ' if balance_type == 'debit' else '')
     if account:
         cond += (' and '

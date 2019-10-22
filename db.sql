@@ -41,7 +41,7 @@ create table transact(
   d_created integer not null,
   d integer,
   chain_transact_id integer,
-  deleted boolean default false,
+  deleted integer default null,
   foreign key(account_credit_id) references account(id) on delete set null,
   foreign key(account_debit_id) references account(id) on delete set null
 );
