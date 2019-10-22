@@ -168,6 +168,8 @@ def get_db():
     try:
         l.db.execute('select 1')
     except:
+        if not _db.engine:
+            raise RuntimeError('finac not initialized')
         l.db = _db.engine.connect()
         return l.db
 
