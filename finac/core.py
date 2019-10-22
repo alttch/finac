@@ -273,7 +273,8 @@ def currency_rate(currency_from, currency_to, date=None):
         if config.rate_allow_reverse:
             d = _get_rate(currency_to, currency_from)
             if not d:
-                raise RateNotFound
+                raise RateNotFound('{}/{} for {}'.format(
+                    currency_from, currency_to, format_date(date)))
             value = 1 / d.value
         else:
             raise RateNotFound
@@ -733,7 +734,7 @@ def account_list(currency=None,
                  hide_empty=False):
     """
     """
-    cond = "where d_created > 0"
+    cond = "where transact.deleted is null and d_created > 0"
     if tp:
         if isinstance(tp, int):
             tp_id = tp
