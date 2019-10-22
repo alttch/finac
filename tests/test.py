@@ -199,7 +199,7 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.currency_rate('TEST', 'CUR2', date='2019-01-05'),
                          1.8)
 
-    def test070_test_targets(self):
+    def test070_test_targets_and_tags(self):
         finac.account_create('TT1', 'TEST', tp='credit')
         finac.account_create('TT2', 'TEST', tp='saving')
         finac.transaction_create('TT1', 1000)
@@ -210,12 +210,14 @@ class Test(unittest.TestCase):
         finac.transaction_create('TT2', target=800)
         self.assertEqual(finac.account_balance('TT1'), 1500)
         self.assertEqual(finac.account_balance('TT2'), 800)
-        finac.transaction_move('TT1', 'TT2', target_ct=700)
+        finac.transaction_move('TT1', 'TT2', target_ct=700, tag='loans')
         self.assertEqual(finac.account_balance('TT1'), 1600)
         self.assertEqual(finac.account_balance('TT2'), 700)
-        finac.transaction_move('TT2', 'TT1', target_dt=2000)
+        finac.transaction_move('TT2', 'TT1', target_dt=2000, tag='loans')
         self.assertEqual(finac.account_balance('TT1'), 300)
         self.assertEqual(finac.account_balance('TT2'), 2000)
+        self.assertEqual(len(list(finac.account_statement('TT1', tag='loans'))),
+                         2)
         print()
         finac.ls('TT2')
         print()

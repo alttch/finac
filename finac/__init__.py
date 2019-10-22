@@ -49,11 +49,13 @@ def ls(account=None,
        tp=None,
        start=None,
        end=None,
+       tag=None,
        pending=False):
     if account:
         result = account_statement_summary(account=account,
                                            start=start,
                                            end=end,
+                                           tag=tag,
                                            pending=pending)
         stmt = result['statement'].copy()
         acc_info = account_info(account)

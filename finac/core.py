@@ -640,7 +640,7 @@ def transaction_purge(_lock=True):
         if _lock: lock_purge.release()
 
 
-def account_statement(account, start=None, end=None, pending=False):
+def account_statement(account, start=None, end=None, tag=None, pending=False):
     """
     Args:
         account: account code
@@ -660,6 +660,8 @@ def account_statement(account, start=None, end=None, pending=False):
         dte = parse_date(end)
         cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(
             d_field, dte)
+    if tag is not None:
+        cond += (' and ' if cond else '') + 'tag = "{}"'.format(tag)
     r = get_db().execute(sql("""
     select transact.id, d_created, d,
             amount, tag, note, account.code as cparty
@@ -687,7 +689,11 @@ def account_statement(account, start=None, end=None, pending=False):
         yield row
 
 
-def account_statement_summary(account, start=None, end=None, pending=False):
+def account_statement_summary(account,
+                              start=None,
+                              end=None,
+                              tag=None,
+                              pending=False):
     """
     Args:
         account: account code
@@ -705,6 +711,7 @@ def account_statement_summary(account, start=None, end=None, pending=False):
         account_statement(account=account,
                           start=start,
                           end=end,
+                          tag=tag,
                           pending=pending))
     credit = 0
     debit = 0
@@ -735,7 +742,7 @@ def account_list(currency=None,
                  hide_empty=False):
     """
     """
-    cond = "where transact.deleted is null and d_created > 0"
+    cond = "where transact.deleted is null"
     if tp:
         if isinstance(tp, int):
             tp_id = tp
