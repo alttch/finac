@@ -1,4 +1,4 @@
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 import setuptools
 
@@ -16,7 +16,9 @@ setuptools.setup(
     url='https://github.com/alttch/finac',
     packages=setuptools.find_packages(),
     license='MIT',
-    install_requires=['rapidtables', 'dateutil', 'neotermcolor', 'sqlalchemy'],
+    install_requires=[
+        'rapidtables', 'python-dateutil', 'neotermcolor', 'sqlalchemy'
+    ],
     classifiers=('Programming Language :: Python :: 2',
                  'Programming Language :: Python :: 3',
                  'License :: OSI Approved :: MIT License',
