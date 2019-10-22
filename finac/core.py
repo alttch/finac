@@ -494,9 +494,9 @@ def transaction_move(dt=None,
     try:
         ctoken = account_lock(ct, credit_lock_token) if ct else None
         dtoken = account_lock(dt, debit_lock_token) if dt else None
-        if target_dt:
+        if target_dt is not None:
             amount = target_dt - account_balance(dt)
-        elif target_ct:
+        elif target_ct is not None:
             amount = account_balance(ct) - target_ct
         if amount == 0: return
         if amount is not None and amount < 0:
