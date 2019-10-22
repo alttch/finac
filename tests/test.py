@@ -243,6 +243,6 @@ if __name__ == '__main__':
         pass
     test_suite = unittest.TestLoader().loadTestsFromTestCase(Test)
     test_result = unittest.TextTestRunner().run(test_suite)
-    exit()
+    #exit()
     os.unlink(os.path.expanduser(TEST_DB))
     sys.exit(not test_result.wasSuccessful())
