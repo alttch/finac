@@ -801,7 +801,10 @@ def account_list_summary(currency,
                          tp=None,
                          date=None,
                          order_by=['tp', 'currency', 'account', 'balance'],
-                         hide_empty=False):
+                         hide_empty=False,
+                         base_currency=None):
+    if base_currency is None:
+        base_currency = config.base_currency
     accounts = list(
         account_list(currency=currency,
                      tp=tp,
