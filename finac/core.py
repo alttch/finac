@@ -175,12 +175,13 @@ def get_db():
         return l.db
 
 
-def init(**kwargs):
+def init(db, **kwargs):
+    config.db = db
     for k, v in kwargs.items():
         if not hasattr(config, k):
             raise RuntimeError('Parameter {} is invalid'.format(k))
         setattr(config, k, v)
-    db_uri = config.db
+    db_uri = db
     if db_uri.find(':///') == -1:
         db_uri = 'sqlite:///' + os.path.expanduser(db_uri)
     _db.engine = get_db_engine(db_uri)
