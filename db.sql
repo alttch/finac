@@ -67,3 +67,6 @@ create table asset_price(
   value real not null,
   foreign key(asset_id) references asset(id)  on delete cascade
 );
+
+insert into currency(code) values('USD');
+insert into currency(code) values('EUR');
