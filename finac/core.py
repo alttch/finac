@@ -273,7 +273,7 @@ def account_create(currency,
                    account,
                    name='',
                    tp='current',
-                   max_overdraft=0,
+                   max_overdraft=None,
                    max_balance=None):
     """
     Args:
