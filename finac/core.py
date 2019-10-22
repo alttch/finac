@@ -346,7 +346,7 @@ def account_info(account):
 def transaction_info(transaction_id):
     r = get_db().execute(sql("""
             select transact.amount as amount, transact.tag as tag,
-            transact.description as description,
+            transact.note as note,
             transact.d_created as d_created,
             transact.d as d,
             dt.code as debit,
@@ -365,7 +365,7 @@ def transaction_info(transaction_id):
         'id': transaction_id,
         'amount': d.amount,
         'tag': d.tag,
-        'description': d.description,
+        'note': d.note,
         'created': d.d_created,
         'completed': d.d,
         'dt': d.debit if hasattr(d, 'debit') else None,
@@ -408,7 +408,7 @@ def account_unlock(account, token):
 def transaction_create(account,
                        amount=None,
                        tag=None,
-                       description='',
+                       note='',
                        creation_date=None,
                        completion_date=None,
                        mark_completed=True,
@@ -432,7 +432,7 @@ def transaction_create(account,
             return transaction_move(ct=account,
                                     amount=-1 * amount if amount else None,
                                     tag=tag,
-                                    description=description,
+                                    note=note,
                                     creation_date=creation_date,
                                     completion_date=completion_date,
                                     mark_completed=mark_completed,
@@ -442,7 +442,7 @@ def transaction_create(account,
             return transaction_move(dt=account,
                                     amount=amount,
                                     tag=tag,
-                                    description=description,
+                                    note=note,
                                     creation_date=creation_date,
                                     completion_date=completion_date,
                                     mark_completed=mark_completed,
@@ -456,7 +456,7 @@ def transaction_move(dt=None,
                      ct=None,
                      amount=0,
                      tag=None,
-                     description='',
+                     note='',
                      creation_date=None,
                      completion_date=None,
                      mark_completed=True,
@@ -470,7 +470,7 @@ def transaction_move(dt=None,
         dt: target (debit) account code
         amount: transaction amount (always >0)
         tag: transaction tag
-        descrption: transaction description
+        descrption: transaction note
         creation_date: transaction creation daate (default: now)
         completion_date: transaction completion date (default: now)
         mark_completed: mark transaction completed (set completion date)
@@ -532,17 +532,17 @@ def transaction_move(dt=None,
             completion_date = parse_date(completion_date)
         return db.execute(sql("""
         insert into transact(account_credit_id, account_debit_id, amount, tag,
-        description, d_created, d) values
+        note, d_created, d) values
         (
         (select id from account where code=:ct),
         (select id from account where code=:dt),
-        :amount, :tag, :description, :d_created, :d)
+        :amount, :tag, :note, :d_created, :d)
         """),
                           ct=ct,
                           dt=dt,
                           amount=amount,
                           tag=tag,
-                          description=description,
+                          note=note,
                           d_created=creation_date,
                           d=completion_date).lastrowid
     finally:
@@ -651,13 +651,13 @@ def account_statement(account,
     try:
         r = get_db().execute(sql("""
         select transact.id, d_created, d,
-                amount, tag, description, account.code as cparty
+                amount, tag, note, account.code as cparty
             from transact left join account on
                 account_credit_id=account.id where account_debit_id=
                     (select id from account where code=:account) and {cond}
         union
         select transact.id, d_created, d,
-                amount * -1, tag, description, account.code as cparty
+                amount * -1, tag, note, account.code as cparty
             from transact left join account on
                 account_debit_id=account.id where account_credit_id=
                     (select id from account where code=:account) and {cond}
@@ -670,7 +670,7 @@ def account_statement(account,
         d = r.fetchone()
         if not d: break
         row = OrderedDict()
-        for i in ('id', 'amount', 'cparty', 'tag', 'description'):
+        for i in ('id', 'amount', 'cparty', 'tag', 'note'):
             row[i] = getattr(d, i)
         row['created'] = format_date(d.d_created)
         row['completed'] = format_date(d.d)

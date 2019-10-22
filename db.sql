@@ -37,7 +37,7 @@ create table transact(
   account_debit_id integer,
   amount real not null,
   tag text,
-  description text default '',
+  note text default '',
   d_created integer not null,
   d integer,
   chain_transact_id integer,
