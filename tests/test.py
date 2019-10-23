@@ -195,7 +195,7 @@ class Test(unittest.TestCase):
         finac.currency_set_rate('TEST', 'CUR2', value=1.8, date='2018-12-01')
         self.assertEqual(finac.currency_rate('TEST', 'CUR2', date='2019-01-05'),
                          1.5)
-        finac.currency_delete_rate('TEST', 'CUR2', date='1546297200')
+        finac.currency_delete_rate('TEST', 'CUR2', date='2019-01-01')
         self.assertEqual(finac.currency_rate('TEST', 'CUR2', date='2019-01-05'),
                          1.8)
 
