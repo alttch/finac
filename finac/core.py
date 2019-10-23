@@ -748,7 +748,7 @@ def account_list(currency=None,
                  hide_empty=False):
     """
     """
-    cond = "where transact.deleted is null"
+    cond = "transact.deleted is null"
     if tp:
         if isinstance(tp, int):
             tp_id = tp
@@ -762,7 +762,7 @@ def account_list(currency=None,
         cond += (' and ' if cond else '') + 'account.tp < 1000'
     if date:
         dts = parse_date(date)
-        cond += (' and ' if cond else '') + 'transact.d <= "{}"'.format(dts)
+        cond += (' and ' if cond else '') + 'transact.d_created <= "{}"'.format(dts)
     oby = ''
     if order_by:
         if isinstance(order_by, list):
@@ -780,7 +780,7 @@ def account_list(currency=None,
                     from transact
                     left join account on account.id=transact.account_debit_id
                     join currency on currency.id=account.currency_id
-                    {cond_d}
+                    where d is not null and {cond_d}
                         group by account.code
                 union
                 select -1*sum(amount) as balance,
@@ -790,7 +790,7 @@ def account_list(currency=None,
                     from transact
                     left join account on account.id=transact.account_credit_id
                     join currency on currency.id=account.currency_id
-                    {cond}
+                    where {cond}
                             group by account.code
                 ) group by account
             {oby}
@@ -948,8 +948,23 @@ def account_balance(account, date=None):
         account: filter by account code
         date: get balance for specified date/time
     """
-    rc = list(account_credit(account=account, date=date, hide_empty=False))
-    rd = list(account_debit(account=account, date=date, hide_empty=False))
-    if not rd or not rc:
+    cond = "transact.deleted is null"
+    if date:
+        dts = parse_date(date)
+        cond += (' and '
+                 if cond else '') + 'transact.d_created <= "{}"'.format(dts)
+    r = get_db().execute(sql("""
+        select debit-credit as balance from
+            (select sum(amount) as debit from transact
+                where account_debit_id=
+                    (select id from account where code=:account)
+                        and d is not null and {cond_d}),
+            (select sum(amount) as credit from transact
+                where account_credit_id=
+                    (select id from account where code=:account) and {cond})
+            """.format(cond=cond, cond_d=cond.replace('_created', ''))),
+                         account=account)
+    d = r.fetchone()
+    if not d or d.balance is None:
         raise ResourceNotFound
-    return rd[0]['debit_balance'] - rc[0]['credit_balance']
+    return d.balance
