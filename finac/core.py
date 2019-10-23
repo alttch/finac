@@ -388,17 +388,23 @@ def transaction_info(transaction_id):
     }
 
 
-def account_delete(account):
+def account_delete(account, lock_token=None):
     logger.warning('Deleting account {}'.format(account))
-    if not get_db().execute(sql("""
-    delete from account where code=:code"""),
-                            code=account).rowcount:
-        logger.error('Account {} not found'.format(account))
-        raise ResourceNotFound
-    get_db().execute(sql("""
-    delete from transact where
-    account_debit_id=:code or account_credit_id=:code and d=0"""),
-                     code=account)
+    token = account_lock(account, lock_token)
+    try:
+        if not get_db().execute(sql("""
+        delete from transact where
+        account_debit_id=(select id from account where code=:code) or
+        account_credit_id=(select id from account where code=:code) and d=0"""),
+                                code=account).rowcount:
+            raise ResourceNotFound
+        if not get_db().execute(sql("""
+        delete from account where code=:code"""),
+                                code=account).rowcount:
+            logger.error('Account {} not found'.format(account))
+            raise ResourceNotFound
+    finally:
+        account_unlock(account, token)
 
 
 def account_lock(account, token):
