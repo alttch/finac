@@ -3,5 +3,7 @@ finac.egg-info
 build
 dist
 Makefile
+.idea/
+finac.db
 TODO.todo
 *.pyc

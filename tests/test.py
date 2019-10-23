@@ -14,7 +14,8 @@ import random
 
 from types import SimpleNamespace
 
-TEST_DB = '/tmp/finac-test.db'
+# TEST_DB = '/home/yivanusa/Projects/finac/finac.db'
+TEST_DB = 'mysql+pymysql://admin:admin@localhost/my_finac'
 
 result = SimpleNamespace()
 
@@ -25,12 +26,9 @@ class Test(unittest.TestCase):
         if not result.errors:
             super(Test, self).run(result)
 
-    def test001_create_currency(self):
-        finac.currency_create('TEST')
-
     def test002_create_account(self):
-        finac.account_create('TEST.TEST', 'TEST', 'Test account', 'current')
-        finac.account_create('TEST2.TEST', 'TEST', 'Test account 2', 'current')
+        finac.account_create('TEST.TEST', 'EUR', 'Test account', 'current')
+        finac.account_create('TEST2.TEST', 'EUR', 'Test account 2', 'current')
 
     def test003_create_transaction(self):
         result.transaction1_id = finac.transaction_create('TEST.TEST',
@@ -92,7 +90,7 @@ class Test(unittest.TestCase):
 
         # allow overdraft
         finac.account_create('TEST3.TEST',
-                             'TEST',
+                             'EUR',
                              'Test account',
                              'current',
                              max_overdraft=900)
@@ -102,7 +100,7 @@ class Test(unittest.TestCase):
 
         # forbid overdraft
         finac.account_create('TEST4.TEST',
-                             'TEST',
+                             'EUR',
                              'Test account',
                              'current',
                              max_overdraft=200)
@@ -114,8 +112,8 @@ class Test(unittest.TestCase):
             self.assertEqual(finac.account_balance('TEST3.TEST'), 300)
 
     def test041_max_balance(self):
-        finac.account_create('TEST5.TEST', 'TEST', max_balance=100)
-        finac.account_create('TEST6.TEST', 'TEST', max_balance=100)
+        finac.account_create('TEST5.TEST', 'EUR', max_balance=100)
+        finac.account_create('TEST6.TEST', 'EUR', max_balance=100)
         finac.transaction_create('TEST5.TEST', 10)
         try:
             finac.transaction_create('TEST5.TEST', 101)
@@ -131,7 +129,7 @@ class Test(unittest.TestCase):
             self.assertEqual(finac.account_balance('TEST6.TEST'), 100)
 
     def test042_overdraft_and_delete(self):
-        finac.account_create('TEST42.TEST', 'TEST', max_overdraft=100)
+        finac.account_create('TEST42.TEST', 'EUR', max_overdraft=100)
         finac.transaction_create('TEST42.TEST', 10)
         tid = finac.transaction_create('TEST42.TEST',
                                        -100,
@@ -144,7 +142,7 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('TEST42.TEST'), 10)
 
     def test050_hack_overdraft(self):
-        finac.account_create('TEST.HO', 'TEST', max_overdraft=100)
+        finac.account_create('TEST.HO', 'EUR', max_overdraft=100)
         tid = finac.transaction_create('TEST.HO', -100, mark_completed=False)
         self.assertEqual(finac.account_balance('TEST.HO'), -100)
         try:
@@ -156,7 +154,7 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('TEST.HO'), -100)
 
     def test051_hack_overlimit(self):
-        finac.account_create('TEST.HL', 'TEST', max_balance=100)
+        finac.account_create('TEST.HL', 'EUR', max_balance=100)
         t1 = finac.transaction_create('TEST.HL', 100, mark_completed=False)
         try:
             t2 = finac.transaction_create('TEST.HL', 100, mark_completed=False)
@@ -167,41 +165,41 @@ class Test(unittest.TestCase):
             return
 
     def test060_currency_rate_set(self):
-        finac.currency_create('CUR2')
-        finac.currency_set_rate('TEST', 'CUR2', 1.5, date='2019-01-01')
-        finac.currency_set_rate('TEST/CUR2', value=2)
+        finac.currency_create('AUD')
+        finac.currency_set_rate('EUR', 'USD', 1.5, date='2019-01-01')
+        finac.currency_set_rate('EUR/USD', value=2)
         try:
-            finac.currency_rate('TEST', 'CUR2', date='2018-01-01')
+            finac.currency_rate('EUR', 'USD', date='2018-01-01')
             raise RuntimeError('Rate not found not raised')
         except finac.RateNotFound:
             pass
-        self.assertEqual(finac.currency_rate('TEST', 'CUR2', date='2019-01-05'),
+        self.assertEqual(finac.currency_rate('EUR', 'USD', date='2019-01-05'),
                          1.5)
-        self.assertEqual(finac.currency_rate('TEST', 'CUR2'), 2)
+        self.assertEqual(finac.currency_rate('EUR', 'USD'), 2)
 
     def test061_currency_rate_easyget(self):
         finac.config.rate_allow_reverse = False
         try:
-            finac.currency_rate('CUR2', 'TEST', date='2019-01-05')
+            finac.currency_rate('USD', 'EUR', date='2019-01-05')
             raise RuntimeError('Rate not found not raised')
         except:
             pass
         finac.config.rate_allow_reverse = True
-        self.assertEqual(finac.currency_rate('CUR2', 'TEST', date='2019-01-05'),
+        self.assertEqual(finac.currency_rate('USD', 'EUR', date='2019-01-05'),
                          1 / 1.5)
-        self.assertEqual(finac.currency_rate('CUR2', 'TEST'), 1 / 2)
+        self.assertEqual(finac.currency_rate('USD', 'EUR'), 1 / 2)
 
     def test062_currency_rate_delete(self):
-        finac.currency_set_rate('TEST', 'CUR2', value=1.8, date='2018-12-01')
-        self.assertEqual(finac.currency_rate('TEST', 'CUR2', date='2019-01-05'),
+        finac.currency_set_rate('EUR', 'USD', value=1.8, date='2018-12-01')
+        self.assertEqual(finac.currency_rate('EUR', 'USD', date='2019-01-05'),
                          1.5)
-        finac.currency_delete_rate('TEST', 'CUR2', date='1546297200')
-        self.assertEqual(finac.currency_rate('TEST', 'CUR2', date='2019-01-05'),
+        finac.currency_delete_rate('EUR', 'USD', date='1546293600')
+        self.assertEqual(finac.currency_rate('EUR', 'USD', date='2019-01-05'),
                          1.8)
 
     def test070_test_targets_and_tags(self):
-        finac.account_create('TT1', 'TEST', tp='credit')
-        finac.account_create('TT2', 'TEST', tp='saving')
+        finac.account_create('TT1', 'EUR', tp='credit')
+        finac.account_create('TT2', 'EUR', tp='saving')
         finac.transaction_create('TT1', 1000)
         finac.transaction_create('TT2', 1000)
         self.assertEqual(finac.account_balance('TT1'), 1000)
@@ -233,7 +231,7 @@ class Test(unittest.TestCase):
         print()
 
     def test099_delete_currency(self):
-        finac.currency_delete('TEST')
+        finac.currency_delete('NZD')
 
 
 if __name__ == '__main__':
@@ -244,18 +242,6 @@ if __name__ == '__main__':
     except:
         pass
     finac.init(db=TEST_DB, keep_integrity=True)
-    finac.config.base_currency = 'TEST'
-    os.system('sqlite3 {} < ../db.sql'.format(TEST_DB))
-    try:
-        finac.currency_delete('TEST')
-    except finac.ResourceNotFound:
-        pass
-    try:
-        finac.currency_delete('CUR2')
-    except finac.ResourceNotFound:
-        pass
     test_suite = unittest.TestLoader().loadTestsFromTestCase(Test)
     test_result = unittest.TextTestRunner().run(test_suite)
-    #exit()
-    os.unlink(os.path.expanduser(TEST_DB))
     sys.exit(not test_result.wasSuccessful())
