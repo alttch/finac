@@ -286,8 +286,8 @@ def currency_rate(currency_from, currency_to, date=None):
 
 def account_create(account,
                    currency,
-                   note='',
                    tp='current',
+                   note=None,
                    max_overdraft=None,
                    max_balance=None):
     """
@@ -429,7 +429,7 @@ def account_unlock(account, token):
 def transaction_create(account,
                        amount=None,
                        tag=None,
-                       note='',
+                       note=None,
                        creation_date=None,
                        completion_date=None,
                        mark_completed=True,
@@ -477,7 +477,7 @@ def transaction_move(dt=None,
                      ct=None,
                      amount=0,
                      tag=None,
-                     note='',
+                     note=None,
                      creation_date=None,
                      completion_date=None,
                      mark_completed=True,

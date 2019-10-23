@@ -29,8 +29,8 @@ class Test(unittest.TestCase):
         finac.currency_create('TEST')
 
     def test002_create_account(self):
-        finac.account_create('TEST.TEST', 'TEST', 'Test account', 'current')
-        finac.account_create('TEST2.TEST', 'TEST', 'Test account 2', 'current')
+        finac.account_create('TEST.TEST', 'TEST', 'current', 'Test acc')
+        finac.account_create('TEST2.TEST', 'TEST', 'current', 'Test acc2')
 
     def test003_create_transaction(self):
         result.transaction1_id = finac.transaction_create('TEST.TEST',
@@ -93,8 +93,8 @@ class Test(unittest.TestCase):
         # allow overdraft
         finac.account_create('TEST3.TEST',
                              'TEST',
-                             'Test account',
                              'current',
+                             'Test account',
                              max_overdraft=900)
         finac.transaction_create('TEST3.TEST', 100)
         finac.transaction_move('TEST2.TEST', 'TEST3.TEST', 1000)
@@ -103,8 +103,8 @@ class Test(unittest.TestCase):
         # forbid overdraft
         finac.account_create('TEST4.TEST',
                              'TEST',
-                             'Test account',
                              'current',
+                             'Test account',
                              max_overdraft=200)
         finac.transaction_create('TEST3.TEST', 1200)
         try:
