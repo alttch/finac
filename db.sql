@@ -24,7 +24,7 @@ create table currency_rate(
 create table account(
   id integer primary key autoincrement,
   code text not null unique,
-  name text default '',
+  note text default '',
   tp integer not null,
   currency_id integer not null,
   max_overdraft real,

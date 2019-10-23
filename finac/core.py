@@ -286,7 +286,7 @@ def currency_rate(currency_from, currency_to, date=None):
 
 def account_create(account,
                    currency,
-                   name='',
+                   note='',
                    tp='current',
                    max_overdraft=None,
                    max_balance=None):
@@ -294,7 +294,7 @@ def account_create(account,
     Args:
         currency: currency code
         account: account code
-        name: account name
+        note: account notes
         tp: account type (credit, current, saving, cash)
         max_overdraft: maximum allowed overdraft (set to negative to force
             account to have minimal positive balance)
@@ -309,13 +309,13 @@ def account_create(account,
     logger.info('Creating account {}, currency: {}'.format(account, currency))
     try:
         r = db.execute(sql("""
-        insert into account(code, name, tp, currency_id, max_overdraft,
+        insert into account(code, note, tp, currency_id, max_overdraft,
         max_balance) values
-        (:code, :name, :tp,
+        (:code, :note, :tp,
             (select id from currency where code=:currency),
             :max_overdraft, :max_balance)"""),
                        code=account,
-                       name=name,
+                       note=note,
                        tp=tp_id,
                        currency=currency,
                        max_overdraft=max_overdraft,
@@ -339,7 +339,7 @@ def account_create(account,
 
 def account_info(account):
     r = get_db().execute(sql("""
-            select account.code as account_code, account.name, account.tp,
+            select account.code as account_code, account.note, account.tp,
             currency.code as currency, max_overdraft, max_balance
             from account join
             currency on account.currency_id = currency.id
@@ -349,7 +349,7 @@ def account_info(account):
     if not d: raise ResourceNotFound
     return {
         'code': d.account_code,
-        'name': d.name,
+        'note': d.note,
         'type': ACCOUNT_TYPE_NAMES[d.tp],
         'tp': d.tp,
         'currency': d.currency,
@@ -670,13 +670,13 @@ def account_statement(account, start=None, end=None, tag=None, pending=False):
         cond += (' and ' if cond else '') + 'tag = "{}"'.format(tag)
     r = get_db().execute(sql("""
     select transact.id, d_created, d,
-            amount, tag, note, account.code as cparty
+            amount, tag, transact.note as note, account.code as cparty
         from transact left join account on
             account_credit_id=account.id where account_debit_id=
                 (select id from account where code=:account) and {cond}
     union
     select transact.id, d_created, d,
-            amount * -1, tag, note, account.code as cparty
+            amount * -1, tag, transact.note as note, account.code as cparty
         from transact left join account on
             account_debit_id=account.id where account_credit_id=
                 (select id from account where code=:account) and {cond}
