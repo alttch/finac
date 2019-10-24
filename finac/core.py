@@ -264,11 +264,13 @@ def currency_delete_rate(currency_from, currency_to, date):
         raise ResourceNotFound
 
 
-def currency_rate(currency_from, currency_to, date=None):
+def currency_rate(currency_from, currency_to=None, date=None):
     if date is None:
         date = time.time()
     else:
         date = parse_date(date)
+    if currency_from.find('/') != -1 and currency_to is None:
+        currency_from, currency_to = currency_from.split('/')
     db = get_db()
 
     def _get_rate(cf, ct):
@@ -446,6 +448,41 @@ def account_unlock(account, token):
         if not l: raise ResourceNotFound
         return l.release(token)
 
+
+def _ckw(kw, allowed):
+    for c in kw:
+        if c not in allowed:
+            raise ValueError('Invalid parameter: {}'.format(c))
+
+
+def _update(objid, tbl, objidf, kw):
+    c = objid
+    if isinstance(c, str):
+        c = c.upper()
+    for k, v in kw.items():
+        if k == 'code':
+            v = v.upper()
+        if not get_db().execute(sql("""
+        update {tbl} set {f} = :val where {objidf} = :id
+        """.format(tbl=tbl, f=k, objidf=objidf)),
+                                val=v,
+                                id=c).rowcount:
+            raise ResourceNotFound('{} {}'.format(tbl, objid))
+        if k == 'code':
+            c = v
+
+
+def account_update(account, **kwargs):
+    _ckw(kwargs, ['code', 'note', 'max_balance', 'max_overdraft'])
+    _update(account, 'account', 'code', kwargs)
+
+def currency_update(currency, **kwargs):
+    _ckw(kwargs, ['code'])
+    _update(currency, 'currency', 'code', kwargs)
+
+def transaction_update(transaction_id, **kwargs):
+    _ckw(kwargs, ['tag', 'note'])
+    _update(transaction_id, 'transact', 'id', kwargs)
 
 def transaction_create(account,
                        amount=None,
@@ -794,10 +831,11 @@ def account_list(currency=None,
             oby = order_by
     r = get_db().execute(
         sql("""
-            select sum(balance) as balance, account, currency, tp from 
+            select sum(balance) as balance, account, note, currency, tp from 
                 (
                 select sum(amount) as balance,
                     account.code as account,
+                    account.note as note,
                     currency.code as currency,
                     account.tp as tp
                     from transact
@@ -808,6 +846,7 @@ def account_list(currency=None,
                 union
                 select -1*sum(amount) as balance,
                     account.code as account,
+                    account.note as note,
                     currency.code as currency,
                     account.tp as tp
                     from transact
@@ -825,7 +864,7 @@ def account_list(currency=None,
         if not d: break
         if hide_empty is False or d.balance:
             row = OrderedDict()
-            for i in ('account', 'type', 'currency', 'balance'):
+            for i in ('account', 'type', 'note', 'currency', 'balance'):
                 if i == 'type':
                     row['type'] = ACCOUNT_TYPE_NAMES[d.tp]
                 else:

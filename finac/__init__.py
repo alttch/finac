@@ -11,13 +11,19 @@ from finac.core import currency_create, currency_delete
 from finac.core import currency_set_rate, currency_rate
 from finac.core import currency_delete_rate
 
+from finac.core import currency_update
+
 # account methods
 from finac.core import account_create, account_delete
 from finac.core import account_info
 
+from finac.core import account_update
+
 # transaction methods
 from finac.core import transaction_create, transaction_complete
 from finac.core import transaction_move, transaction_delete
+
+from finac.core import transaction_update
 
 # balance methods
 from finac.core import account_credit, account_debit, account_balance
@@ -98,6 +104,7 @@ def ls(account=None,
         for i, r in enumerate(accounts):
             r = r.copy()
             r['balance'] = format_money(r['balance'])
+            del r['note']
             accounts[i] = r
         ft = rapidtables.format_table(accounts,
                                       fmt=rapidtables.FORMAT_GENERATOR)

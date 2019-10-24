@@ -231,7 +231,25 @@ class Test(unittest.TestCase):
         finac.ls()
         print()
 
-    def test099_delete_currency(self):
+    def test072_account_update(self):
+        finac.account_update('TT2', code='TEST_ACC_2', note='Test acc #2')
+        finac.account_update('TEST_ACC_2', max_overdraft=1000)
+        self.assertEqual(
+            finac.account_info('TEST_ACC_2')['max_overdraft'], 1000)
+
+    def test098_currency_update(self):
+        finac.currency_update('eur', code='euRo')
+        self.assertEqual(finac.currency_rate('EURo/USD'), 2)
+        finac.currency_update('euro', code='eur')
+
+    def test099_transact_update(self):
+        finac.transaction_update(41, tag='loans2', note='somenote')
+        for t in finac.account_statement('TT1'):
+            if t['id'] == 41:
+                self.assertEqual(t['tag'], 'loans2')
+                self.assertEqual(t['note'], 'somenote')
+
+    def test100_delete_currency(self):
         finac.currency_delete('eur')
 
 
