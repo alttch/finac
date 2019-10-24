@@ -283,13 +283,17 @@ def currency_rate(currency_from, currency_to, date=None):
     return value
 
 
-def account_create(account, currency, name='', tp='current',
-                   max_overdraft=None, max_balance=None):
+def account_create(account,
+                   currency,
+                   tp='current',
+                   note=None,
+                   max_overdraft=None,
+                   max_balance=None):
     """
     Args:
         currency: currency code
         account: account code
-        name: account name
+        note: account notes
         tp: account type (credit, current, saving, cash)
         max_overdraft: maximum allowed overdraft (set to negative to force
             account to have minimal positive balance)
@@ -304,13 +308,17 @@ def account_create(account, currency, name='', tp='current',
     logger.info('Creating account {}, currency: {}'.format(account.upper(), currency.upper()))
     try:
         r = db.execute(sql("""
-        insert into account(code, name, tp, currency_id, max_overdraft,
+        insert into account(code, note, tp, currency_id, max_overdraft,
         max_balance) values
-        (:code, :name, :tp,
+        (:code, :note, :tp,
             (select id from currency where code=:currency),
-            :max_overdraft, :max_balance)"""), code=account.upper(), name=name,
-                       tp=tp_id, currency=currency.upper(),
-                       max_overdraft=max_overdraft, max_balance=max_balance)
+            :max_overdraft, :max_balance)"""),
+                       code=account.upper(),
+                       note=note,
+                       tp=tp_id,
+                       currency=currency.upper(),
+                       max_overdraft=max_overdraft,
+                       max_balance=max_balance)
         db.execute(sql("""
             insert into transact(account_debit_id, amount, d_created, d) values
             (:account_id, 0, 0, 0)
@@ -330,17 +338,22 @@ def account_create(account, currency, name='', tp='current',
 
 def account_info(account):
     r = get_db().execute(sql("""
-            select account.code as account_code, account.name, account.tp,
+            select account.code as account_code, account.note, account.tp,
             currency.code as currency, max_overdraft, max_balance
             from account join
             currency on account.currency_id = currency.id
             where account.code = :account"""), account=account.upper())
     d = r.fetchone()
     if not d: raise ResourceNotFound
-    return {'code': d.account_code, 'name': d.name,
-            'type': ACCOUNT_TYPE_NAMES[d.tp], 'tp': d.tp,
-            'currency': d.currency, 'max_overdraft': d.max_overdraft,
-            'max_balance': d.max_balance}
+    return {
+        'code': d.account_code,
+        'note': d.note,
+        'type': ACCOUNT_TYPE_NAMES[d.tp],
+        'tp': d.tp,
+        'currency': d.currency,
+        'max_overdraft': d.max_overdraft,
+        'max_balance': d.max_balance
+    }
 
 
 def transaction_info(transaction_id):
@@ -407,10 +420,15 @@ def account_unlock(account, token):
         return l.release(token)
 
 
-def transaction_create(account, amount=None, tag=None, note='',
-                       creation_date=None, completion_date=None,
-                       mark_completed=True, target=None, lock_token=None):
-    account = account.upper()
+def transaction_create(account,
+                       amount=None,
+                       tag=None,
+                       note=None,
+                       creation_date=None,
+                       completion_date=None,
+                       mark_completed=True,
+                       target=None,
+                       lock_token=None):
     if amount is not None and target is not None:
         raise ValueError('Amount and target can not be specified together')
     elif amount is None and target is None:
@@ -443,10 +461,18 @@ def transaction_create(account, amount=None, tag=None, note='',
         account_unlock(account, token)
 
 
-def transaction_move(dt=None, ct=None, amount=0, tag=None, note='',
-                     creation_date=None, completion_date=None,
-                     mark_completed=True, target_ct=None, target_dt=None,
-                     credit_lock_token=None, debit_lock_token=None):
+def transaction_move(dt=None,
+                     ct=None,
+                     amount=0,
+                     tag=None,
+                     note=None,
+                     creation_date=None,
+                     completion_date=None,
+                     mark_completed=True,
+                     target_ct=None,
+                     target_dt=None,
+                     credit_lock_token=None,
+                     debit_lock_token=None):
     """
     Args:
         ct: source (credit) account code
@@ -623,13 +649,13 @@ def account_statement(account, start=None, end=None, tag=None, pending=False):
         cond += (' and ' if cond else '') + 'tag = "{}"'.format(tag)
     r = get_db().execute(sql("""
     select transact.id, d_created, d,
-            amount, tag, note, account.code as cparty
+            amount, tag, transact.note as note, account.code as cparty
         from transact left join account on
             account_credit_id=account.id where account_debit_id=
                 (select id from account where code=:account) and {cond}
     union
     select transact.id, d_created, d,
-            amount * -1, tag, note, account.code as cparty
+            amount * -1, tag, transact.note as note, account.code as cparty
         from transact left join account on
             account_debit_id=account.id where account_credit_id=
                 (select id from account where code=:account) and {cond}
@@ -688,7 +714,7 @@ def account_list(currency=None, tp=None, date=None,
                  hide_empty=False):
     """
     """
-    cond = "where transact.deleted is null"
+    cond = "transact.deleted is null"
     if tp:
         if isinstance(tp, int):
             tp_id = tp
@@ -702,7 +728,7 @@ def account_list(currency=None, tp=None, date=None,
         cond += (' and ' if cond else '') + 'account.tp < 1000'
     if date:
         dts = parse_date(date)
-        cond += (' and ' if cond else '') + 'transact.d <= "{}"'.format(dts)
+        cond += (' and ' if cond else '') + 'transact.d_created <= "{}"'.format(dts)
     oby = ''
     if order_by:
         if isinstance(order_by, list):
@@ -719,7 +745,8 @@ def account_list(currency=None, tp=None, date=None,
                     from transact
                     left join account on account.id=transact.account_debit_id
                     join currency on currency.id=account.currency_id
-                    {cond_d} group by account.code
+                    where d is not null and {cond_d}
+                        group by account.code
                 union
                 select -1*sum(amount) as balance,
                     account.code as account,
@@ -728,7 +755,8 @@ def account_list(currency=None, tp=None, date=None,
                     from transact
                     left join account on account.id=transact.account_credit_id
                     join currency on currency.id=account.currency_id
-                    {cond} group by account.code
+                    where {cond}
+                            group by account.code
                 ) as templist group by account, templist.currency, templist.tp
             {oby}
             """.format(cond=cond, cond_d=cond.replace('_created', ''),
@@ -853,8 +881,23 @@ def account_balance(account, date=None):
         account: filter by account code
         date: get balance for specified date/time
     """
-    rc = list(account_credit(account=account, date=date, hide_empty=False))
-    rd = list(account_debit(account=account, date=date, hide_empty=False))
-    if not rd or not rc:
+    cond = "transact.deleted is null"
+    if date:
+        dts = parse_date(date)
+        cond += (' and '
+                 if cond else '') + 'transact.d_created <= "{}"'.format(dts)
+    r = get_db().execute(sql("""
+        select debit-credit as balance from
+            (select sum(amount) as debit from transact
+                where account_debit_id=
+                    (select id from account where code=:account)
+                        and d is not null and {cond_d}) as f,
+            (select sum(amount) as credit from transact
+                where account_credit_id=
+                    (select id from account where code=:account) and {cond}) as s
+            """.format(cond=cond, cond_d=cond.replace('_created', ''))),
+                         account=account)
+    d = r.fetchone()
+    if not d or d.balance is None:
         raise ResourceNotFound
-    return rd[0]['debit_balance'] - rc[0]['credit_balance']
+    return d.balance

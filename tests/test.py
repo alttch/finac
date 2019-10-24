@@ -14,7 +14,8 @@ import random
 
 from types import SimpleNamespace
 
-TEST_DB = '/tmp/finac-test.db'
+TEST_DB = '/home/yivanusa/Projects/finac/finac.db'
+# TEST_DB = 'mysql+pymysql://admin:admin@localhost/my_finac'
 
 result = SimpleNamespace()
 
@@ -26,8 +27,8 @@ class Test(unittest.TestCase):
             super(Test, self).run(result)
 
     def test002_create_account(self):
-        finac.account_create('TEST.TEST', 'eur', 'Test account', 'current')
-        finac.account_create('TEST2.TEST', 'eur', 'Test account 2', 'current')
+        finac.account_create('test.test', 'eur', 'current', 'Test acc')
+        finac.account_create('TEST2.TEST', 'eur', 'current', 'Test acc2')
 
     def test003_create_transaction(self):
         result.transaction1_id = finac.transaction_create('test.test',
@@ -89,9 +90,9 @@ class Test(unittest.TestCase):
 
         # allow overdraft
         finac.account_create('TEST3.TEST',
-                             'EUR',
-                             'Test account',
+                             'eur',
                              'current',
+                             'Test account',
                              max_overdraft=900)
         finac.transaction_create('TEST3.TEST', 100)
         finac.transaction_move('TEST2.TEST', 'TEST3.TEST', 1000)
@@ -99,9 +100,9 @@ class Test(unittest.TestCase):
 
         # forbid overdraft
         finac.account_create('TEST4.TEST',
-                             'EUR',
-                             'Test account',
+                             'eur',
                              'current',
+                             'Test account',
                              max_overdraft=200)
         finac.transaction_create('TEST3.TEST', 1200)
         try:
