@@ -14,8 +14,7 @@ import random
 
 from types import SimpleNamespace
 
-TEST_DB = '/home/yivanusa/Projects/finac/finac.db'
-# TEST_DB = 'mysql+pymysql://admin:admin@localhost/my_finac'
+TEST_DB = '/tmp/finac-test.db'
 
 result = SimpleNamespace()
 
@@ -41,12 +40,14 @@ class Test(unittest.TestCase):
             finac.account_statement('TEST.TEST', '2019-01-01', pending=False))
         self.assertEqual(len(statement), 0)
         statement = list(
-            finac.account_statement('TEST.TEST', '2019-01-01', pending=True))
+            finac.account_statement('test.test', '2019-01-01', pending=True))
         self.assertEqual(len(statement), 1)
 
     def test004_transaction_complete(self):
         finac.transaction_complete(result.transaction1_id)
-        self.assertEqual(finac.account_balance('TEST.TEST'), 100)
+        self.assertEqual(finac.account_balance('test.test'), 100)
+        statement = list(
+            finac.account_statement('test.test', '2019-01-01', pending=True))
 
     def test005_transaction_move(self):
         result.transaction2_id = finac.transaction_move('TEST2.TEST',
