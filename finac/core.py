@@ -896,7 +896,7 @@ def account_balance(account, date=None):
                 where account_credit_id=
                     (select id from account where code=:account) and {cond}) as s
             """.format(cond=cond, cond_d=cond.replace('_created', ''))),
-                         account=account)
+                         account=account.upper())
     d = r.fetchone()
     if not d or d.balance is None:
         raise ResourceNotFound
