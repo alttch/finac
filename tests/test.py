@@ -237,9 +237,34 @@ class Test(unittest.TestCase):
         self.assertEqual(
             finac.account_info('TEST_ACC_2')['max_overdraft'], 1000)
 
+    def test080_lazy_exchange(self):
+        finac.config.lazy_exchange = False
+        finac.account_create('eur1', 'eur')
+        finac.account_create('usd1', 'usd')
+        try:
+            finac.transaction_move('usd1', 'eur1', 20)
+            raise RuntimeError(
+                'Lazy exchange is off but currency mismatch not detected')
+        except ValueError:
+            pass
+        finac.config.lazy_exchange = True
+        finac.currency_set_rate('EUR/USD', value=1.1)
+
+        finac.transaction_move('usd1', 'eur1', 20, xdt=False)
+        self.assertEqual(finac.account_balance('eur1'), -20)
+        self.assertEqual(finac.account_balance('usd1'), 22)
+
+        finac.transaction_move('usd1', 'eur1', 20)
+        self.assertEqual(finac.account_balance('eur1'), -38.18)
+        self.assertEqual(finac.account_balance('usd1'), 42)
+
+        finac.transaction_move('usd1', 'eur1', 20, rate=1.25)
+        self.assertEqual(finac.account_balance('eur1'), -54.18)
+        self.assertEqual(finac.account_balance('usd1'), 62)
+
     def test098_currency_update(self):
         finac.currency_update('eur', code='euRo')
-        self.assertEqual(finac.currency_rate('EURo/USD'), 2)
+        self.assertEqual(finac.currency_rate('EURo/USD'), 1.1)
         finac.currency_update('euro', code='eur')
 
     def test099_transact_update(self):

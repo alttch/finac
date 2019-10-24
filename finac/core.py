@@ -71,7 +71,7 @@ _db = SimpleNamespace(engine=None)
 
 config = SimpleNamespace(db=None,
                          keep_integrity=True,
-                         easy_exchange=True,
+                         lazy_exchange=True,
                          rate_allow_reverse=True,
                          colorize=True,
                          rate_allow_cross=True,
@@ -107,6 +107,10 @@ def parse_date(d):
     except:
         pass
     return dateutil.parser.parse(str(d)).timestamp()
+
+
+def format_amount(i):
+    return int(i * 100) / 100.0
 
 
 class ResourceNotFound(Exception):
@@ -271,6 +275,8 @@ def currency_rate(currency_from, currency_to=None, date=None):
         date = parse_date(date)
     if currency_from.find('/') != -1 and currency_to is None:
         currency_from, currency_to = currency_from.split('/')
+    if currency_from.upper() == currency_to.upper():
+        return 1
     db = get_db()
 
     def _get_rate(cf, ct):
@@ -473,16 +479,22 @@ def _update(objid, tbl, objidf, kw):
 
 
 def account_update(account, **kwargs):
-    _ckw(kwargs, ['code', 'note', 'max_balance', 'max_overdraft'])
-    _update(account, 'account', 'code', kwargs)
+    _ckw(kwargs, ['code', 'note', 'tp', 'max_balance', 'max_overdraft'])
+    kw = kwargs.copy()
+    if 'tp' in kw:
+        kw['tp'] = ACCOUNT_TYPE_IDS[kw['tp']]
+    _update(account, 'account', 'code', kw)
+
 
 def currency_update(currency, **kwargs):
     _ckw(kwargs, ['code'])
     _update(currency, 'currency', 'code', kwargs)
 
+
 def transaction_update(transaction_id, **kwargs):
     _ckw(kwargs, ['tag', 'note'])
     _update(transaction_id, 'transact', 'id', kwargs)
+
 
 def transaction_create(account,
                        amount=None,
@@ -531,6 +543,79 @@ def transaction_create(account,
         account_unlock(account, token)
 
 
+def _transaction_move(dt=None,
+                      ct=None,
+                      amount=0,
+                      tag=None,
+                      note=None,
+                      creation_date=None,
+                      completion_date=None,
+                      mark_completed=True,
+                      target_ct=None,
+                      target_dt=None,
+                      _ct_info=None,
+                      _dt_info=None):
+    if ct == dt:
+        raise ValueError('Debit and credit account can not be the same')
+    if amount is None and target_ct is None and target_dt is None:
+        raise ValueError('Specify amount or target')
+    if target_ct is not None and target_dt is not None:
+        raise ValueError('Target should be specified either for dt or for ct')
+    if target_ct is not None and not ct:
+        raise ValueError('Target is specified but ct account not')
+    elif target_dt is not None and not dt:
+        raise ValueError('Target is specified but dt account not')
+    db = get_db()
+    ct = ct.upper() if ct else None
+    dt = dt.upper() if dt else None
+    if target_dt is not None:
+        amount = target_dt - account_balance(dt)
+    elif target_ct is not None:
+        amount = account_balance(ct) - target_ct
+    if amount == 0: return
+    if amount is not None and amount < 0:
+        raise ValueError('Amount should be greater than zero')
+    if config.keep_integrity:
+        ccur = None
+        dcur = None
+        if ct:
+            acc_info = _ct_info
+            ctp = acc_info['tp']
+            m = acc_info['max_overdraft']
+            if m is not None and account_balance(ct) - amount < -1 * m:
+                raise OverdraftError
+        if dt:
+            acc_info = _dt_info
+            dtp = acc_info['tp']
+            m = acc_info['max_balance']
+            if m is not None and account_balance(dt) + amount > m:
+                raise OverlimitError
+    if creation_date is None:
+        creation_date = time.time()
+    else:
+        creation_date = parse_date(creation_date)
+    if completion_date is None:
+        if mark_completed:
+            completion_date = creation_date
+    else:
+        completion_date = parse_date(completion_date)
+    return db.execute(sql("""
+    insert into transact(account_credit_id, account_debit_id, amount, tag,
+    note, d_created, d) values
+    (
+    (select id from account where code=:ct),
+    (select id from account where code=:dt),
+    :amount, :tag, :note, :d_created, :d)
+    """),
+                      ct=ct,
+                      dt=dt,
+                      amount=amount,
+                      tag=tag,
+                      note=note,
+                      d_created=creation_date,
+                      d=completion_date).lastrowid
+
+
 def transaction_move(dt=None,
                      ct=None,
                      amount=0,
@@ -541,6 +626,8 @@ def transaction_move(dt=None,
                      mark_completed=True,
                      target_ct=None,
                      target_dt=None,
+                     rate=None,
+                     xdt=True,
                      credit_lock_token=None,
                      debit_lock_token=None):
     """
@@ -555,76 +642,63 @@ def transaction_move(dt=None,
         mark_completed: mark transaction completed (set completion date)
         target_ct: target credit account balance
         target_dt: target debit account balance
+        rate: exchange rate (lazy exchange should be on)
+        xdt: for lazy exchange:
+            True (default): consider amount is debited and calculate rate for credit
+            False: consider amount is credited and calculate rate for debit
 
     Returns:
         transaction id
     """
-    if ct == dt:
-        raise ValueError('Debit and credit account can not be the same')
-    if amount is None and target_ct is None and target_dt is None:
-        raise ValueError('Specify amount or target')
-    if target_ct is not None and target_dt is not None:
-        raise ValueError('Target should be specified either for dt or for ct')
-    if target_ct is not None and not ct:
-        raise ValueError('Target is specified but ct account not')
-    elif target_dt is not None and not dt:
-        raise ValueError('Target is specified but dt account not')
-    db = get_db()
-    ct = ct.upper() if ct else None
-    dt = dt.upper() if dt else None
     try:
         ctoken = account_lock(ct, credit_lock_token) if ct else None
         dtoken = account_lock(dt, debit_lock_token) if dt else None
-        if target_dt is not None:
-            amount = target_dt - account_balance(dt)
-        elif target_ct is not None:
-            amount = account_balance(ct) - target_ct
-        if amount == 0: return
-        if amount is not None and amount < 0:
-            raise ValueError('Amount should be greater than zero')
-        if config.keep_integrity:
-            ccur = None
-            dcur = None
-            if ct:
-                acc_info = account_info(ct)
-                ccur = acc_info['currency']
-                ctp = acc_info['tp']
-                m = acc_info['max_overdraft']
-                if m is not None and account_balance(ct) - amount < -1 * m:
-                    raise OverdraftError
-            if dt:
-                acc_info = account_info(dt)
-                dcur = acc_info['currency']
-                dtp = acc_info['tp']
-                m = acc_info['max_balance']
-                if m is not None and account_balance(dt) + amount > m:
-                    raise OverlimitError
-            if ct and dt and ccur != dcur:
+        ct_info = account_info(ct) if ct else None
+        dt_info = account_info(dt) if dt else None
+        if ct and dt and ct_info['currency'] != dt_info['currency']:
+            if config.lazy_exchange:
+                if not amount:
+                    raise ValueError(
+                        'Amount is required for exchange operations')
+                if not rate:
+                    rate = currency_rate(ct_info['currency'],
+                                         dt_info['currency'],
+                                         date=creation_date)
+
+            else:
                 raise ValueError('Currency mismatch')
-        if creation_date is None:
-            creation_date = time.time()
+            tid1 = _transaction_move(
+                ct=ct,
+                amount=format_amount(amount / rate) if xdt else amount,
+                tag=tag,
+                note=note,
+                creation_date=creation_date,
+                completion_date=completion_date,
+                mark_completed=mark_completed,
+                _ct_info=ct_info)
+            tid2 = _transaction_move(dt=dt,
+                                     amount=amount if xdt else format_amount(
+                                         (amount * rate)),
+                                     tag=tag,
+                                     note=note,
+                                     creation_date=creation_date,
+                                     completion_date=completion_date,
+                                     mark_completed=mark_completed,
+                                     _dt_info=dt_info)
+            return tid1, tid2
         else:
-            creation_date = parse_date(creation_date)
-        if completion_date is None:
-            if mark_completed:
-                completion_date = creation_date
-        else:
-            completion_date = parse_date(completion_date)
-        return db.execute(sql("""
-        insert into transact(account_credit_id, account_debit_id, amount, tag,
-        note, d_created, d) values
-        (
-        (select id from account where code=:ct),
-        (select id from account where code=:dt),
-        :amount, :tag, :note, :d_created, :d)
-        """),
-                          ct=ct,
-                          dt=dt,
-                          amount=amount,
-                          tag=tag,
-                          note=note,
-                          d_created=creation_date,
-                          d=completion_date).lastrowid
+            return _transaction_move(dt=dt,
+                                     ct=ct,
+                                     amount=amount,
+                                     tag=tag,
+                                     note=note,
+                                     creation_date=creation_date,
+                                     completion_date=completion_date,
+                                     mark_completed=mark_completed,
+                                     target_ct=target_ct,
+                                     target_dt=target_dt,
+                                     _ct_info=ct_info,
+                                     _dt_info=dt_info)
     finally:
         if ctoken: account_unlock(ct, ctoken)
         if dtoken: account_unlock(dt, dtoken)
@@ -886,6 +960,9 @@ def account_list_summary(currency,
                      date=date,
                      order_by=order_by,
                      hide_empty=hide_empty))
+    for a in accounts:
+        a['balance_bc'] = a['balance'] * currency_rate(
+            a['currency'], config.base_currency, date=date)
     return {
         'accounts':
             accounts,
