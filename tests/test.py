@@ -14,8 +14,7 @@ import random
 
 from types import SimpleNamespace
 
-# TEST_DB = '/home/yivanusa/Projects/finac/finac.db'
-TEST_DB = 'mysql+pymysql://admin:admin@localhost/my_finac'
+TEST_DB = '/tmp/finac-test.db'
 
 result = SimpleNamespace()
 
@@ -27,11 +26,11 @@ class Test(unittest.TestCase):
             super(Test, self).run(result)
 
     def test002_create_account(self):
-        finac.account_create('TEST.TEST', 'EUR', 'Test account', 'current')
-        finac.account_create('TEST2.TEST', 'EUR', 'Test account 2', 'current')
+        finac.account_create('TEST.TEST', 'eur', 'Test account', 'current')
+        finac.account_create('TEST2.TEST', 'eur', 'Test account 2', 'current')
 
     def test003_create_transaction(self):
-        result.transaction1_id = finac.transaction_create('TEST.TEST',
+        result.transaction1_id = finac.transaction_create('test.test',
                                                           100,
                                                           'test',
                                                           'Test balance import',
@@ -56,7 +55,7 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('TEST2.TEST'), 25)
 
     def test006_statement_tests(self):
-        statement = list(finac.account_statement('TEST.TEST', '2019-01-01'))
+        statement = list(finac.account_statement('test.test', '2019-01-01'))
         self.assertEqual(len(statement), 2)
         statement = list(finac.account_statement('TEST2.TEST'))
         self.assertEqual(len(statement), 1)
@@ -193,7 +192,7 @@ class Test(unittest.TestCase):
         finac.currency_set_rate('EUR', 'USD', value=1.8, date='2018-12-01')
         self.assertEqual(finac.currency_rate('EUR', 'USD', date='2019-01-05'),
                          1.5)
-        finac.currency_delete_rate('EUR', 'USD', date='1546293600')
+        finac.currency_delete_rate('EUR', 'USD', date='2019-01-01')
         self.assertEqual(finac.currency_rate('EUR', 'USD', date='2019-01-05'),
                          1.8)
 

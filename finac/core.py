@@ -1,4 +1,6 @@
 # assets
+from sqlalchemy.exc import IntegrityError
+
 ACCOUNT_CREDIT = 0
 ACCOUNT_CASH = 1
 ACCOUNT_CURRENT = 2
@@ -68,9 +70,6 @@ lock_account_token = threading.Lock()
 
 account_lockers = {}
 
-# todo - all currency and account cods convert to uppercase
-# todo - ResourceAlreadyExists - возвращай если sql выкидывает Integrity error  в аккаунте and currency
-
 
 def gen_random_str(length=64):
     symbols = string.ascii_letters + '0123456789'
@@ -79,8 +78,7 @@ def gen_random_str(length=64):
 
 def format_date(d):
     if d is not None:
-        if config.date_format is None:
-            return d
+        if config.date_format is None: return d
         else:
             return datetime.datetime.strftime(
                 datetime.datetime.fromtimestamp(d), config.date_format)
@@ -112,6 +110,12 @@ class OverdraftError(Exception):
 
 class OverlimitError(Exception):
     pass
+
+
+class ResourceAlreadyExists(Exception):
+
+    def __init__(self, reason):
+        logger.error('{} Already Exists'.format(reason))
 
 
 class AccountLocker:
@@ -177,21 +181,28 @@ def init(db, **kwargs):
     db_uri = db
     if db_uri.find('.db') != -1:
         db_uri = 'sqlite:///' + os.path.expanduser(db_uri)
+    elif not db_uri.__contains__('mysql+pymysql'):
+        raise RuntimeError(
+            'DB URI configuration: mysql+pymysql://user:pass@host/db_name')
     _db.engine = get_db_engine(db_uri)
     init_db(_db.engine)
 
 
 def currency_create(currency):
-    logger.info('Creating currency {}'.format(currency))
-    get_db().execute(sql("""
-    insert into currency(code) values(:code)"""), code=currency)
+    logger.info('Creating currency {}'.format(currency.upper()))
+    try:
+        get_db().execute(sql("""
+        insert into currency(code) values(:code)"""), code=currency.upper())
+    except IntegrityError:
+        raise ResourceAlreadyExists(currency.upper())
+
 
 
 def currency_delete(currency):
-    logger.warning('Deleting currency {}'.format(currency))
+    logger.warning('Deleting currency {}'.format(currency.upper()))
     if not get_db().execute(sql("""
-    delete from currency where code=:code"""), code=currency).rowcount:
-        logger.error('Currency {} not found'.format(currency))
+    delete from currency where code=:code"""), code=currency.upper()).rowcount:
+        logger.error('Currency {} not found'.format(currency.upper()))
         raise ResourceNotFound
 
 
@@ -202,8 +213,8 @@ def currency_set_rate(currency_from, currency_to=None, value=1, date=None):
         date = parse_date(date)
     if currency_from.find('/') != -1 and currency_to is None:
         currency_from, currency_to = currency_from.split('/')
-    logging.info('Setting rate for {}/{} to {} for {}'.format(currency_from,
-                                                              currency_to,
+    logging.info('Setting rate for {}/{} to {} for {}'.format(currency_from.upper(),
+                                                              currency_to.upper(),
                                                               value,
                                                               format_date(
                                                                   date)))
@@ -216,7 +227,7 @@ def currency_set_rate(currency_from, currency_to=None, value=1, date=None):
         :d,
         :value
     )
-    """), f=currency_from, t=currency_to, d=date, value=value)
+    """), f=currency_from.upper(), t=currency_to.upper(), d=date, value=value)
 
 
 def currency_delete_rate(currency_from, currency_to, date):
@@ -224,7 +235,7 @@ def currency_delete_rate(currency_from, currency_to, date):
         currency_from, currency_to = currency_from.split('/')
     date = parse_date(date)
     logging.info(
-        'Deleting rate for {}/{} for {}'.format(currency_from, currency_to,
+        'Deleting rate for {}/{} for {}'.format(currency_from.upper(), currency_to.upper(),
                                                 format_date(date)))
     if not get_db().execute(sql("""
     delete from currency_rate where
@@ -232,10 +243,10 @@ def currency_delete_rate(currency_from, currency_to, date):
         and
         currency_to_id=(select id from currency where code=:t)
         and d=:d
-        """), f=currency_from, t=currency_to, d=date).rowcount:
+        """), f=currency_from.upper(), t=currency_to.upper(), d=date).rowcount:
         logger.error(
-            'Currency rate {}/{} for {} not found'.format(currency_from,
-                                                          currency_to,
+            'Currency rate {}/{} for {} not found'.format(currency_from.upper(),
+                                                          currency_to.upper(),
                                                           format_date(date)))
         raise ResourceNotFound
 
@@ -254,16 +265,15 @@ def currency_rate(currency_from, currency_to, date=None):
                 join currency as cto on currency_to_id=cto.id
             where d <= :d and cfrom.code = :f and cto.code = :t
             order by d desc limit 1
-            """), d=date, f=cf, t=ct)
+            """), d=date, f=cf.upper(), t=ct.upper())
         return r.fetchone()
-
     d = _get_rate(currency_from, currency_to)
     if not d:
         if config.rate_allow_reverse:
             d = _get_rate(currency_to, currency_from)
             if not d:
                 raise RateNotFound(
-                    '{}/{} for {}'.format(currency_from, currency_to,
+                    '{}/{} for {}'.format(currency_from.upper(), currency_to.upper(),
                                           format_date(date)))
             value = 1 / d.value
         else:
@@ -291,15 +301,15 @@ def account_create(account, currency, name='', tp='current',
         tp_id = ACCOUNT_TYPE_IDS[tp]
     db = get_db()
     dbt = db.begin()
-    logger.info('Creating account {}, currency: {}'.format(account, currency))
+    logger.info('Creating account {}, currency: {}'.format(account.upper(), currency.upper()))
     try:
         r = db.execute(sql("""
         insert into account(code, name, tp, currency_id, max_overdraft,
         max_balance) values
         (:code, :name, :tp,
             (select id from currency where code=:currency),
-            :max_overdraft, :max_balance)"""), code=account, name=name,
-                       tp=tp_id, currency=currency,
+            :max_overdraft, :max_balance)"""), code=account.upper(), name=name,
+                       tp=tp_id, currency=currency.upper(),
                        max_overdraft=max_overdraft, max_balance=max_balance)
         db.execute(sql("""
             insert into transact(account_debit_id, amount, d_created, d) values
@@ -310,8 +320,10 @@ def account_create(account, currency, name='', tp='current',
             (:account_id, 0, 0, 0)
             """), account_id=r.lastrowid)
         dbt.commit()
+    except IntegrityError:
+        raise ResourceAlreadyExists(account.upper())
     except:
-        logger.error('Unable to create account {}'.format(account))
+        logger.error('Unable to create account {}'.format(account.upper()))
         dbt.rollback()
         raise
 
@@ -322,7 +334,7 @@ def account_info(account):
             currency.code as currency, max_overdraft, max_balance
             from account join
             currency on account.currency_id = currency.id
-            where account.code = :account"""), account=account)
+            where account.code = :account"""), account=account.upper())
     d = r.fetchone()
     if not d: raise ResourceNotFound
     return {'code': d.account_code, 'name': d.name,
@@ -355,20 +367,28 @@ def transaction_info(transaction_id):
             'ct': d.credit if hasattr(d, 'credit') else None, }
 
 
-def account_delete(account):
+def account_delete(account, lock_token=None):
+    account = account.upper()
     logger.warning('Deleting account {}'.format(account))
-    if not get_db().execute(sql("""
-    delete from account where code=:code"""), code=account).rowcount:
-        logger.error('Account {} not found'.format(account))
-        raise ResourceNotFound
-    get_db().execute(sql("""
-    delete from transact where
-    account_debit_id=(select id from account where code=:code) or 
-    account_credit_id=(select id from account where code=:code) and d=0"""),
-                     code=account)
+    token = account_lock(account, lock_token)
+    try:
+        if not get_db().execute(sql("""
+        delete from transact where
+        account_debit_id=(select id from account where code=:code) or
+        account_credit_id=(select id from account where code=:code) and d=0"""),
+                                code=account).rowcount:
+            raise ResourceNotFound
+        if not get_db().execute(sql("""
+        delete from account where code=:code"""),
+                                code=account).rowcount:
+            logger.error('Account {} not found'.format(account))
+            raise ResourceNotFound
+    finally:
+        account_unlock(account, token)
 
 
 def account_lock(account, token):
+    account = account.upper() if account else account
     if config.keep_integrity:
         with lock_account_token:
             if account in account_lockers:
@@ -382,7 +402,7 @@ def account_lock(account, token):
 def account_unlock(account, token):
     if config.keep_integrity:
         with lock_account_token:
-            l = account_lockers.get(account)
+            l = account_lockers.get(account.upper())
         if not l: raise ResourceNotFound
         return l.release(token)
 
@@ -390,6 +410,7 @@ def account_unlock(account, token):
 def transaction_create(account, amount=None, tag=None, note='',
                        creation_date=None, completion_date=None,
                        mark_completed=True, target=None, lock_token=None):
+    account = account.upper()
     if amount is not None and target is not None:
         raise ValueError('Amount and target can not be specified together')
     elif amount is None and target is None:
@@ -453,6 +474,8 @@ def transaction_move(dt=None, ct=None, amount=0, tag=None, note='',
     elif target_dt is not None and not dt:
         raise ValueError('Target is specified but dt account not')
     db = get_db()
+    ct = ct.upper() if ct else None
+    dt = dt.upper() if dt else None
     try:
         ctoken = account_lock(ct, credit_lock_token) if ct else None
         dtoken = account_lock(dt, debit_lock_token) if dt else None
@@ -611,7 +634,7 @@ def account_statement(account, start=None, end=None, tag=None, pending=False):
             account_debit_id=account.id where account_credit_id=
                 (select id from account where code=:account) and {cond}
         order by d, d_created
-    """.format(cond=cond)), account=account)
+    """.format(cond=cond)), account=account.upper())
     while True:
         d = r.fetchone()
         if not d: break
@@ -640,7 +663,7 @@ def account_statement_summary(account, start=None, end=None, tag=None,
             statement: list of transactions
     """
     statement = list(
-        account_statement(account=account, start=start, end=end, tag=tag,
+        account_statement(account=account.upper(), start=start, end=end, tag=tag,
                           pending=pending))
     credit = 0
     debit = 0
@@ -674,7 +697,7 @@ def account_list(currency=None, tp=None, date=None,
         cond += (' and ' if cond else '') + 'account.tp = {}'.format(tp_id)
     if currency:
         cond += (' and ' if cond else '') + 'currency.code = "{}"'.format(
-            currency)
+            currency.upper())
     else:
         cond += (' and ' if cond else '') + 'account.tp < 1000'
     if date:
