@@ -68,7 +68,7 @@ asset_price = Table('asset_price', meta,
 
 def init_db(engine):
     meta.create_all(engine)
-    for cur in ('EUR', 'USD', 'NZD'):
+    for cur in ('EUR', 'USD'):
         try:
             engine.execute(text("""
     insert into currency(code) values(:code)"""), code=cur)

@@ -232,7 +232,7 @@ class Test(unittest.TestCase):
         print()
 
     def test099_delete_currency(self):
-        finac.currency_delete('NZD')
+        finac.currency_delete('eur')
 
 
 if __name__ == '__main__':
@@ -240,6 +240,10 @@ if __name__ == '__main__':
         if sys.argv[1] == 'debug':
             logging.basicConfig(level=logging.DEBUG)
             logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
+    except:
+        pass
+    try:
+        os.unlink(TEST_DB)
     except:
         pass
     finac.init(db=TEST_DB, keep_integrity=True)
