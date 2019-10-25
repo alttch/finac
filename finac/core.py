@@ -835,7 +835,7 @@ def account_statement(account, start=None, end=None, tag=None, pending=False):
         from transact left join account on
             account_debit_id=account.id where account_credit_id=
                 (select id from account where code=:account) and {cond}
-        order by d, d_created
+        order by d_created, d
     """.format(cond=cond)),
                          account=account.upper())
     while True:
@@ -878,7 +878,8 @@ def account_statement_summary(account,
     debit = 0
     for row in statement:
         if row['amount'] > 0:
-            debit += row['amount']
+            if row['completed']:
+                debit += row['amount']
         else:
             credit += row['amount']
     return {
