@@ -1,5 +1,7 @@
 import rapidtables, neotermcolor
 
+from functools import partial
+
 from finac.core import init, config
 
 # exceptions
@@ -29,6 +31,7 @@ from finac.core import transaction_update
 
 # balance methods
 from finac.core import account_credit, account_debit, account_balance
+from finac.core import account_balance_range
 
 # statements
 from finac.core import account_statement, account_statement_summary
@@ -43,6 +46,8 @@ rm = transaction_delete
 
 stmt = account_statement_summary
 balance = account_balance
+
+balance_range = partial(account_balance_range, return_timestamp=False)
 
 lsaccs = account_list_summary
 
@@ -162,5 +167,5 @@ def ls(account=None,
         neotermcolor.cprint('{} {}'.format(
             format_money(result['total'], currency_precision(base_currency)),
             base_currency.upper()),
-            style='@finac:sum')
+                            style='@finac:sum')
         print()

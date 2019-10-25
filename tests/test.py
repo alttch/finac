@@ -274,6 +274,20 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('eur1'), -38.18)
         self.assertEqual(finac.account_balance('usd1'), 42)
 
+    def test097_balance_range(self):
+        finac.account_create('tr', 'eur')
+        finac.transaction_create('tr', 1000, date='2019-01-05')
+        finac.transaction_create('tr', 2000, date='2019-02-05')
+        finac.transaction_create('tr', -500, date='2019-04-05')
+        finac.transaction_create('tr', -200, date='2019-06-05')
+        finac.transaction_create('tr', 800, date='2019-08-05')
+        t, dt = finac.account_balance_range('tr',
+                                            start='2019-01-05',
+                                            end='2019-8-07',
+                                            return_timestamp=False)
+        self.assertEqual(dt[-3], 2300)
+        self.assertEqual(dt[-1], 3100)
+
     def test098_currency_update(self):
         finac.currency_update('eur', code='euRo')
         self.assertEqual(finac.currency_rate('EURo/USD'), 1.1)

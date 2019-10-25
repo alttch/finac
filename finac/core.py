@@ -99,7 +99,7 @@ def format_date(d):
                 datetime.datetime.fromtimestamp(d), config.date_format)
 
 
-def parse_date(d):
+def parse_date(d, return_timestamp=True):
     try:
         d = float(d)
         if d > 3000:
@@ -108,7 +108,11 @@ def parse_date(d):
             d = int(d)
     except:
         pass
-    return dateutil.parser.parse(str(d)).timestamp()
+    if not isinstance(d, datetime.datetime):
+        dt = dateutil.parser.parse(str(d))
+    else:
+        dt = d
+    return dt.timestamp() if return_timestamp else dt
 
 
 @lru_cache(maxsize=256)
@@ -517,7 +521,7 @@ def transaction_create(account,
                        amount=None,
                        tag=None,
                        note=None,
-                       creation_date=None,
+                       date=None,
                        completion_date=None,
                        mark_completed=True,
                        target=None,
@@ -541,7 +545,7 @@ def transaction_create(account,
                                     amount=-1 * amount if amount else None,
                                     tag=tag,
                                     note=note,
-                                    creation_date=creation_date,
+                                    date=date,
                                     completion_date=completion_date,
                                     mark_completed=mark_completed,
                                     target_ct=target,
@@ -551,7 +555,7 @@ def transaction_create(account,
                                     amount=amount,
                                     tag=tag,
                                     note=note,
-                                    creation_date=creation_date,
+                                    date=date,
                                     completion_date=completion_date,
                                     mark_completed=mark_completed,
                                     target_dt=None,
@@ -565,7 +569,7 @@ def _transaction_move(dt=None,
                       amount=0,
                       tag=None,
                       note=None,
-                      creation_date=None,
+                      date=None,
                       completion_date=None,
                       chain_transact_id=None,
                       mark_completed=True,
@@ -608,13 +612,13 @@ def _transaction_move(dt=None,
             m = acc_info['max_balance']
             if m is not None and account_balance(dt) + amount > m:
                 raise OverlimitError
-    if creation_date is None:
-        creation_date = time.time()
+    if date is None:
+        date = time.time()
     else:
-        creation_date = parse_date(creation_date)
+        date = parse_date(date)
     if completion_date is None:
         if mark_completed:
-            completion_date = creation_date
+            completion_date = date
     else:
         completion_date = parse_date(completion_date)
     return db.execute(sql("""
@@ -630,7 +634,7 @@ def _transaction_move(dt=None,
                       amount=amount,
                       tag=tag,
                       note=note,
-                      d_created=creation_date,
+                      d_created=date,
                       d=completion_date,
                       chain_id=chain_transact_id).lastrowid
 
@@ -640,7 +644,7 @@ def transaction_move(dt=None,
                      amount=0,
                      tag=None,
                      note=None,
-                     creation_date=None,
+                     date=None,
                      completion_date=None,
                      mark_completed=True,
                      target_ct=None,
@@ -656,7 +660,7 @@ def transaction_move(dt=None,
         amount: transaction amount (always >0)
         tag: transaction tag
         descrption: transaction note
-        creation_date: transaction creation daate (default: now)
+        date: transaction creation daate (default: now)
         completion_date: transaction completion date (default: now)
         mark_completed: mark transaction completed (set completion date)
         target_ct: target credit account balance
@@ -682,7 +686,7 @@ def transaction_move(dt=None,
                 if not rate:
                     rate = currency_rate(ct_info['currency'],
                                          dt_info['currency'],
-                                         date=creation_date)
+                                         date=date)
 
             else:
                 raise ValueError('Currency mismatch')
@@ -692,7 +696,7 @@ def transaction_move(dt=None,
                 if xdt else amount,
                 tag=tag,
                 note=note,
-                creation_date=creation_date,
+                date=date,
                 completion_date=completion_date,
                 mark_completed=mark_completed,
                 _ct_info=ct_info)
@@ -701,7 +705,7 @@ def transaction_move(dt=None,
                                          amount * rate, dt_info['currency']),
                                      tag=tag,
                                      note=note,
-                                     creation_date=creation_date,
+                                     date=date,
                                      completion_date=completion_date,
                                      mark_completed=mark_completed,
                                      chain_transact_id=tid1,
@@ -713,7 +717,7 @@ def transaction_move(dt=None,
                                      amount=amount,
                                      tag=tag,
                                      note=note,
-                                     creation_date=creation_date,
+                                     date=date,
                                      completion_date=completion_date,
                                      mark_completed=mark_completed,
                                      target_ct=target_ct,
@@ -1148,3 +1152,22 @@ def account_balance(account, date=None):
     if not d or d.balance is None:
         raise ResourceNotFound
     return format_amount(d.balance, acc_info['currency'])
+
+
+def account_balance_range(account,
+                          start,
+                          end=None,
+                          step=1,
+                          return_timestamp=True):
+    times = []
+    data = []
+    dt = parse_date(start, return_timestamp=False)
+    end_date = parse_date(
+        end, return_timestamp=False
+    ) if end else datetime.datetime.now() + datetime.timedelta(days=1)
+    delta = datetime.timedelta(days=step)
+    while dt < end_date:
+        times.append(dt.timestamp() if return_timestamp else dt)
+        data.append(account_balance(account, date=dt))
+        dt += delta
+    return times, data
