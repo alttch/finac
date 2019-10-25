@@ -30,9 +30,8 @@ currency_rate = Table(
 account = Table(
     'account', meta, Column('id', Integer, primary_key=True,
                             autoincrement=True),
-    Column('code', String(20), nullable=False, unique=True),
-    Column('note', String(20)), Column('name', String(100), default=''),
-    Column('tp', Integer, nullable=False),
+    Column('code', String(60), nullable=False, unique=True),
+    Column('note', String(2048)), Column('tp', Integer, nullable=False),
     Column('currency_id',
            Integer,
            ForeignKey('currency.id', ondelete='CASCADE'),

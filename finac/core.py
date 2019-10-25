@@ -125,8 +125,7 @@ def currency_precision(currency):
 
 
 def format_amount(i, currency):
-    p = pow(10, currency_precision(currency))
-    return int(i * p) / (p * 1.0)
+    return round(i, currency_precision(currency))
 
 
 class ResourceNotFound(Exception):
