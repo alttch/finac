@@ -1,0 +1,8 @@
+transactions:
+  - account: xtest1
+    amount: 500
+    tag: test
+  - dt: xtest2
+    ct: xtest1
+    amount: 200
+    tag: move

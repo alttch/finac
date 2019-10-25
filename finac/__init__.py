@@ -29,7 +29,7 @@ from finac.core import account_update
 from finac.core import transaction_create, transaction_complete
 from finac.core import transaction_move, transaction_delete
 
-from finac.core import transaction_update
+from finac.core import transaction_update, transaction_apply
 
 # balance methods
 from finac.core import account_credit, account_debit, account_balance

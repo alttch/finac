@@ -17,7 +17,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     license='MIT',
     install_requires=[
-        'rapidtables', 'python-dateutil', 'neotermcolor', 'sqlalchemy'
+        'rapidtables', 'python-dateutil', 'neotermcolor', 'sqlalchemy', 'pyyaml'
     ],
     classifiers=('Programming Language :: Python :: 2',
                  'Programming Language :: Python :: 3',

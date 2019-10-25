@@ -435,6 +435,21 @@ def transaction_info(transaction_id):
     }
 
 
+def transaction_apply(fname):
+    import yaml
+    try:
+        yaml.warnings({'YAMLLoadWarning': False})
+    except:
+        pass
+    with open(fname) as fh:
+        transactions = yaml.load(fh)['transactions']
+    for t in transactions:
+        if 'account' in t:
+            transaction_create(**t)
+        else:
+            transaction_move(**t)
+
+
 def account_delete(account, lock_token=None):
     account = account.upper()
     logger.warning('Deleting account {}'.format(account))
@@ -1012,8 +1027,8 @@ def account_list_summary(currency=None,
                 format_amount(d['balance'], d['currency']) if d['currency'] ==
                 base else format_amount(
                     d['balance'] *
-                    currency_rate(d['currency'], base, date=date),
-                    d['currency']) for d in accounts)
+                    currency_rate(d['currency'], base, date=date), d['currency']
+                ) for d in accounts)
     }
 
 

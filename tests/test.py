@@ -274,6 +274,13 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('eur1'), -38.18)
         self.assertEqual(finac.account_balance('usd1'), 42)
 
+    def test085_apply(self):
+        finac.account_create('xtest1', 'eur')
+        finac.account_create('xtest2', 'eur')
+        finac.transaction_apply('transactions.yml')
+        self.assertEqual(finac.account_balance('xtest1'), 300)
+        self.assertEqual(finac.account_balance('xtest2'), 200)
+
     def test097_balance_range(self):
         finac.account_create('tr', 'eur')
         finac.transaction_create('tr', 1000, date='2019-01-05')
