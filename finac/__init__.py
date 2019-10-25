@@ -1,4 +1,4 @@
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 
 import rapidtables, neotermcolor
 
@@ -41,6 +41,10 @@ from finac.core import account_list, account_list_summary
 
 # purges
 from finac.core import purge, transaction_purge
+
+# plots
+from finac.plot import account_plot as plot
+from finac.plot import account_pie as pie
 
 tr = transaction_create
 mv = transaction_move
