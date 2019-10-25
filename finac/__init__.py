@@ -76,7 +76,7 @@ def ls(account=None,
        pending=False,
        hide_empty=False,
        order_by=['tp', 'currency', 'account', 'balance'],
-       base_currency=None):
+       base=None):
     if account and account.find('%') != -1:
         code = account
         account = None
@@ -127,23 +127,24 @@ def ls(account=None,
                             attrs='bold')
         print()
     else:
-        if not base_currency:
-            base_currency = config.base_currency
+        if not base:
+            base = config.base_currency
+        base = base.upper()
         result = account_list_summary(currency=currency,
                                       tp=tp,
                                       code=code,
                                       date=end,
                                       order_by=order_by,
                                       hide_empty=hide_empty,
-                                      base_currency=base_currency)
+                                      base=base)
         accounts = result['accounts']
         data = accounts.copy()
+        bcp = currency_precision(base)
         for i, r in enumerate(accounts):
             r = r.copy()
             r['balance'] = format_money(r['balance'],
                                         currency_precision(r['currency']))
-            r['balance ' + base_currency.upper()] = format_money(
-                r['balance_bc'], currency_precision(base_currency))
+            r['balance ' + base] = format_money(r['balance_bc'], bcp)
             del r['balance_bc']
             del r['note']
             accounts[i] = r
@@ -164,8 +165,7 @@ def ls(account=None,
                                 attrs='')
         neotermcolor.cprint('-' * len(h), '@finac:separator')
         neotermcolor.cprint('Total: ', end='')
-        neotermcolor.cprint('{} {}'.format(
-            format_money(result['total'], currency_precision(base_currency)),
-            base_currency.upper()),
+        neotermcolor.cprint('{} {}'.format(format_money(result['total'], bcp),
+                                           base),
                             style='@finac:sum')
         print()

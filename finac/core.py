@@ -991,9 +991,9 @@ def account_list_summary(currency,
                          date=None,
                          order_by=['tp', 'currency', 'account', 'balance'],
                          hide_empty=False,
-                         base_currency=None):
-    if base_currency is None:
-        base_currency = config.base_currency
+                         base=None):
+    if base is None:
+        base = config.base_currency
     accounts = list(
         account_list(currency=currency,
                      tp=tp,
@@ -1003,16 +1003,16 @@ def account_list_summary(currency,
                      hide_empty=hide_empty))
     for a in accounts:
         a['balance_bc'] = a['balance'] * currency_rate(
-            a['currency'], base_currency, date=date)
+            a['currency'], base, date=date)
     return {
         'accounts':
             accounts,
         'total':
             sum(
                 format_amount(d['balance'], d['currency']) if d['currency'] ==
-                base_currency else format_amount(
+                base else format_amount(
                     d['balance'] *
-                    currency_rate(d['currency'], base_currency, date=date),
+                    currency_rate(d['currency'], base, date=date),
                     d['currency']) for d in accounts)
     }
 
