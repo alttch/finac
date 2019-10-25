@@ -1,4 +1,4 @@
-__version__ = '0.0.7'
+__version__ = '0.0.8'
 
 import rapidtables, neotermcolor
 
@@ -49,6 +49,7 @@ from finac.plot import account_pie as pie
 tr = transaction_create
 mv = transaction_move
 rm = transaction_delete
+complete = transaction_complete
 
 stmt = account_statement_summary
 balance = account_balance
