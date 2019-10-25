@@ -880,6 +880,7 @@ def purge():
 
 def account_list(currency=None,
                  tp=None,
+                 code=None,
                  date=None,
                  order_by=['tp', 'currency', 'account', 'balance'],
                  hide_empty=False):
@@ -913,6 +914,9 @@ def account_list(currency=None,
         dts = parse_date(date)
         cond += (' and '
                  if cond else '') + 'transact.d_created <= "{}"'.format(dts)
+    if code:
+        cond += (' and '
+                 if cond else '') + 'account.code like "{}"'.format(code)
     oby = ''
     if order_by:
         if isinstance(order_by, list):
@@ -964,6 +968,7 @@ def account_list(currency=None,
 
 def account_list_summary(currency,
                          tp=None,
+                         code=None,
                          date=None,
                          order_by=['tp', 'currency', 'account', 'balance'],
                          hide_empty=False,
@@ -973,6 +978,7 @@ def account_list_summary(currency,
     accounts = list(
         account_list(currency=currency,
                      tp=tp,
+                     code=code,
                      date=date,
                      order_by=order_by,
                      hide_empty=hide_empty))

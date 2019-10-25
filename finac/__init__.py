@@ -53,6 +53,7 @@ def format_money(amnt):
 
 def ls(account=None,
        currency=None,
+       code=None,
        tp=None,
        start=None,
        end=None,
@@ -112,6 +113,7 @@ def ls(account=None,
             base_currency = config.base_currency
         result = account_list_summary(currency=currency,
                                       tp=tp,
+                                      code=code,
                                       date=end,
                                       order_by=order_by,
                                       hide_empty=hide_empty,
