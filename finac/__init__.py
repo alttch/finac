@@ -72,6 +72,9 @@ def ls(account=None,
        hide_empty=False,
        order_by=['tp', 'currency', 'account', 'balance'],
        base_currency=None):
+    if account and account.find('%') != -1:
+        code = account
+        account = None
     if account:
         result = account_statement_summary(account=account,
                                            start=start,
