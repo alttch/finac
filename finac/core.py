@@ -1,6 +1,8 @@
 # assets
 from sqlalchemy.exc import IntegrityError
 
+from functools import lru_cache
+
 ACCOUNT_CREDIT = 0
 ACCOUNT_CASH = 1
 ACCOUNT_CURRENT = 2
@@ -109,8 +111,18 @@ def parse_date(d):
     return dateutil.parser.parse(str(d)).timestamp()
 
 
-def format_amount(i):
-    return int(i * 100) / 100.0
+@lru_cache(maxsize=256)
+def currency_precision(currency):
+    d = get_db().execute(sql('select precision from currency where code=:code'),
+                         code=currency.upper()).fetchone()
+    if not d:
+        raise ResourceNotFound
+    return d.precision
+
+
+def format_amount(i, currency):
+    p = pow(10, currency_precision(currency))
+    return int(i * p) / (p * 1.0)
 
 
 class ResourceNotFound(Exception):
@@ -203,12 +215,13 @@ def init(db, **kwargs):
     init_db(_db.engine)
 
 
-def currency_create(currency):
+def currency_create(currency, precision=2):
     logger.info('Creating currency {}'.format(currency.upper()))
     try:
         get_db().execute(sql("""
-        insert into currency(code) values(:code)"""),
-                         code=currency.upper())
+        insert into currency(code, precision) values(:code, :precision)"""),
+                         code=currency.upper(),
+                         precision=precision)
     except IntegrityError:
         raise ResourceAlreadyExists(currency.upper())
 
@@ -491,7 +504,7 @@ def account_update(account, **kwargs):
 
 
 def currency_update(currency, **kwargs):
-    _ckw(kwargs, ['code'])
+    _ckw(kwargs, ['code', 'precision'])
     _update(currency, 'currency', 'code', kwargs)
 
 
@@ -675,7 +688,8 @@ def transaction_move(dt=None,
                 raise ValueError('Currency mismatch')
             tid1 = _transaction_move(
                 ct=ct,
-                amount=format_amount(amount / rate) if xdt else amount,
+                amount=format_amount(amount / rate, ct_info['currency'])
+                if xdt else amount,
                 tag=tag,
                 note=note,
                 creation_date=creation_date,
@@ -684,7 +698,7 @@ def transaction_move(dt=None,
                 _ct_info=ct_info)
             tid2 = _transaction_move(dt=dt,
                                      amount=amount if xdt else format_amount(
-                                         (amount * rate)),
+                                         amount * rate, dt_info['currency']),
                                      tag=tag,
                                      note=note,
                                      creation_date=creation_date,
@@ -989,11 +1003,12 @@ def account_list_summary(currency,
         'accounts':
             accounts,
         'total':
-            format_amount(
-                sum(d['balance'] if d['currency'] ==
-                    base_currency else d['balance'] *
-                    currency_rate(d['currency'], base_currency, date=date)
-                    for d in accounts))
+            sum(
+                format_amount(d['balance'], d['currency']) if d['currency'] ==
+                base_currency else format_amount(
+                    d['balance'] *
+                    currency_rate(d['currency'], base_currency, date=date),
+                    d['currency']) for d in accounts)
     }
 
 
@@ -1116,6 +1131,7 @@ def account_balance(account, date=None):
         dts = parse_date(date)
         cond += (' and '
                  if cond else '') + 'transact.d_created <= "{}"'.format(dts)
+    acc_info = account_info(account)
     r = get_db().execute(sql("""
         select debit-credit as balance from
             (select sum(amount) as debit from transact
@@ -1131,4 +1147,4 @@ def account_balance(account, date=None):
     d = r.fetchone()
     if not d or d.balance is None:
         raise ResourceNotFound
-    return d.balance
+    return format_amount(d.balance, acc_info['currency'])

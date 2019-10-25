@@ -85,7 +85,7 @@ def init_db(engine):
     for cur in ('EUR', 'USD'):
         try:
             engine.execute(text("""
-    insert into currency(code) values(:code)"""),
+    insert into currency(code, precision) values(:code, 2)"""),
                            code=cur)
         except IntegrityError as e:
             pass

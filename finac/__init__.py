@@ -13,6 +13,7 @@ from finac.core import currency_set_rate, currency_rate
 from finac.core import currency_delete_rate
 
 from finac.core import currency_update
+from finac.core import currency_precision
 
 # account methods
 from finac.core import account_create, account_delete
@@ -46,9 +47,9 @@ balance = account_balance
 lsaccs = account_list_summary
 
 
-def format_money(amnt):
+def format_money(amnt, precision):
     # return '{:,.2f}'.format(amnt)
-    return '{:,.2f}'.format(amnt).replace(',', ' ')
+    return ('{:,.' + str(precision) + 'f}').format(amnt).replace(',', ' ')
 
 
 def ls(account=None,
@@ -70,10 +71,11 @@ def ls(account=None,
                                            pending=pending)
         stmt = result['statement'].copy()
         acc_info = account_info(account)
+        precision = currency_precision(acc_info['currency'])
         for i, r in enumerate(stmt):
             r = r.copy()
             del r['is_completed']
-            r['amount'] = format_money(r['amount'])
+            r['amount'] = format_money(r['amount'], precision)
             stmt[i] = r
         ft = rapidtables.format_table(
             stmt,
@@ -93,18 +95,18 @@ def ls(account=None,
                                 attrs='')
         neotermcolor.cprint('-' * len(h), 'grey')
         print('Debit turnover: ', end='')
-        neotermcolor.cprint(format_money(result['debit']),
+        neotermcolor.cprint(format_money(result['debit'], precision),
                             color='green',
                             attrs='bold',
                             end=', ')
         print('credit turnover: ', end='')
-        neotermcolor.cprint(format_money(result['credit']),
+        neotermcolor.cprint(format_money(result['credit'], precision),
                             color='red',
                             attrs='bold')
         print()
         print('Net profit/loss: ', end='')
         neotermcolor.cprint('{} {}'.format(
-            format_money(result['debit'] - result['credit']),
+            format_money(result['debit'] - result['credit'], precision),
             acc_info['currency']),
                             attrs='bold')
         print()
@@ -122,9 +124,10 @@ def ls(account=None,
         data = accounts.copy()
         for i, r in enumerate(accounts):
             r = r.copy()
-            r['balance'] = format_money(r['balance'])
+            r['balance'] = format_money(r['balance'],
+                                        currency_precision(r['currency']))
             r['balance ' + base_currency.upper()] = format_money(
-                r['balance_bc'])
+                r['balance_bc'], currency_precision(base_currency))
             del r['balance_bc']
             del r['note']
             accounts[i] = r
@@ -145,7 +148,8 @@ def ls(account=None,
                                 attrs='')
         neotermcolor.cprint('-' * len(h), 'grey')
         neotermcolor.cprint('Total: ', end='')
-        neotermcolor.cprint('{} {}'.format(format_money(result['total']),
-                                           base_currency.upper()),
+        neotermcolor.cprint('{} {}'.format(
+            format_money(result['total'], currency_precision(base_currency)),
+            base_currency.upper()),
                             attrs='bold')
         print()
