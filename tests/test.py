@@ -258,9 +258,21 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('eur1'), -38.18)
         self.assertEqual(finac.account_balance('usd1'), 42)
 
-        finac.transaction_move('usd1', 'eur1', 20, rate=1.25)
+        t1, t2 = finac.transaction_move('usd1', 'eur1', 20, rate=1.25)
         self.assertEqual(finac.account_balance('eur1'), -54.18)
         self.assertEqual(finac.account_balance('usd1'), 62)
+
+        finac.transaction_delete(t1)
+        self.assertEqual(finac.account_balance('eur1'), -38.18)
+        self.assertEqual(finac.account_balance('usd1'), 42)
+
+        t1, t2 = finac.transaction_move('usd1', 'eur1', 20, rate=1.25)
+        self.assertEqual(finac.account_balance('eur1'), -54.18)
+        self.assertEqual(finac.account_balance('usd1'), 62)
+
+        finac.transaction_delete(t2)
+        self.assertEqual(finac.account_balance('eur1'), -38.18)
+        self.assertEqual(finac.account_balance('usd1'), 42)
 
     def test098_currency_update(self):
         finac.currency_update('eur', code='euRo')

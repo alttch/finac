@@ -393,6 +393,7 @@ def transaction_info(transaction_id):
             transact.note as note,
             transact.d_created as d_created,
             transact.d as d,
+            chain_transact_id,
             dt.code as debit,
             ct.code as credit
             from transact left join
@@ -412,6 +413,7 @@ def transaction_info(transaction_id):
         'note': d.note,
         'created': d.d_created,
         'completed': d.d,
+        'chain_transact_id': d.chain_transact_id,
         'dt': d.debit if hasattr(d, 'debit') else None,
         'ct': d.credit if hasattr(d, 'credit') else None,
     }
@@ -552,6 +554,7 @@ def _transaction_move(dt=None,
                       note=None,
                       creation_date=None,
                       completion_date=None,
+                      chain_transact_id=None,
                       mark_completed=True,
                       target_ct=None,
                       target_dt=None,
@@ -603,11 +606,11 @@ def _transaction_move(dt=None,
         completion_date = parse_date(completion_date)
     return db.execute(sql("""
     insert into transact(account_credit_id, account_debit_id, amount, tag,
-    note, d_created, d) values
+    note, d_created, d, chain_transact_id) values
     (
     (select id from account where code=:ct),
     (select id from account where code=:dt),
-    :amount, :tag, :note, :d_created, :d)
+    :amount, :tag, :note, :d_created, :d, :chain_id)
     """),
                       ct=ct,
                       dt=dt,
@@ -615,7 +618,8 @@ def _transaction_move(dt=None,
                       tag=tag,
                       note=note,
                       d_created=creation_date,
-                      d=completion_date).lastrowid
+                      d=completion_date,
+                      chain_id=chain_transact_id).lastrowid
 
 
 def transaction_move(dt=None,
@@ -646,11 +650,11 @@ def transaction_move(dt=None,
         target_dt: target debit account balance
         rate: exchange rate (lazy exchange should be on)
         xdt: for lazy exchange:
-            True (default): consider amount is debited and calculate rate for credit
-            False: consider amount is credited and calculate rate for debit
+            True (default): amount is debited and calculate rate for credit
+            False: amount is credited and calculate rate for debit
 
     Returns:
-        transaction id
+        transaction id, if lazy exchange performed: tuple of two transactions
     """
     try:
         ctoken = account_lock(ct, credit_lock_token) if ct else None
@@ -686,6 +690,7 @@ def transaction_move(dt=None,
                                      creation_date=creation_date,
                                      completion_date=completion_date,
                                      mark_completed=mark_completed,
+                                     chain_transact_id=tid1,
                                      _dt_info=dt_info)
             return tid1, tid2
         else:
@@ -740,21 +745,18 @@ def transaction_complete(transaction_id, completion_date=None, lock_token=None):
 
 
 def transaction_delete(transaction_id):
-    db = get_db()
-    dbt = db.begin()
     logging.warning('Deleting transaction {}'.format(transaction_id))
-    try:
-        if not get_db().execute(sql("""
-        update transact set
-        deleted=:ts where id=:id or chain_transact_id=:id"""),
-                                ts=time.time(),
-                                id=transaction_id).rowcount:
-            logging.error('Transaction {} not found'.format(transaction_id))
-            raise ResourceNotFound
-        dbt.commit()
-    except:
-        dbt.rollback()
-        raise
+    tinfo = transaction_info(transaction_id)
+    if not get_db().execute(sql("""
+    update transact set
+    deleted=:ts where id=:id or chain_transact_id=:id"""),
+                            ts=time.time(),
+                            id=transaction_id).rowcount:
+        logging.error('Transaction {} not found'.format(transaction_id))
+        raise ResourceNotFound
+    chid = tinfo.get('chain_transact_id')
+    if chid:
+        transaction_delete(chid)
 
 
 def transaction_purge(_lock=True):
@@ -1116,7 +1118,8 @@ def account_balance(account, date=None):
                         and d is not null and {cond_d}) as f,
             (select sum(amount) as credit from transact
                 where account_credit_id=
-                    (select id from account where code=:account) and {cond}) as s
+                    (select id from account where code=:account) and {cond})
+                        as s
             """.format(cond=cond, cond_d=cond.replace('_created', ''))),
                          account=account.upper())
     d = r.fetchone()
