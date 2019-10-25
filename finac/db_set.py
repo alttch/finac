@@ -9,7 +9,8 @@ meta = MetaData()
 
 currency = Table('currency', meta,
                  Column('id', Integer, primary_key=True, autoincrement=True),
-                 Column('code', String(20), nullable=False, unique=True))
+                 Column('code', String(20), nullable=False, unique=True),
+                 Column('precision', Integer, nullable=False, default=2))
 
 currency_rate = Table(
     'currency_rate', meta,
