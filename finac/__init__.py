@@ -123,7 +123,8 @@ def ls(account=None,
         for i, r in enumerate(accounts):
             r = r.copy()
             r['balance'] = format_money(r['balance'])
-            r['balance ' + base_currency] = format_money(r['balance_bc'])
+            r['balance ' + base_currency.upper()] = format_money(
+                r['balance_bc'])
             del r['balance_bc']
             del r['note']
             accounts[i] = r
