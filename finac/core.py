@@ -985,7 +985,7 @@ def account_list(currency=None,
             yield row
 
 
-def account_list_summary(currency,
+def account_list_summary(currency=None,
                          tp=None,
                          code=None,
                          date=None,
