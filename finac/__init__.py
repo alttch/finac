@@ -1,3 +1,5 @@
+__version__ = '0.0.6'
+
 import rapidtables, neotermcolor
 
 from functools import partial
