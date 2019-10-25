@@ -10,7 +10,7 @@ meta = MetaData()
 currency = Table('currency', meta,
                  Column('id', Integer, primary_key=True, autoincrement=True),
                  Column('code', String(20), nullable=False, unique=True),
-                 Column('precision', Integer, nullable=False, default=2))
+                 Column('precs', Integer, nullable=False, default=2))
 
 currency_rate = Table(
     'currency_rate', meta,
@@ -85,7 +85,7 @@ def init_db(engine):
     for cur in ('EUR', 'USD'):
         try:
             engine.execute(text("""
-    insert into currency(code, precision) values(:code, 2)"""),
+    insert into currency(code, precs) values(:code, 2)"""),
                            code=cur)
         except IntegrityError as e:
             pass

@@ -117,11 +117,11 @@ def parse_date(d, return_timestamp=True):
 
 @lru_cache(maxsize=256)
 def currency_precision(currency):
-    d = get_db().execute(sql('select precision from currency where code=:code'),
+    d = get_db().execute(sql('select precs from currency where code=:code'),
                          code=currency.upper()).fetchone()
     if not d:
         raise ResourceNotFound
-    return d.precision
+    return d.precs
 
 
 def format_amount(i, currency):
@@ -223,7 +223,7 @@ def currency_create(currency, precision=2):
     logger.info('Creating currency {}'.format(currency.upper()))
     try:
         get_db().execute(sql("""
-        insert into currency(code, precision) values(:code, :precision)"""),
+        insert into currency(code, precs) values(:code, :precision)"""),
                          code=currency.upper(),
                          precision=precision)
     except IntegrityError:
@@ -967,7 +967,8 @@ def account_list(currency=None,
                     join currency on currency.id=account.currency_id
                     where {cond}
                             group by account.code
-                ) as templist group by account, templist.currency, templist.tp
+                ) as templist
+                    group by account, note, templist.currency, templist.tp
             {oby}
             """.format(cond=cond,
                        cond_d=cond.replace('_created', ''),
