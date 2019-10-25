@@ -117,6 +117,10 @@ def parse_date(d, return_timestamp=True):
 
 @lru_cache(maxsize=256)
 def currency_precision(currency):
+    """
+    Get precision (digits after comma) for the currency
+    Note: currency precision is cached, so process restart required if changed
+    """
     d = get_db().execute(sql('select precs from currency where code=:code'),
                          code=currency.upper()).fetchone()
     if not d:
@@ -125,6 +129,10 @@ def currency_precision(currency):
 
 
 def format_amount(i, currency):
+    """
+    Format amount for values and exchange operations. Default: apply currency
+    precision
+    """
     return round(i, currency_precision(currency))
 
 
@@ -203,6 +211,22 @@ def get_db():
 
 
 def init(db, **kwargs):
+    """
+    Initialize finac database and configuration
+
+    Args:
+        db: SQLAlchemy DB URI or sqlite file name
+        keep_integrity: finac should keep database integrity (lock accounts,
+            watch overdrafts, overlimits etc. Default is True
+        lazy_exchange: allow direct exchange operations betwen accounts.
+            Default: True
+        rate_allow_reverse: allow reverse rates for lazy exchange (e.g. if
+            "EUR/USD" pair exists but no USD/EUR, use 1 / "EUR/USD"
+        rate_allow_cross: if exchange rate is not found, allow finac to look
+            for the nearest cross-currency rate
+        base_currency: default base currency. Default is "USD"
+        date_format: default date format in statements
+    """
     config.db = db
     for k, v in kwargs.items():
         if not hasattr(config, k):
@@ -219,6 +243,14 @@ def init(db, **kwargs):
 
 
 def currency_create(currency, precision=2):
+    """
+    Create currency
+
+    Args:
+        currency: currency code (e.g. "CAD", "AUD")
+        precision: precision (digits after comma) for statements and exchange
+            operations. Default is 2 digits
+    """
     logger.info('Creating currency {}'.format(currency.upper()))
     try:
         get_db().execute(sql("""
@@ -230,6 +262,11 @@ def currency_create(currency, precision=2):
 
 
 def currency_delete(currency):
+    """
+    Delete currency
+
+    Warning: all accounts linked to this currency will be deleted as well
+    """
     logger.warning('Deleting currency {}'.format(currency.upper()))
     if not get_db().execute(sql("""
     delete from currency where code=:code"""),
@@ -239,6 +276,17 @@ def currency_delete(currency):
 
 
 def currency_set_rate(currency_from, currency_to=None, value=None, date=None):
+    """
+    Set currency rate
+
+    Args:
+        currency_from: currency from code
+        currency_to: currency to code
+        value: exchange rate value
+        date: date/time exchange rate is set on (default: now)
+
+    Function can be also called as e.g. currency_set_rate('EUR/USD', value=1.1)
+    """
     if value is None:
         raise ValueError('Currency rate value is not specified')
     if date is None:
@@ -266,6 +314,9 @@ def currency_set_rate(currency_from, currency_to=None, value=None, date=None):
 
 
 def currency_delete_rate(currency_from, currency_to, date):
+    """
+    Delete currrency rate
+    """
     if currency_from.find('/') != -1 and currency_to is None:
         currency_from, currency_to = currency_from.split('/')
     date = parse_date(date)
@@ -287,6 +338,13 @@ def currency_delete_rate(currency_from, currency_to, date):
 
 
 def currency_rate(currency_from, currency_to=None, date=None):
+    """
+    Get currency rate for the specified date
+
+    If no date is specified, get currency rate for now
+
+    Function can be also called as e.g. currency_rate('EUR/USD')
+    """
     if date is None:
         date = time.time()
     else:
@@ -337,10 +395,11 @@ def account_create(account,
         currency: currency code
         account: account code
         note: account notes
-        tp: account type (credit, current, saving, cash)
+        tp: account type (credit, current, saving, cash etc.)
         max_overdraft: maximum allowed overdraft (set to negative to force
-            account to have minimal positive balance)
-        max_balance: max allowed account balance
+            account to have minimal positive balance), default is None
+            (unlimited)
+        max_balance: max allowed account balance, default is None (unlimited)
     """
     if isinstance(tp, int):
         tp_id = tp
@@ -383,6 +442,9 @@ def account_create(account,
 
 
 def account_info(account):
+    """
+    Get dict with account info
+    """
     r = get_db().execute(sql("""
             select account.code as account_code, account.note, account.tp,
             currency.code as currency, max_overdraft, max_balance
@@ -404,6 +466,9 @@ def account_info(account):
 
 
 def transaction_info(transaction_id):
+    """
+    Get dict with transaction info
+    """
     r = get_db().execute(sql("""
             select transact.amount as amount, transact.tag as tag,
             transact.note as note,
@@ -436,6 +501,23 @@ def transaction_info(transaction_id):
 
 
 def transaction_apply(fname):
+    """
+    Apply transaction yaml file
+
+    File format example:
+
+    transactions:
+      - account: acc1
+	amount: 500
+	tag: test
+      - dt: acc2
+	ct: acc1
+	amount: 200
+	tag: moving
+
+    If "account" is specified, function transaction_create is called, otherwise
+    transaction_move. All arguments are passed to the functions as-is
+    """
     import yaml
     try:
         yaml.warnings({'YAMLLoadWarning': False})
@@ -451,6 +533,9 @@ def transaction_apply(fname):
 
 
 def account_delete(account, lock_token=None):
+    """
+    Delete account
+    """
     account = account.upper()
     logger.warning('Deleting account {}'.format(account))
     token = account_lock(account, lock_token)
@@ -471,6 +556,21 @@ def account_delete(account, lock_token=None):
 
 
 def account_lock(account, token):
+    """
+    Lock account
+
+    Account locking works similarly to threading.RLock(), but instead of thread
+    ID, token is used.
+
+    If token is provided and match the current lock token, lock counter will be
+    increased and lock is passed
+
+    When locked, all account transaction operation are freezed until unlocked
+    (unless current lock token is provided for the operation)
+
+    Returns:
+        specified lock token or new lock token if no token provided
+    """
     account = account.upper() if account else account
     if config.keep_integrity:
         with lock_account_token:
@@ -483,6 +583,12 @@ def account_lock(account, token):
 
 
 def account_unlock(account, token):
+    """
+    Unlock account
+
+    Note that if you call account_lock, you must always unlock account,
+    otherwise it will be locked until process restart
+    """
     if config.keep_integrity:
         with lock_account_token:
             l = account_lockers.get(account.upper())
@@ -514,6 +620,12 @@ def _update(objid, tbl, objidf, kw):
 
 
 def account_update(account, **kwargs):
+    """
+    Update account parameters
+
+    Parameters, allowed to be updated:
+        code, note, tp, max_balance, max_overdraft
+    """
     _ckw(kwargs, ['code', 'note', 'tp', 'max_balance', 'max_overdraft'])
     kw = kwargs.copy()
     if 'tp' in kw:
@@ -522,11 +634,29 @@ def account_update(account, **kwargs):
 
 
 def currency_update(currency, **kwargs):
+    """
+    Update currency parameters
+
+    Parameters, allowed to be updated:
+        code, precision
+
+    Note that currency precision is cached and requires
+    """
     _ckw(kwargs, ['code', 'precision'])
-    _update(currency, 'currency', 'code', kwargs)
+    kw = kwargs.copy()
+    if 'precision' in kw:
+        kw['precs'] = kw['precision']
+        del kw['precision']
+    _update(currency, 'currency', 'code', kw)
 
 
 def transaction_update(transaction_id, **kwargs):
+    """
+    Update currency parameters
+
+    Parameters, allowed to be updated:
+        tag, note
+    """
     _ckw(kwargs, ['tag', 'note'])
     _update(transaction_id, 'transact', 'id', kwargs)
 
@@ -540,6 +670,22 @@ def transaction_create(account,
                        mark_completed=True,
                        target=None,
                        lock_token=None):
+    """
+    Create new simple transaction on account
+
+    Args:
+        account: account code
+        amount: tranasction amount (>0 for debit, <0 for credit)
+        tag: transaction tag
+        note: transaction note
+        date: transaction date
+        completion_date: transaction completion date
+        mark_completed: if no completion_date is specified, set completion date
+            equal to creation. Default is True
+
+        target: if no amount but target is specified, calculate transaction
+            amount to make final balance equal to target
+    """
     if amount is not None and target is not None:
         raise ValueError('Amount and target can not be specified together')
     elif amount is None and target is None:
@@ -668,6 +814,8 @@ def transaction_move(dt=None,
                      credit_lock_token=None,
                      debit_lock_token=None):
     """
+    Create new standard (double-entry bookkeeping) transaction
+
     Args:
         ct: source (credit) account code
         dt: target (debit) account code
@@ -777,6 +925,9 @@ def transaction_complete(transaction_id, completion_date=None, lock_token=None):
 
 
 def transaction_delete(transaction_id):
+    """
+    Delete (mark deleted) transaction
+    """
     logging.warning('Deleting transaction {}'.format(transaction_id))
     tinfo = transaction_info(transaction_id)
     if not get_db().execute(sql("""
@@ -792,6 +943,9 @@ def transaction_delete(transaction_id):
 
 
 def transaction_purge(_lock=True):
+    """
+    Purge deleted transactions
+    """
     if _lock:
         lock_purge.acquire()
     try:
@@ -821,6 +975,7 @@ def account_statement(account, start=None, end=None, tag=None, pending=False):
         account: account code
         start: statement start date/time
         end: statement end date/time
+        tag: filter transactions by tag
         pending: include pending transactions
     Returns:
         generator object
@@ -874,6 +1029,7 @@ def account_statement_summary(account,
         account: account code
         start: statement start date/time
         end: statement end date/time
+        tag: filter transactions by tag
         pending: include pending transactions
     Returns:
         dict with fields:
@@ -905,6 +1061,9 @@ def account_statement_summary(account,
 
 
 def purge():
+    """
+    Purge deleted resources
+    """
     logging.info('Purge requested')
     with lock_purge:
         result = {'transaction': transaction_purge(_lock=False)}
@@ -918,6 +1077,15 @@ def account_list(currency=None,
                  order_by=['tp', 'currency', 'account', 'balance'],
                  hide_empty=False):
     """
+    List accounts and their balances
+
+    Args:
+        currency: filter by currency
+        tp: filter by account type (or types)
+        code: filter by acocunt code (may contain '%' as a wildcards)
+        date: get balances for the specified date
+        order_by: list ordering
+        hide_empty: hide accounts with zero balance, default is False
     """
     cond = "transact.deleted is null"
     if tp:
@@ -1007,6 +1175,22 @@ def account_list_summary(currency=None,
                          order_by=['tp', 'currency', 'account', 'balance'],
                          hide_empty=False,
                          base=None):
+    """
+    List accounts and their balances plus return a total sum
+
+    Args:
+        currency: filter by currency
+        tp: filter by account type (or types)
+        code: filter by acocunt code (may contain '%' as a wildcards)
+        date: get balances for the specified date
+        order_by: list ordering
+        hide_empty: hide accounts with zero balance, default is False
+        base: base currency (if not specified, config.base_currency is used)
+
+    Returns:
+        accounts: list of accounts
+        total: total sum in base currency
+    """
     if base is None:
         base = config.base_currency
     accounts = list(
@@ -1039,6 +1223,8 @@ def account_credit(account=None,
                    order_by=['tp', 'account', 'currency'],
                    hide_empty=False):
     """
+    Get credit operations for the account
+
     Args:
         account: filter by account code
         currency: filter by currency code
@@ -1066,6 +1252,8 @@ def account_debit(account=None,
                   order_by=['tp', 'account', 'currency'],
                   hide_empty=False):
     """
+    Get debit operations for the account
+
     Args:
         account: filter by account code
         currency: filter by currency code
@@ -1142,8 +1330,10 @@ def _account_summary(balance_type,
 
 def account_balance(account, date=None):
     """
+    Get account balance
+
     Args:
-        account: filter by account code
+        account: account code
         date: get balance for specified date/time
     """
     cond = "transact.deleted is null"
@@ -1175,6 +1365,17 @@ def account_balance_range(account,
                           end=None,
                           step=1,
                           return_timestamp=True):
+    """
+    Get list of account balances for the specified range
+
+    Args:
+        account: account code
+        start: start date/time, required
+        end: end date/time, if not specified, current time is used
+        step: list step in days
+        return_timestamp: return dates as timestamps if True, otherwise as
+            datetime objects. Default is True
+    """
     times = []
     data = []
     dt = parse_date(start, return_timestamp=False)

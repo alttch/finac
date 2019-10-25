@@ -2,6 +2,16 @@ from . import core
 
 
 def account_plot(account, start, end=None, step=1, **kwargs):
+    """
+    Plot account balance chart for the specified time range
+
+    Args:
+        account: account code
+        start: start date/time, required
+        end: end date/time, if not specified, current time is used
+        step: chart step in days
+        **kwargs: passed as-is to matplotlib.pyplot.plot
+    """
     from matplotlib import pyplot as plt
     plt.plot(
         *core.account_balance_range(
@@ -16,11 +26,13 @@ def account_pie(tp=None,
                 autopct='%1.1f%%',
                 **kwargs):
     """
+    Plot pie chart of the account balances
+
     Args:
         tp: account types to include
         mb: min balace (or account go to "other")
         base: base currency to recalc amounts (default: usd)
-        shadow, autopct, **kwargs: options for plt.pie
+        shadow, autopct, **kwargs: passed as-is to matplotlib.pyplot.plot
     """
     from matplotlib import pyplot as plt
     x = core.account_list_summary(base=base, hide_empty=True, tp=tp)

@@ -60,6 +60,9 @@ lsaccs = account_list_summary
 
 
 def format_money(amnt, precision):
+    """
+    Format output for money values
+    """
     # return '{:,.2f}'.format(amnt)
     return ('{:,.' + str(precision) + 'f}').format(amnt).replace(',', ' ')
 
@@ -84,6 +87,24 @@ def ls(account=None,
        hide_empty=False,
        order_by=['tp', 'currency', 'account', 'balance'],
        base=None):
+    """
+    Primary interactive function. Prints account statement if account code
+    is specified, otherwise prints summary for all accounts
+
+    Account code may contain '%' symbol as a wildcard.
+
+    Args:
+        account: account code
+        currency: filter by currency code
+        tp: filter by account type (or types)
+        start: start date (for statement)
+        end: end date (or balance date for summary)
+        tag: filter transactions by tag (for statement)
+        pending: include pending transactions
+        hide_empty: hide empty accounts (for summary)
+        order_by: column ordering (ordering by base is not supported)
+        base: specify base currency
+    """
     if account and account.find('%') != -1:
         code = account
         account = None
