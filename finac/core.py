@@ -962,14 +962,14 @@ def account_list_summary(currency,
                      hide_empty=hide_empty))
     for a in accounts:
         a['balance_bc'] = a['balance'] * currency_rate(
-            a['currency'], config.base_currency, date=date)
+            a['currency'], base_currency, date=date)
     return {
         'accounts':
             accounts,
         'total':
             sum(d['balance'] if d['currency'] ==
-                config.base_currency else d['balance'] *
-                currency_rate(d['currency'], config.base_currency, date=date)
+                base_currency else d['balance'] *
+                currency_rate(d['currency'], base_currency, date=date)
                 for d in accounts)
     }
 
