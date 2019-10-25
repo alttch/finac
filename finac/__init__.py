@@ -58,7 +58,8 @@ def ls(account=None,
        end=None,
        tag=None,
        pending=False,
-       order_by=['tp', 'currency', 'account', 'balance']):
+       order_by=['tp', 'currency', 'account', 'balance'],
+       base_currency=None):
     if account:
         result = account_statement_summary(account=account,
                                            start=start,
@@ -100,10 +101,13 @@ def ls(account=None,
                             attrs='bold')
         print()
     else:
+        if not base_currency:
+            base_currency = config.base_currency
         result = account_list_summary(currency=currency,
                                       tp=tp,
                                       date=end,
-                                      order_by=order_by)
+                                      order_by=order_by,
+                                      base_currency=base_currency)
         accounts = result['accounts']
         data = accounts.copy()
         for i, r in enumerate(accounts):
@@ -126,6 +130,6 @@ def ls(account=None,
         neotermcolor.cprint('-' * len(h), 'grey')
         neotermcolor.cprint('Total: ', end='')
         neotermcolor.cprint('{} {}'.format(format_money(result['total']),
-                                           config.base_currency.upper()),
+                                           base_currency.upper()),
                             attrs='bold')
         print()

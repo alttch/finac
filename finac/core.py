@@ -222,7 +222,9 @@ def currency_delete(currency):
         raise ResourceNotFound
 
 
-def currency_set_rate(currency_from, currency_to=None, value=1, date=None):
+def currency_set_rate(currency_from, currency_to=None, value=None, date=None):
+    if value is None:
+        raise ValueError('Currency rate value is not specified')
     if date is None:
         date = time.time()
     else:
@@ -883,11 +885,23 @@ def account_list(currency=None,
     """
     cond = "transact.deleted is null"
     if tp:
-        if isinstance(tp, int):
-            tp_id = tp
+        if not isinstance(tp, list) and not isinstance(tp, tuple):
+            if isinstance(tp, int):
+                tp_id = tp
+            else:
+                tp_id = ACCOUNT_TYPE_IDS[tp]
+            cond += (' and ' if cond else '') + 'account.tp = {}'.format(tp_id)
         else:
-            tp_id = ACCOUNT_TYPE_IDS[tp]
-        cond += (' and ' if cond else '') + 'account.tp = {}'.format(tp_id)
+            cond += (' and (' if cond else '(')
+            cor = ''
+            for p in tp:
+                if isinstance(p, int):
+                    tp_id = p
+                else:
+                    tp_id = ACCOUNT_TYPE_IDS[p]
+                cor = cor + (' or '
+                             if cor else '') + 'account.tp = {}'.format(tp_id)
+            cond += cor + ')'
     if currency:
         cond += (' and ' if cond else '') + 'currency.code = "{}"'.format(
             currency.upper())
@@ -967,10 +981,11 @@ def account_list_summary(currency,
         'accounts':
             accounts,
         'total':
-            sum(d['balance'] if d['currency'] ==
-                base_currency else d['balance'] *
-                currency_rate(d['currency'], base_currency, date=date)
-                for d in accounts)
+            format_amount(
+                sum(d['balance'] if d['currency'] ==
+                    base_currency else d['balance'] *
+                    currency_rate(d['currency'], base_currency, date=date)
+                    for d in accounts))
     }
 
 
