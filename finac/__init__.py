@@ -58,6 +58,7 @@ def ls(account=None,
        end=None,
        tag=None,
        pending=False,
+       hide_empty=False,
        order_by=['tp', 'currency', 'account', 'balance'],
        base_currency=None):
     if account:
@@ -73,7 +74,13 @@ def ls(account=None,
             del r['is_completed']
             r['amount'] = format_money(r['amount'])
             stmt[i] = r
-        ft = rapidtables.format_table(stmt, fmt=rapidtables.FORMAT_GENERATOR)
+        ft = rapidtables.format_table(
+            stmt,
+            fmt=rapidtables.FORMAT_GENERATOR,
+            align=(rapidtables.ALIGN_LEFT, rapidtables.ALIGN_RIGHT,
+                   rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
+                   rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
+                   rapidtables.ALIGN_LEFT))
         if not ft:
             return
         h, tbl = ft
@@ -107,6 +114,7 @@ def ls(account=None,
                                       tp=tp,
                                       date=end,
                                       order_by=order_by,
+                                      hide_empty=hide_empty,
                                       base_currency=base_currency)
         accounts = result['accounts']
         data = accounts.copy()
@@ -117,8 +125,12 @@ def ls(account=None,
             del r['balance_bc']
             del r['note']
             accounts[i] = r
-        ft = rapidtables.format_table(accounts,
-                                      fmt=rapidtables.FORMAT_GENERATOR)
+        ft = rapidtables.format_table(
+            accounts,
+            fmt=rapidtables.FORMAT_GENERATOR,
+            align=(rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
+                   rapidtables.ALIGN_CENTER, rapidtables.ALIGN_RIGHT,
+                   rapidtables.ALIGN_RIGHT))
         if not ft:
             return
         h, tbl = ft
