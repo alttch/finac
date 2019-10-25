@@ -52,6 +52,15 @@ def format_money(amnt, precision):
     return ('{:,.' + str(precision) + 'f}').format(amnt).replace(',', ' ')
 
 
+neotermcolor.set_style('finac:title', color='blue')
+neotermcolor.set_style('finac:separator', color='grey')
+neotermcolor.set_style('finac:sum', attrs='bold')
+neotermcolor.set_style('finac:debit', color='green')
+neotermcolor.set_style('finac:credit', color='red')
+neotermcolor.set_style('finac:debit_sum', color='green', attrs='bold')
+neotermcolor.set_style('finac:credit_sum', color='red', attrs='bold')
+
+
 def ls(account=None,
        currency=None,
        code=None,
@@ -87,22 +96,21 @@ def ls(account=None,
         if not ft:
             return
         h, tbl = ft
-        neotermcolor.cprint(h, 'blue')
-        neotermcolor.cprint('-' * len(h), 'grey')
+        neotermcolor.cprint(h, '@finac:title')
+        neotermcolor.cprint('-' * len(h), '@finac:separator')
         for t, s in zip(tbl, result['statement']):
-            neotermcolor.cprint(t,
-                                'red' if s['amount'] < 0 else 'green',
-                                attrs='')
-        neotermcolor.cprint('-' * len(h), 'grey')
+            neotermcolor.cprint(
+                t,
+                '@finac:credit' if s['amount'] < 0 else '@finac:debit',
+                attrs='')
+        neotermcolor.cprint('-' * len(h), '@finac:separator')
         print('Debit turnover: ', end='')
         neotermcolor.cprint(format_money(result['debit'], precision),
-                            color='green',
-                            attrs='bold',
+                            style='@finac:debit_sum',
                             end=', ')
         print('credit turnover: ', end='')
         neotermcolor.cprint(format_money(result['credit'], precision),
-                            color='red',
-                            attrs='bold')
+                            style='finac:credit_sum')
         print()
         print('Net profit/loss: ', end='')
         neotermcolor.cprint('{} {}'.format(
@@ -140,16 +148,16 @@ def ls(account=None,
         if not ft:
             return
         h, tbl = ft
-        neotermcolor.cprint(h, 'blue')
-        neotermcolor.cprint('-' * len(h), 'grey')
+        neotermcolor.cprint(h, '@finac:title')
+        neotermcolor.cprint('-' * len(h), '@finac:separator')
         for t, s in zip(tbl, data):
             neotermcolor.cprint(t,
-                                'red' if s['balance'] < 0 else None,
+                                '@finac:credit' if s['balance'] < 0 else None,
                                 attrs='')
-        neotermcolor.cprint('-' * len(h), 'grey')
+        neotermcolor.cprint('-' * len(h), '@finac:separator')
         neotermcolor.cprint('Total: ', end='')
         neotermcolor.cprint('{} {}'.format(
             format_money(result['total'], currency_precision(base_currency)),
             base_currency.upper()),
-                            attrs='bold')
+            style='@finac:sum')
         print()
