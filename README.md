@@ -105,8 +105,8 @@ Total: 7 000.00 USD
 ```
 
 ```python
-# display assets pie chart (requires Jupyter, Spyder-IDE or similar interactive
-# environment)
+# display assets pie chart, (wrapper for matplotlib.pyplot, requires Jupyter,
+# Spyder-IDE or similar interactive environment)
 f.pie()
 ```
 <img src="https://github.com/alttch/finac/blob/master/doc/images/pie.png?raw=true" width="400" />
