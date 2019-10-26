@@ -201,7 +201,7 @@ function argument. Note: calculated transaction amount should be always greater
 than zero (if you try specifying credit account target higher than its current
 balance, you get *ValueError* exception)
 
-For the simple transactions (*f.mv(...))*), use *target=*.
+For the simple transactions (*f.tr(...))*), use *target=*.
 
 ### Transaction templates
 
