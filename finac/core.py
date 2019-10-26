@@ -1,8 +1,14 @@
-# assets
+__author__ = 'Altertech, https://www.altertech.com/'
+__copyright__ = 'Copyright (C) 2019 Altertech'
+__license__ = 'MIT'
+
+__version__ = '0.0.9'
+
 from sqlalchemy.exc import IntegrityError
 
 from functools import lru_cache
 
+# assets
 ACCOUNT_CREDIT = 0
 ACCOUNT_CASH = 1
 ACCOUNT_CURRENT = 2
@@ -449,6 +455,7 @@ def account_create(account,
                    account_id=r.lastrowid)
         dbt.commit()
     except IntegrityError:
+        dbt.rollback()
         raise ResourceAlreadyExists(account.upper())
     except:
         logger.error('Unable to create account {}'.format(account.upper()))

@@ -1,3 +1,7 @@
+__author__ = 'Altertech, https://www.altertech.com/'
+__copyright__ = 'Copyright (C) 2019 Altertech'
+__license__ = 'MIT'
+
 __version__ = '0.0.9'
 
 import rapidtables, neotermcolor
@@ -62,6 +66,9 @@ lsaccs = account_list_summary
 def format_money(amnt, precision):
     """
     Format output for money values
+
+    Finac doesn't use system locale, in the interactive mode all numbers are
+    formatted with this function. Override it to set the number format you wish
     """
     # return '{:,.2f}'.format(amnt)
     return ('{:,.' + str(precision) + 'f}').format(amnt).replace(',', ' ')
