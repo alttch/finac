@@ -11,6 +11,8 @@ supported by SQLAlchemy.
 You can use Finac either in interactive mode with
 [Jupyter](https://jupyter.org/), [Spyder-IDE](https://www.spyder-ide.org/),
 ipython or other similar environment or embed Finac library into own projects.
+The library may be used in accounting applications as well it's useful for the
+fin-tech projects.
 
 Finac supports multiple currencies, simple transactions, double-entry
 bookkeeping transactions, watch for overdrafts, balance limits and has many
