@@ -243,5 +243,6 @@ Finac is in alpha stage. We are continuously working on the features, speed and
 stability improvements as well as waiting your commits.
 
 * Cross-currency rates
+* Wrappers around some used SQL-formats to get rid of injections
 * Portfolio management functions
 * finac-cli
