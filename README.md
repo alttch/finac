@@ -205,7 +205,7 @@ For the simple transactions (*f.mv(...))*), use *target=*.
 
 ### Transaction templates
 
-Example: you have a recurrent payment order in your bank, which pays office
+Example: you have a recurrent payment orders in your bank, which pay office
 utility bills every 5th day of month, plus automatically moves $100 to saving
 account. To fill this into accounting, just create YAML transaction template:
 
@@ -228,6 +228,9 @@ transactions:
 
 then create a cron job which calls *f.transaction_apply("/path/to/file.yml")*
 and that's it.
+
+Actually, transaction templates are useful for any recurrent operations. You
+may specify all same arguments, as for the core functions.
 
 ## How to embed Finac library into own project
 
