@@ -272,14 +272,33 @@ def currency_create(currency, precision=2):
         precision: precision (digits after comma) for statements and exchange
             operations. Default is 2 digits
     """
-    logger.info('Creating currency {}'.format(currency.upper()))
+    currency = currency.upper()
+    logger.info('Creating currency {}'.format(currency))
     try:
         get_db().execute(sql("""
         insert into currency(code, precs) values(:code, :precision)"""),
-                         code=currency.upper(),
+                         code=currency,
                          precision=precision)
     except IntegrityError:
-        raise ResourceAlreadyExists(currency.upper())
+        raise ResourceAlreadyExists(currency)
+
+
+def currency_list():
+    """
+    List currencies
+    """
+    result = []
+    r = get_db().execute(
+        sql("""
+        select code, precs from currency order by code"""))
+    while True:
+        d = r.fetchone()
+        if not d: break
+        row = OrderedDict()
+        row['currency'] = d.code
+        row['precision'] = d.precs
+        result.append(row)
+    return result
 
 
 def currency_delete(currency):

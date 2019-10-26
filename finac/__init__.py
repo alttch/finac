@@ -22,7 +22,7 @@ from finac.core import currency_create, currency_delete
 from finac.core import currency_set_rate, currency_rate
 from finac.core import currency_delete_rate
 
-from finac.core import currency_update
+from finac.core import currency_update, currency_list
 from finac.core import currency_precision
 
 # account methods
@@ -154,7 +154,7 @@ def ls(account=None,
         neotermcolor.cprint('-' * len(h), '@finac:separator')
         print('Debit turnover: ', end='')
         neotermcolor.cprint(format_money(result['debit'], precision),
-                            style='@finac:debit_sum',
+                            style='finac:debit_sum',
                             end=', ')
         print('credit turnover: ', end='')
         neotermcolor.cprint(format_money(result['credit'], precision),
@@ -207,5 +207,25 @@ def ls(account=None,
         neotermcolor.cprint('Total: ', end='')
         neotermcolor.cprint('{} {}'.format(format_money(result['total'], bcp),
                                            base),
-                            style='@finac:sum')
+                            style='finac:sum')
         print()
+
+
+def lscur():
+    """
+    Print list of currencies
+    """
+    ft = rapidtables.format_table(currency_list(),
+                                  fmt=rapidtables.FORMAT_GENERATOR,
+                                  align=(rapidtables.ALIGN_CENTER,
+                                         rapidtables.ALIGN_RIGHT))
+    if not ft:
+        return
+    h, tbl = ft
+    neotermcolor.cprint(h, '@finac:title')
+    neotermcolor.cprint('-' * len(h), '@finac:separator')
+    for t in tbl:
+        neotermcolor.cprint(t)
+    neotermcolor.cprint('-' * len(h), '@finac:separator')
+    print('Base currency: ', end='')
+    neotermcolor.cprint(config.base_currency.upper(), style='finac:sum')
