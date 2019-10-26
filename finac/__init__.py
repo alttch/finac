@@ -4,7 +4,9 @@ __license__ = 'MIT'
 
 __version__ = '0.0.11'
 
-import rapidtables, neotermcolor
+import rapidtables
+import neotermcolor
+import datetime
 
 from functools import partial
 
@@ -103,7 +105,7 @@ def ls(account=None,
         account: account code
         currency: filter by currency code
         tp: filter by account type (or types)
-        start: start date (for statement)
+        start: start date (for statement), default: first day of current month
         end: end date (or balance date for summary)
         tag: filter transactions by tag (for statement)
         pending: include pending transactions
@@ -117,11 +119,12 @@ def ls(account=None,
     else:
         code = None
     if account:
-        result = account_statement_summary(account=account,
-                                           start=start,
-                                           end=end,
-                                           tag=tag,
-                                           pending=pending)
+        result = account_statement_summary(
+            account=account,
+            start=start if start else datetime.datetime.today().replace(day=1),
+            end=end,
+            tag=tag,
+            pending=pending)
         stmt = result['statement'].copy()
         acc_info = account_info(account)
         precision = currency_precision(acc_info['currency'])
