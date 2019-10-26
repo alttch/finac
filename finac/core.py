@@ -662,7 +662,8 @@ def currency_update(currency, **kwargs):
     Parameters, allowed to be updated:
         code, precision
 
-    Note that currency precision is cached and requires
+    Note that currency precision is cached and requires process restart if
+    changed
     """
     _ckw(kwargs, ['code', 'precision'])
     kw = kwargs.copy()
