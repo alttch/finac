@@ -28,7 +28,7 @@ Special accounts
 Customers, counterparties and company assets
 --------------------------------------------
 
-* **gs** Goods and services
+* **gs** goods and services
 * **supplier** supplier accounts
 * **customer** customer accounts
 * **finagent** financial agent accounts
