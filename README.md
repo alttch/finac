@@ -15,7 +15,7 @@ The library may be used in accounting applications as well it's useful for the
 fin-tech services.
 
 Finac supports multiple currencies, simple transactions, double-entry
-bookkeeping transactions, watch for overdrafts, balance limits and has many
+bookkeeping transactions, watches overdrafts, balance limits and has many
 useful features, which make accounting simple and fun.
 
 ## Install
