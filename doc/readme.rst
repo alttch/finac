@@ -2,7 +2,7 @@ Finac - financial accounting for humans
 =======================================
 
 Finac is a library and function set for Jupyter/ipython, which provides
-a simple double-entry bookkeeping database.
+a double-entry bookkeeping database.
 
 Finac is simple, open and free. It can work with SQLite or any database
 supported by SQLAlchemy.
@@ -15,7 +15,7 @@ used in accounting applications as well it’s useful for the fin-tech
 services.
 
 Finac supports multiple currencies, simple transactions, double-entry
-bookkeeping transactions, watch for overdrafts, balance limits and has
+bookkeeping transactions, watches overdrafts, balance limits and has
 many useful features, which make accounting simple and fun.
 
 Install
@@ -169,19 +169,19 @@ check:
 
 As you see, there’s no counter party account in lazy exchange. This
 feature is useful for personal accounting and special applications, but
-for the professional accounting, you should create counter-party
-exchange account and perform buy-sell transactions with it.
+for the professional accounting, you should create counterparty exchange
+account and perform buy-sell transactions with it.
 
 Targets
 ~~~~~~~
 
-Targets is a feature I wrote Finac for. You have account balance in bank
-and in accounting. They differ by some amount and you are going to
+Targets is a feature I wrote Finac for. You have account balances in
+bank and in accounting. They differ by some amount and you are going to
 record this with a single transaction.
 
 But the problem is there’s a lot of transactions you should sum up. Or
 calculate the difference between bank balance and accounting. Pretty
-common, eh? Don’t do it, we have a targets.
+common, eh? Don’t do this, we have the targets.
 
 Specifying targets instead of amount tells Finac to calculate
 transaction amount by itself.
@@ -211,14 +211,14 @@ happy :)
 If you want to specify a debit account balance target instead, use
 *target_dt* function argument. Note: calculated transaction amount
 should be always greater than zero (if you try specifying credit account
-target larger than its current balance, you get *ValueError* exception)
+target higher than its current balance, you get *ValueError* exception)
 
 For the simple transactions (*f.mv(…))*), use *target=*.
 
 Transaction templates
 ~~~~~~~~~~~~~~~~~~~~~
 
-Example: you have a recurrent payment order in your bank, which pays
+Example: you have a recurrent payment orders in your bank, which pay
 office utility bills every 5th day of month, plus automatically moves
 $100 to saving account. To fill this into accounting, just create YAML
 transaction template:
@@ -243,6 +243,9 @@ transaction template:
 then create a cron job which calls
 *f.transaction_apply(“/path/to/file.yml”)* and that’s it.
 
+Actually, transaction templates are useful for any recurrent operations.
+You may specify all same arguments, as for the core functions.
+
 How to embed Finac library into own project
 -------------------------------------------
 
@@ -256,5 +259,6 @@ Finac is in alpha stage. We are continuously working on the features,
 speed and stability improvements as well as waiting your commits.
 
 -  Cross-currency rates
+-  Wrappers around some used SQL-formats to get rid of injections
 -  Portfolio management functions
 -  finac-cli
