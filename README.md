@@ -6,6 +6,8 @@ simple double-entry bookkeeping database.
 Finac is simple, open and free. It can work with SQLite or any database
 supported by SQLAlchemy.
 
+<img src="https://img.shields.io/pypi/v/finac.svg" /> <img src="https://img.shields.io/badge/license-MIT-green" /> <img src="https://img.shields.io/badge/python-3.4%20%7C%203.6%20%7C%203.8-blue.svg" /> <img src="https://img.shields.io/badge/-alpha-red.svg" />
+
 You can use Finac either in interactive mode with
 [Jupyter](https://jupyter.org/), [Spyder-IDE](https://www.spyder-ide.org/),
 ipython or other similar environment or embed Finac library into own projects.
@@ -111,6 +113,9 @@ Note: when addressing currencies and accounts both in interactive and API mode,
 you should use account and currency codes as object identifiers. **All codes
 are case-insensitive**.
 
+Inside database, Finac uses numeric IDs to connect objects, so all their codes
+can be changed without any problems.
+
 ## Special features
 
 ### Lazy exchange
@@ -127,7 +132,7 @@ f.mv(dt='acc5', ct='acc1', amount=100)
 
 hoorah, account acc5 got 100 EUR! And exchange rate was 1.1. Let's check:
 
->>> f.ls('acc1')
+    >>> f.ls('acc1')
 
 ```
 id     amount  cparty  tag     note  created              completed
@@ -138,7 +143,7 @@ id     amount  cparty  tag     note  created              completed
 -----------------------------------------------------------------------------
 ```
 
->>> f.ls('acc5')
+    >>> f.ls('acc5')
 
 ```
 id  amount  cparty  tag  note  created              completed
@@ -171,7 +176,7 @@ amount by itself.
 After the previous operation, we have *4,890.00* USD on "acc1" and want to move
 all except $1000 to "acc2". Let's do it:
 
->>> f.mv(dt='acc2', ct='acc1', target_ct=1000)
+    >>> f.mv(dt='acc2', ct='acc1', target_ct=1000)
 
 ```
 id     amount  cparty  tag     note  created              completed
@@ -200,6 +205,9 @@ See [Finac documentation](https://finac.readthedocs.io/) for core function API
 details.
 
 ## TODO
+
+Finac is in alpha stage. We are continuously working on the features and
+stability improvements as well as waiting your commits.
 
 * Cross-currency rates
 * Portfolio management functions

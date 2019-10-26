@@ -244,7 +244,7 @@ def init(db, **kwargs):
         rate_allow_reverse: allow reverse rates for lazy exchange (e.g. if
             "EUR/USD" pair exists but no USD/EUR, use 1 / "EUR/USD"
         rate_allow_cross: if exchange rate is not found, allow finac to look
-            for the nearest cross-currency rate
+            for the nearest cross-currency rate (NOT IMPLEMENTED YET)
         base_currency: default base currency. Default is "USD"
         date_format: default date format in statements
     """
