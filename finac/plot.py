@@ -36,7 +36,7 @@ def account_pie(tp=None,
 
     Args:
         tp: account types to include
-        mb: min balace (or account go to "other")
+        mb: min balace (or section goes to "other")
         base: base currency to recalc amounts (default: usd)
         shadow:
         autopct:
