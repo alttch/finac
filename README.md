@@ -198,7 +198,7 @@ The transaction amount is automatically calculated. Lazy people are happy :)
 
 If you want to specify a debit account balance target instead, use *target_dt*
 function argument. Note: calculated transaction amount should be always greater
-than zero (if you try specifying credit account target larger than its current
+than zero (if you try specifying credit account target higher than its current
 balance, you get *ValueError* exception)
 
 For the simple transactions (*f.mv(...))*), use *target=*.
