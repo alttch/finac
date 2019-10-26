@@ -6,7 +6,7 @@ simple double-entry bookkeeping database.
 Finac is simple, open and free. It can work with SQLite or any database
 supported by SQLAlchemy.
 
-<img src="https://img.shields.io/pypi/v/finac.svg" /> <img src="https://img.shields.io/badge/license-MIT-green" /> <img src="https://img.shields.io/badge/python-3.4%20%7C%203.6%20%7C%203.8-blue.svg" /> <img src="https://img.shields.io/badge/-alpha-red.svg" />
+<img src="https://img.shields.io/pypi/v/finac.svg" /> <img src="https://img.shields.io/badge/license-MIT-green" /> <img src="https://img.shields.io/badge/python-3.5%20%7C%203.6%20%7C%203.7%20%7C%203.8-blue.svg" /> <img src="https://img.shields.io/badge/-alpha-red.svg" />
 
 You can use Finac either in interactive mode with
 [Jupyter](https://jupyter.org/), [Spyder-IDE](https://www.spyder-ide.org/),
