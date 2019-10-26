@@ -32,7 +32,9 @@ def account_pie(tp=None,
         tp: account types to include
         mb: min balace (or account go to "other")
         base: base currency to recalc amounts (default: usd)
-        shadow, autopct, **kwargs: passed as-is to matplotlib.pyplot.plot
+        shadow:
+        autopct:
+        **kwargs: passed as-is to matplotlib.pyplot.plot
     """
     from matplotlib import pyplot as plt
     x = core.account_list_summary(base=base, hide_empty=True, tp=tp)

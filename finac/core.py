@@ -137,22 +137,37 @@ def format_amount(i, currency):
 
 
 class ResourceNotFound(Exception):
+    """
+    Raised when accessed resource is not found
+    """
     pass
 
 
 class RateNotFound(Exception):
+    """
+    Raised when accessed currency rate is not found
+    """
     pass
 
 
 class OverdraftError(Exception):
+    """
+    Raised when transaction is trying to break account max overdraft
+    """
     pass
 
 
 class OverlimitError(Exception):
+    """
+    Raised when transaction is trying to break account max balance
+    """
     pass
 
 
 class ResourceAlreadyExists(Exception):
+    """
+    Raised when trying to create already existing resource
+    """
     pass
 
 
@@ -652,7 +667,7 @@ def currency_update(currency, **kwargs):
 
 def transaction_update(transaction_id, **kwargs):
     """
-    Update currency parameters
+    Update transaction parameters
 
     Parameters, allowed to be updated:
         tag, note
