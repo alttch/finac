@@ -680,8 +680,15 @@ def transaction_update(transaction_id, **kwargs):
     Parameters, allowed to be updated:
         tag, note
     """
-    _ckw(kwargs, ['tag', 'note'])
-    _update(transaction_id, 'transact', 'id', kwargs)
+    _ckw(kwargs, ['tag', 'note', 'created', 'completed'])
+    kw = kwargs.copy()
+    if 'created' in kw:
+        kw['d_created'] = parse_date(kw['created'])
+        del kw['created']
+    if 'completed' in kw:
+        kw['d'] = parse_date(kw['completed'])
+        del kw['completed']
+    _update(transaction_id, 'transact', 'id', kw)
 
 
 def transaction_create(account,
