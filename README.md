@@ -224,7 +224,7 @@ transactions:
     note: rainy day savings
 ```
 
-then create a cron job which calls *f.transaction.apply("/path/to/file.yml")*
+then create a cron job which calls *f.transaction_apply("/path/to/file.yml")*
 and that's it.
 
 ## How to embed Finac library into own project
