@@ -109,8 +109,8 @@ bookkeeping (between debit and credit account)
 
 .. code:: python
 
-   # display assets pie chart (requires Jupyter, Spyder-IDE or similar interactive
-   # environment)
+   # display assets pie chart, (wrapper for matplotlib.pyplot, requires Jupyter,
+   # Spyder-IDE or similar interactive environment)
    f.pie()
 
 Note: when addressing currencies and accounts both in interactive and
@@ -133,7 +133,7 @@ currencies, if exchange rate is set or specified in transaction details:
 
    # create EUR account
    f.account_create('acc5', 'eur')
-   # put some exchane rate to it (in real life you would probably use cron job)
+   # set exchange rate (in real life you would probably use cron job)
    f.currency_set_rate('eur/usd', value=1.1)
    f.mv(dt='acc5', ct='acc1', amount=100)
 

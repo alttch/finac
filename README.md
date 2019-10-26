@@ -1,7 +1,7 @@
 # Finac - financial accounting for humans
 
 Finac is a library and function set for Jupyter/ipython, which provides a
-simple double-entry bookkeeping database.
+double-entry bookkeeping database.
 
 Finac is simple, open and free. It can work with SQLite or any database
 supported by SQLAlchemy.
