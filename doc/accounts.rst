@@ -1,7 +1,7 @@
 Account types
 *************
 
-Finac account-types are hard-coded and can not be changed. Type codes are
+Finac account types are hard-coded and can not be changed. Type codes are
 reserved for the future.
 
 Financial assets
