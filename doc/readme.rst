@@ -181,7 +181,7 @@ record this with a single transaction.
 
 But the problem is there’s a lot of transactions you should sum up. Or
 calculate the difference between bank balance and accounting. Pretty
-common, eh? Don’t do this, we have the targets.
+common, eh? Don’t do this, we have targets.
 
 Specifying targets instead of amount tells Finac to calculate
 transaction amount by itself.
