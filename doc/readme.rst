@@ -10,11 +10,13 @@ supported by SQLAlchemy.
 You can use Finac either in interactive mode with
 `Jupyter <https://jupyter.org/>`__,
 `Spyder-IDE <https://www.spyder-ide.org/>`__, ipython or other similar
-environment or embed Finac library into own projects.
+environment or embed Finac library into own projects. The library may be
+used in accounting applications as well it’s useful for the fin-tech
+services.
 
-Finac supports multiple currencies, simple transaction, double-entry
-bookkeeping transactions and has many useful features, which make
-accounting simple and fun.
+Finac supports multiple currencies, simple transactions, double-entry
+bookkeeping transactions, watch for overdrafts, balance limits and has
+many useful features, which make accounting simple and fun.
 
 Install
 -------
@@ -131,6 +133,7 @@ currencies, if exchange rate is set or specified in transaction details:
 
    # create EUR account
    f.account_create('acc5', 'eur')
+   # put some exchane rate to it (in real life you would probably use cron job)
    f.currency_set_rate('eur/usd', value=1.1)
    f.mv(dt='acc5', ct='acc1', amount=100)
 
@@ -211,6 +214,34 @@ should be always greater than zero (if you try specifying credit account
 target larger than its current balance, you get *ValueError* exception)
 
 For the simple transactions (*f.mv(…))*), use *target=*.
+
+Transaction templates
+~~~~~~~~~~~~~~~~~~~~~
+
+Example: you have a recurrent payment order in your bank, which pays
+office utility bills every 5th day of month, plus automatically moves
+$100 to saving account. To fill this into accounting, just create YAML
+transaction template:
+
+.. code:: yaml
+
+   transactions:
+     - account: acc1
+       amount: 200
+       tag: electricity
+       note: energy company deposit
+     - account: acc1
+       amount: 800
+       tag: rent
+       note: office rent
+     - dt: depo
+       ct: acc1
+       amount: 200
+       tag: savings
+       note: rainy day savings
+
+then create a cron job which calls
+*f.transaction_apply(“/path/to/file.yml”)* and that’s it.
 
 How to embed Finac library into own project
 -------------------------------------------
