@@ -9,6 +9,7 @@ import neotermcolor
 import datetime
 
 from functools import partial
+from collections import OrderedDict
 
 from finac.core import init, config
 
@@ -22,8 +23,9 @@ from finac.core import currency_create, currency_delete
 from finac.core import currency_set_rate, currency_rate
 from finac.core import currency_delete_rate
 
-from finac.core import currency_update, currency_list
+from finac.core import currency_update
 from finac.core import currency_precision
+from finac.core import currency_list, currency_list_rates
 
 # account methods
 from finac.core import account_create, account_delete
@@ -62,8 +64,6 @@ stmt = account_statement_summary
 balance = account_balance
 
 balance_range = partial(account_balance_range, return_timestamp=False)
-
-lsaccs = account_list_summary
 
 
 def format_money(amnt, precision):
@@ -211,21 +211,40 @@ def ls(account=None,
         print()
 
 
-def lscur():
+def lscur(currency=None, start=None, end=None):
     """
     Print list of currencies
+
+    Currency filter can be specified either as code, or as pair "code/code"
     """
-    ft = rapidtables.format_table(currency_list(),
-                                  fmt=rapidtables.FORMAT_GENERATOR,
-                                  align=(rapidtables.ALIGN_CENTER,
-                                         rapidtables.ALIGN_RIGHT))
-    if not ft:
-        return
-    h, tbl = ft
-    neotermcolor.cprint(h, '@finac:title')
-    neotermcolor.cprint('-' * len(h), '@finac:separator')
-    for t in tbl:
-        neotermcolor.cprint(t)
-    neotermcolor.cprint('-' * len(h), '@finac:separator')
-    print('Base currency: ', end='')
-    neotermcolor.cprint(config.base_currency.upper(), style='finac:sum')
+    if not currency:
+        ft = rapidtables.format_table(currency_list(),
+                                      fmt=rapidtables.FORMAT_GENERATOR,
+                                      align=(rapidtables.ALIGN_CENTER,
+                                             rapidtables.ALIGN_RIGHT))
+        if not ft:
+            return
+        h, tbl = ft
+        neotermcolor.cprint(h, '@finac:title')
+        neotermcolor.cprint('-' * len(h), '@finac:separator')
+        for t in tbl:
+            neotermcolor.cprint(t)
+        neotermcolor.cprint('-' * len(h), '@finac:separator')
+        print('Base currency: ', end='')
+        neotermcolor.cprint(config.base_currency.upper(), style='finac:sum')
+    else:
+        rr = []
+        for r in currency_list_rates(currency, start=start, end=end):
+            row = OrderedDict()
+            row['pair'] = '{}/{}'.format(r['currency_from'], r['currency_to'])
+            row['date'] = r['date']
+            row['value'] = r['value']
+            rr.append(row)
+        ft = rapidtables.format_table(rr, fmt=rapidtables.FORMAT_GENERATOR)
+        if not ft:
+            return
+        h, tbl = ft
+        neotermcolor.cprint(h, '@finac:title')
+        neotermcolor.cprint('-' * len(h), '@finac:separator')
+        for t in tbl:
+            neotermcolor.cprint(t)

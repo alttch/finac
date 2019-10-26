@@ -16,7 +16,6 @@ The following functions are aliases for :doc:`core`:
    f.complete(...) # alias for finac.core.transaction_complete
    f.apply(...) # alias for finac.core.transaction_apply
    stmt(...) # alias for finac.core.account_statement_summary
-   lsaccs(...) # alias for finac.core.account_list_summary
    balance(...) # alias for finac.core.account_balance
    balance_range(...) # alias for finac.core.account_balance_range, in opposite
                       # to the original function, returns dates as datetime

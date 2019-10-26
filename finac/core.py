@@ -287,7 +287,6 @@ def currency_list():
     """
     List currencies
     """
-    result = []
     r = get_db().execute(
         sql("""
         select code, precs from currency order by code"""))
@@ -297,8 +296,51 @@ def currency_list():
         row = OrderedDict()
         row['currency'] = d.code
         row['precision'] = d.precs
-        result.append(row)
-    return result
+        yield row
+
+
+def currency_list_rates(currency, start=None, end=None):
+    """
+    List currency rates
+
+    Currency can be specified either as code, or as pair "code/code"
+    """
+    cond = ''
+    currency = currency.upper()
+    if start:
+        dts = parse_date(start)
+        cond += (' and ' if cond else '') + 'd >= {}'.format(dts)
+    if end:
+        dte = parse_date(end)
+        cond += (' and ' if cond else '') + 'd <= {}'.format(dte)
+    if currency.find('/') != -1:
+        currency_from, currency_to = currency.split('/')
+        cond += (' and '
+                 if cond else '') + 'cf.code = "{}" and ct.code = "{}"'.format(
+                     currency_from, currency_to)
+    else:
+        cond += (' and ' if cond else
+                 '') + '(cf.code = "{code}" or ct.code = "{code}")'.format(
+                     code=currency)
+    r = get_db().execute(
+        sql("""
+        select cf.code as currency_from,
+                ct.code as currency_to,
+                d, value
+        from currency_rate
+            join currency as cf on currency_from_id = cf.id
+            join currency as ct on currency_to_id = ct.id
+                where {cond}
+    """.format(cond=cond)))
+    while True:
+        d = r.fetchone()
+        if not d: break
+        row = OrderedDict()
+        row['currency_from'] = d.currency_from
+        row['currency_to'] = d.currency_to
+        row['date'] = format_date(d.d)
+        row['value'] = d.value
+        yield row
 
 
 def currency_delete(currency):
