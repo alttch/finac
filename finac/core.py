@@ -1397,6 +1397,9 @@ def account_balance_range(account,
         step: list step in days
         return_timestamp: return dates as timestamps if True, otherwise as
             datetime objects. Default is True
+
+    Returns:
+        tuple with time series list and corresponding balance list
     """
     times = []
     data = []
