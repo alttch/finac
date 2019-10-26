@@ -213,9 +213,14 @@ def ls(account=None,
 
 def lscur(currency=None, start=None, end=None):
     """
-    Print list of currencies
+    Print list of currencies or currency rates for the specified one
 
     Currency filter can be specified either as code, or as pair "code/code"
+
+    Args:
+        currency: currency code
+        start: start date (for rates), default: first day of current month
+        end: end date (for rates)
     """
     if not currency:
         ft = rapidtables.format_table(currency_list(),
@@ -234,7 +239,11 @@ def lscur(currency=None, start=None, end=None):
         neotermcolor.cprint(config.base_currency.upper(), style='finac:sum')
     else:
         rr = []
-        for r in currency_list_rates(currency, start=start, end=end):
+        for r in currency_list_rates(
+                currency,
+                start=start if start else datetime.datetime.today().replace(
+                    day=1),
+                end=end):
             row = OrderedDict()
             row['pair'] = '{}/{}'.format(r['currency_from'], r['currency_to'])
             row['date'] = r['date']
