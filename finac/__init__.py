@@ -55,6 +55,7 @@ from finac.plot import account_pie as pie
 tr = transaction_create
 mv = transaction_move
 rm = transaction_delete
+apply = transaction_apply
 complete = transaction_complete
 
 stmt = account_statement_summary

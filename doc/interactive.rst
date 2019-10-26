@@ -14,6 +14,7 @@ The following functions are aliases for :doc:`core`:
    f.mv(...) # alias for finac.core.transaction_move
    f.rm(...) # alias for finac.core.transaction_delete
    f.complete(...) # alias for finac.core.transaction_complete
+   f.apply(...) # alias for finac.core.transaction_apply
    stmt(...) # alias for finac.core.account_statement_summary
    lsaccs(...) # alias for finac.core.account_list_summary
    balance(...) # alias for finac.core.account_balance
