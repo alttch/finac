@@ -160,7 +160,7 @@ Net profit/loss: 100.00 EUR
 
 As you see, there's no counter party account in lazy exchange. This feature is
 useful for personal accounting and special applications, but for the
-professional accounting, you should create counter-party exchange account and
+professional accounting, you should create counterparty exchange account and
 perform buy-sell transactions with it.
 
 ### Targets
