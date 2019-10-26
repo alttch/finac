@@ -40,7 +40,7 @@ def account_pie(tp=None,
         base: base currency to recalc amounts (default: usd)
         shadow:
         autopct:
-        **kwargs: passed as-is to matplotlib.pyplot.plot
+        **kwargs: passed as-is to matplotlib.pyplot.pie
     """
     from matplotlib import pyplot as plt
     x = core.account_list_summary(base=base, hide_empty=True, tp=tp)
