@@ -165,13 +165,13 @@ perform buy-sell transactions with it.
 
 ### Targets
 
-Targets is a feature I wrote Finac for. You have account balance in bank and in
-accounting. They differ by some amount and you are going to record this with a
-single transaction.
+Targets is a feature I wrote Finac for. You have account balances in bank and
+in accounting. They differ by some amount and you are going to record this with
+a single transaction.
 
 But the problem is there's a lot of transactions you should sum up. Or
 calculate the difference between bank balance and accounting. Pretty common,
-eh? Don't do it, we have a targets.
+eh? Don't do this, we have the targets.
 
 Specifying targets instead of amount tells Finac to calculate transaction
 amount by itself.
