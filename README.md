@@ -128,7 +128,7 @@ if exchange rate is set or specified in transaction details:
 ```python
 # create EUR account
 f.account_create('acc5', 'eur')
-# put some exchane rate to it (in real life you would probably use cron job)
+# set exchange rate (in real life you would probably use cron job)
 f.currency_set_rate('eur/usd', value=1.1)
 f.mv(dt='acc5', ct='acc1', amount=100)
 ```
