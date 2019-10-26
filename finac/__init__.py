@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.0.10'
+__version__ = '0.0.11'
 
 import rapidtables, neotermcolor
 
@@ -85,7 +85,6 @@ neotermcolor.set_style('finac:credit_sum', color='red', attrs='bold')
 
 def ls(account=None,
        currency=None,
-       code=None,
        tp=None,
        start=None,
        end=None,
@@ -115,6 +114,8 @@ def ls(account=None,
     if account and account.find('%') != -1:
         code = account
         account = None
+    else:
+        code = None
     if account:
         result = account_statement_summary(account=account,
                                            start=start,
