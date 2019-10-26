@@ -115,6 +115,9 @@ Note: when addressing currencies and accounts both in interactive and
 API mode, you should use account and currency codes as object
 identifiers. **All codes are case-insensitive**.
 
+Inside database, Finac uses numeric IDs to connect objects, so all their
+codes can be changed without any problems.
+
 Special features
 ----------------
 
@@ -192,6 +195,7 @@ to move all except $1000 to “acc2”. Let’s do it:
    id     amount  cparty  tag     note  created              completed
    -----------------------------------------------------------------------------
    ......
+   ......
    16  -3 890.00  ACC2                  2019-10-26 03:25:56  2019-10-26 03:25:56
    -----------------------------------------------------------------------------
    Debit turnover: 10 000.00, credit turnover: 9 000.00
@@ -216,6 +220,9 @@ function API details.
 
 TODO
 ----
+
+Finac is in alpha stage. We are continuously working on the features,
+speed and stability improvements as well as waiting your commits.
 
 -  Cross-currency rates
 -  Portfolio management functions

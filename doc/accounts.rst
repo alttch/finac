@@ -18,20 +18,20 @@ are primary financial assets and includes them in various listings by default.
 Special accounts
 ----------------
 
-* **transit** transit account
-* **escrow** escrow account
-* **holding** holding account
-* **virtual** virtual account
-* **temp** temporary account
-* **exchange** virtual exchange account (not used by lazy exchange operations)
+* **transit** transit accounts
+* **escrow** escrow accounts
+* **holding** holding accounts
+* **virtual** virtual accounts
+* **temp** temporary accounts
+* **exchange** virtual exchange accounts (not used by lazy exchange operations)
 
 Customers, counterparties and company assets
 --------------------------------------------
 
 * **gs** Goods and services
-* **supplier** supplier account
-* **customer** customer account
-* **finagent** financial agent account
+* **supplier** supplier accounts
+* **customer** customer accounts
+* **finagent** financial agent accounts
 
 Taxes
 -----

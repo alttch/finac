@@ -1,5 +1,3 @@
-.. include:: readme.rst
-
 .. toctree::
     :maxdepth: 1
 
@@ -7,3 +5,6 @@
     plot
     core
     accounts
+
+.. include:: readme.rst
+
