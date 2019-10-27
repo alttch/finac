@@ -225,7 +225,7 @@ def lscur(currency=None, start=None, end=None):
     if not currency:
         ft = rapidtables.format_table(currency_list(),
                                       fmt=rapidtables.FORMAT_GENERATOR,
-                                      align=(rapidtables.ALIGN_CENTER,
+                                      align=(rapidtables.ALIGN_LEFT,
                                              rapidtables.ALIGN_RIGHT))
         if not ft:
             return
