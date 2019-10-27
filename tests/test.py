@@ -11,6 +11,7 @@ import unittest
 import logging
 import rapidtables
 import random
+import time
 
 from types import SimpleNamespace
 
@@ -248,6 +249,7 @@ class Test(unittest.TestCase):
         except ValueError:
             pass
         finac.config.lazy_exchange = True
+        time.sleep(1)
         finac.currency_set_rate('EUR/USD', value=1.1)
 
         finac.transaction_move('usd1', 'eur1', 20, xdt=False)
