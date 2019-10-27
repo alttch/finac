@@ -388,7 +388,7 @@ def currency_set_rate(currency_from, currency_to=None, value=None, date=None):
     if value is None:
         raise ValueError('Currency rate value is not specified')
     if date is None:
-        date = time.time()
+        date = int(time.time())
     else:
         date = parse_date(date)
     if currency_from.find('/') != -1 and currency_to is None:
@@ -411,10 +411,12 @@ def currency_set_rate(currency_from, currency_to=None, value=None, date=None):
                      value=value)
 
 
-def currency_delete_rate(currency_from, currency_to=None, date):
+def currency_delete_rate(currency_from, currency_to=None, date=None):
     """
     Delete currrency rate
     """
+    if not date:
+        raise ValueError('currency rate date not specified')
     if currency_from.find('/') != -1 and currency_to is None:
         currency_from, currency_to = currency_from.split('/')
     date = parse_date(date)
@@ -444,7 +446,7 @@ def currency_rate(currency_from, currency_to=None, date=None):
     Function can be also called as e.g. currency_rate('EUR/USD')
     """
     if date is None:
-        date = time.time()
+        date = int(time.time())
     else:
         date = parse_date(date)
     if currency_from.find('/') != -1 and currency_to is None:
@@ -880,7 +882,7 @@ def _transaction_move(dt=None,
             if m is not None and account_balance(dt) + amount > m:
                 raise OverlimitError
     if date is None:
-        date = time.time()
+        date = int(time.time())
     else:
         date = parse_date(date)
     if completion_date is None:
@@ -1007,7 +1009,7 @@ def transaction_complete(transaction_id, completion_date=None, lock_token=None):
         completion_date: completion date (default: now)
     """
     logging.info('Completing transaction {}'.format(transaction_id))
-    if completion_date is None: completion_date = time.time()
+    if completion_date is None: completion_date = int(time.time())
     if config.keep_integrity:
         dt = None
         with lock_account_token:
@@ -1042,7 +1044,7 @@ def transaction_delete(transaction_id):
     if not get_db().execute(sql("""
     update transact set
     deleted=:ts where id=:id or chain_transact_id=:id"""),
-                            ts=time.time(),
+                            ts=int(time.time()),
                             id=transaction_id).rowcount:
         logging.error('Transaction {} not found'.format(transaction_id))
         raise ResourceNotFound
