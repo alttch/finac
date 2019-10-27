@@ -33,6 +33,15 @@ Customers, counterparties and company assets
 * **customer** customer accounts
 * **finagent** financial agent accounts
 
+Investment accounts
+-------------------
+
+* **stock** stocks
+* **bond** bonds
+* **fund** mutual and other funds
+* **metal** precious metals
+* **reality** real estate objects
+
 Taxes
 -----
 

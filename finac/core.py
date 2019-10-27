@@ -14,6 +14,7 @@ ACCOUNT_CASH = 1
 ACCOUNT_CURRENT = 2
 ACCOUNT_SAVING = 100
 
+#
 ACCOUNT_GS = 200
 ACCOUNT_SUPPLIER = 201
 ACCOUNT_CUSTOMER = 202
@@ -21,8 +22,18 @@ ACCOUNT_FINAGENT = 203
 
 ACCOUNT_HOLDING = 300
 
+# investment instruments
+
+ACCOUNT_STOCK = 400
+ACCOUNT_BOND = 401
+ACCOUNT_FUND = 402
+ACCOUNT_METAL = 403
+
+ACCOUNT_REALITY = 500
+
+
 # taxes
-ACCOUNT_TAXES = 1000
+ACCOUNT_TAX = 1000
 
 # special
 ACCOUNT_TRANSIT = 2000
@@ -38,6 +49,11 @@ ACCOUNT_TYPE_NAMES = {
     ACCOUNT_CASH: 'cash',
     ACCOUNT_CURRENT: 'current',
     ACCOUNT_SAVING: 'saving',
+    ACCOUNT_STOCK: 'stock',
+    ACCOUNT_BOND: 'bond',
+    ACCOUNT_FUND: 'fund',
+    ACCOUNT_METAL: 'metal',
+    ACCOUNT_REALITY: 'reality',
     ACCOUNT_TRANSIT: 'transit',
     ACCOUNT_ESCROW: 'escrow',
     ACCOUNT_HOLDING: 'holding',
@@ -48,7 +64,7 @@ ACCOUNT_TYPE_NAMES = {
     ACCOUNT_SUPPLIER: 'supplier',
     ACCOUNT_CUSTOMER: 'customer',
     ACCOUNT_FINAGENT: 'finagent',
-    ACCOUNT_TAXES: 'taxes'
+    ACCOUNT_TAX: 'tax'
 }
 
 ACCOUNT_TYPE_IDS = {v: k for k, v in ACCOUNT_TYPE_NAMES.items()}

@@ -53,31 +53,6 @@ transact = Table(
     Column('chain_transact_id', Integer),
     Column('deleted', Integer, default=None))
 
-asset_group = Table('asset_group', meta,
-                    Column('id', Integer, primary_key=True, autoincrement=True),
-                    Column('code', String(20), nullable=False, unique=True))
-
-asset = Table(
-    'asset', meta, Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('code', String(20), unique=True),
-    Column('currency_id',
-           Integer,
-           ForeignKey('currency.id', ondelete='CASCADE'),
-           nullable=False),
-    Column('asset_group_id',
-           Integer,
-           ForeignKey('asset_group.id', ondelete='CASCADE'),
-           nullable=False), Column('amount', Float, nullable=False, default=0))
-
-asset_price = Table(
-    'asset_price', meta,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('asset_id',
-           Integer,
-           ForeignKey('asset.id', ondelete='CASCADE'),
-           nullable=False), Column('d', Integer, nullable=False),
-    Column('value', Float, nullable=False))
-
 
 def init_db(engine):
     meta.create_all(engine)
