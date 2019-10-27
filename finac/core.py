@@ -411,7 +411,7 @@ def currency_set_rate(currency_from, currency_to=None, value=None, date=None):
                      value=value)
 
 
-def currency_delete_rate(currency_from, currency_to, date):
+def currency_delete_rate(currency_from, currency_to=None, date):
     """
     Delete currrency rate
     """
