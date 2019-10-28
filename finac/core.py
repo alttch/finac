@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 from sqlalchemy.exc import IntegrityError
 
@@ -436,10 +436,10 @@ def asset_delete_rate(asset_from, asset_to=None, date=None):
 
 
 def asset_rate(asset_from,
-                  asset_to=None,
-                  date=None,
-                  _rate_allow_cross=None,
-                  _rate_allow_reverse=None):
+               asset_to=None,
+               date=None,
+               _rate_allow_cross=None,
+               _rate_allow_reverse=None):
     """
     Get asset rate for the specified date
 
@@ -477,15 +477,15 @@ def asset_rate(asset_from,
             c = cur['asset']
             try:
                 crossrate1 = asset_rate(asset_from,
-                                           c,
-                                           d,
-                                           _rate_allow_cross=False,
-                                           _rate_allow_reverse=True)
+                                        c,
+                                        d,
+                                        _rate_allow_cross=False,
+                                        _rate_allow_reverse=True)
                 crossrate2 = asset_rate(asset_to,
-                                           c,
-                                           d,
-                                           _rate_allow_cross=False,
-                                           _rate_allow_reverse=True)
+                                        c,
+                                        d,
+                                        _rate_allow_cross=False,
+                                        _rate_allow_reverse=True)
                 return crossrate1 / crossrate2
             except RateNotFound:
                 pass
@@ -531,8 +531,8 @@ def account_create(account,
         tp_id = ACCOUNT_TYPE_IDS[tp]
     db = get_db()
     dbt = db.begin()
-    logger.info('Creating account {}, asset: {}'.format(
-        account.upper(), asset.upper()))
+    logger.info('Creating account {}, asset: {}'.format(account.upper(),
+                                                        asset.upper()))
     try:
         r = db.execute(sql("""
         insert into account(code, note, tp, asset_id, max_overdraft,
@@ -982,31 +982,32 @@ def transaction_move(dt=None,
                         'Amount is required for exchange operations')
                 if not rate:
                     rate = asset_rate(ct_info['asset'],
-                                         dt_info['asset'],
-                                         date=date)
+                                      dt_info['asset'],
+                                      date=date)
 
             else:
                 raise ValueError('Currency mismatch')
             tid1 = _transaction_move(
                 ct=ct,
-                amount=format_amount(amount / rate, ct_info['asset'])
-                if xdt else amount,
+                amount=format_amount(amount /
+                                     rate, ct_info['asset']) if xdt else amount,
                 tag=tag,
                 note=note,
                 date=date,
                 completion_date=completion_date,
                 mark_completed=mark_completed,
                 _ct_info=ct_info)
-            tid2 = _transaction_move(dt=dt,
-                                     amount=amount if xdt else format_amount(
-                                         amount * rate, dt_info['asset']),
-                                     tag=tag,
-                                     note=note,
-                                     date=date,
-                                     completion_date=completion_date,
-                                     mark_completed=mark_completed,
-                                     chain_transact_id=tid1,
-                                     _dt_info=dt_info)
+            tid2 = _transaction_move(
+                dt=dt,
+                amount=amount if xdt else format_amount(amount *
+                                                        rate, dt_info['asset']),
+                tag=tag,
+                note=note,
+                date=date,
+                completion_date=completion_date,
+                mark_completed=mark_completed,
+                chain_transact_id=tid1,
+                _dt_info=dt_info)
             return tid1, tid2
         else:
             return _transaction_move(dt=dt,
@@ -1336,8 +1337,7 @@ def account_list_summary(asset=None,
                      order_by=order_by,
                      hide_empty=hide_empty))
     for a in accounts:
-        a['balance_bc'] = a['balance'] * asset_rate(
-            a['asset'], base, date=date)
+        a['balance_bc'] = a['balance'] * asset_rate(a['asset'], base, date=date)
     return {
         'accounts':
             accounts,
@@ -1346,8 +1346,8 @@ def account_list_summary(asset=None,
                 format_amount(d['balance'], d['asset']) if d['asset'] ==
                 base else format_amount(
                     d['balance'] *
-                    asset_rate(d['asset'], base, date=date), d['asset']
-                ) for d in accounts)
+                    asset_rate(d['asset'], base, date=date), d['asset'])
+                for d in accounts)
     }
 
 
@@ -1422,8 +1422,7 @@ def _account_summary(balance_type,
         cond += (' and '
                  if cond else '') + 'account.code = "{}"'.format(account)
     if asset:
-        cond += (' and '
-                 if cond else '') + 'asset.code = "{}"'.format(asset)
+        cond += (' and ' if cond else '') + 'asset.code = "{}"'.format(asset)
     if date:
         dts = parse_date(date)
         cond += (' and ' if cond else '') + 'transact.d <= "{}"'.format(dts)
@@ -1499,7 +1498,8 @@ def account_balance_range(account,
                           start,
                           end=None,
                           step=1,
-                          return_timestamp=True):
+                          return_timestamp=True,
+                          base=None):
     """
     Get list of account balances for the specified range
 
@@ -1516,6 +1516,7 @@ def account_balance_range(account,
     """
     times = []
     data = []
+    acc_info = account_info(account)
     dt = parse_date(start, return_timestamp=False)
     end_date = parse_date(
         end, return_timestamp=False
@@ -1523,6 +1524,9 @@ def account_balance_range(account,
     delta = datetime.timedelta(days=step)
     while dt < end_date:
         times.append(dt.timestamp() if return_timestamp else dt)
-        data.append(account_balance(account, date=dt))
+        b = account_balance(account, date=dt)
+        if base:
+            b *= asset_rate(acc_info['asset'], base, date=dt)
+        data.append(b)
         dt += delta
     return times, data

@@ -2,12 +2,12 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 from . import core
 
 
-def account_plot(account, start, end=None, step=1, **kwargs):
+def account_plot(account, start, end=None, step=1, base=None, **kwargs):
     """
     Plot account balance chart for the specified time range
 
@@ -16,13 +16,17 @@ def account_plot(account, start, end=None, step=1, **kwargs):
         start: start date/time, required
         end: end date/time, if not specified, current time is used
         step: chart step in days
+        base: base currency
         **kwargs: passed as-is to matplotlib.pyplot.plot
     """
     from matplotlib import pyplot as plt
     plt.plot(
-        *core.account_balance_range(
-            account, start, end=end, step=step, return_timestamp=False),
-        **kwargs)
+        *core.account_balance_range(account,
+                                    start,
+                                    end=end,
+                                    step=step,
+                                    return_timestamp=False,
+                                    base=base), **kwargs)
 
 
 def account_pie(tp=None,
