@@ -33,7 +33,7 @@ Documentation: https://finac.readthedocs.io/
 Finac database contain 3 entity types:
 
 * **asset** currency, ISIN, stock code etc., currencies "USD" and "EUR" are
-  created automatically. Finac don't divide assets into currencies, property
+  created automatically. Finac doesn't divide assets into currencies, property
   and other. This allows creating applications for the various areas using the
   single library.
 
