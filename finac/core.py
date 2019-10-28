@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 from sqlalchemy.exc import IntegrityError
 
@@ -1104,7 +1104,7 @@ def transaction_purge(_lock=True):
         if _lock: lock_purge.release()
 
 
-def account_statement(account, start=None, end=None, tag=None, pending=False):
+def account_statement(account, start=None, end=None, tag=None, pending=True):
     """
     Args:
         account: account code
@@ -1158,7 +1158,7 @@ def account_statement_summary(account,
                               start=None,
                               end=None,
                               tag=None,
-                              pending=False):
+                              pending=True):
     """
     Args:
         account: account code

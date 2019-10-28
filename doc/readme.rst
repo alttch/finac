@@ -35,13 +35,17 @@ How to use in interactive mode
 Finac database contain 3 entity types:
 
 -  **asset** currency, ISIN, stock code etc., currencies “USD” and “EUR”
-   are created automatically.
+   are created automatically. Finac doesn’t divide assets into
+   currencies, property and other. This allows creating applications for
+   the various areas using the single library.
 
 -  **account** bank account, counterparty account, tax account, special
    account etc. Everything is accounts :)
 
 -  **transaction** movements from (credit) / to (debit) and between
    accounts
+
+Assets have **rates** - value of one asset, relative to other.
 
 Transactions can be simple (no counterparty) or classic double-entry
 bookkeeping (between debit and credit account)
