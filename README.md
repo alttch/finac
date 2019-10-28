@@ -42,6 +42,8 @@ Finac database contain 3 entity types:
 
 * **transaction** movements from (credit) / to (debit) and between accounts
 
+Assets have **rates** - value of one asset, relative to other.
+
 Transactions can be simple (no counterparty) or classic double-entry
 bookkeeping (between debit and credit account)
 
