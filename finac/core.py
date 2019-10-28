@@ -31,7 +31,6 @@ ACCOUNT_METAL = 403
 
 ACCOUNT_REALITY = 500
 
-
 # taxes
 ACCOUNT_TAX = 1000
 
@@ -97,7 +96,6 @@ config = SimpleNamespace(db=None,
                          keep_integrity=True,
                          lazy_exchange=True,
                          rate_allow_reverse=True,
-                         colorize=True,
                          rate_allow_cross=True,
                          base_currency='USD',
                          date_format='%Y-%m-%d %H:%M:%S')
@@ -437,7 +435,11 @@ def currency_delete_rate(currency_from, currency_to=None, date=None):
         raise ResourceNotFound
 
 
-def currency_rate(currency_from, currency_to=None, date=None):
+def currency_rate(currency_from,
+                  currency_to=None,
+                  date=None,
+                  _rate_allow_cross=None,
+                  _rate_allow_reverse=None):
     """
     Get currency rate for the specified date
 
@@ -451,7 +453,9 @@ def currency_rate(currency_from, currency_to=None, date=None):
         date = parse_date(date)
     if currency_from.find('/') != -1 and currency_to is None:
         currency_from, currency_to = currency_from.split('/')
-    if currency_from.upper() == currency_to.upper():
+    currency_from = currency_from.upper()
+    currency_to = currency_to.upper()
+    if currency_from == currency_to:
         return 1
     db = get_db()
 
@@ -464,18 +468,38 @@ def currency_rate(currency_from, currency_to=None, date=None):
             order by d desc limit 1
             """),
                        d=date,
-                       f=cf.upper(),
-                       t=ct.upper())
+                       f=cf,
+                       t=ct)
         return r.fetchone()
+
+    def _get_crossrate(currency_from, currency_to, d):
+        for cur in list(currency_list()):
+            c = cur['currency']
+            try:
+                crossrate1 = currency_rate(currency_from,
+                                           c,
+                                           d,
+                                           _rate_allow_cross=False,
+                                           _rate_allow_reverse=True)
+                crossrate2 = currency_rate(currency_to,
+                                           c,
+                                           d,
+                                           _rate_allow_cross=False,
+                                           _rate_allow_reverse=True)
+                return crossrate1 / crossrate2
+            except RateNotFound:
+                pass
 
     d = _get_rate(currency_from, currency_to)
     if not d:
-        if config.rate_allow_reverse:
+        if config.rate_allow_reverse or _rate_allow_reverse is True:
             d = _get_rate(currency_to, currency_from)
             if not d:
+                if config.rate_allow_cross and _rate_allow_cross is not False:
+                    rate = _get_crossrate(currency_from, currency_to, date)
+                    if rate: return rate
                 raise RateNotFound('{}/{} for {}'.format(
-                    currency_from.upper(), currency_to.upper(),
-                    format_date(date)))
+                    currency_from, currency_to, format_date(date)))
             value = 1 / d.value
         else:
             raise RateNotFound
