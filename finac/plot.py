@@ -37,7 +37,7 @@ def account_pie(tp=None,
     Args:
         tp: account types to include
         mb: min balace (or section goes to "other")
-        base: base currency to recalc amounts (default: usd)
+        base: base asset to recalc amounts (default: usd)
         shadow:
         autopct:
         **kwargs: passed as-is to matplotlib.pyplot.pie

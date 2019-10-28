@@ -166,37 +166,37 @@ class Test(unittest.TestCase):
         except finac.OverlimitError:
             return
 
-    def test060_currency_rate_set(self):
-        finac.currency_create('AUD')
-        finac.currency_set_rate('EUR', 'USD', 1.5, date='2019-01-01')
-        finac.currency_set_rate('EUR/USD', value=2)
+    def test060_asset_rate_set(self):
+        finac.asset_create('AUD')
+        finac.asset_set_rate('EUR', 'USD', 1.5, date='2019-01-01')
+        finac.asset_set_rate('EUR/USD', value=2)
         try:
-            finac.currency_rate('EUR', 'USD', date='2018-01-01')
+            finac.asset_rate('EUR', 'USD', date='2018-01-01')
             raise RuntimeError('Rate not found not raised')
         except finac.RateNotFound:
             pass
-        self.assertEqual(finac.currency_rate('EUR', 'USD', date='2019-01-05'),
+        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'),
                          1.5)
-        self.assertEqual(finac.currency_rate('EUR', 'USD'), 2)
+        self.assertEqual(finac.asset_rate('EUR', 'USD'), 2)
 
-    def test061_currency_rate_easyget(self):
+    def test061_asset_rate_easyget(self):
         finac.config.rate_allow_reverse = False
         try:
-            finac.currency_rate('USD', 'EUR', date='2019-01-05')
+            finac.asset_rate('USD', 'EUR', date='2019-01-05')
             raise RuntimeError('Rate not found not raised')
         except:
             pass
         finac.config.rate_allow_reverse = True
-        self.assertEqual(finac.currency_rate('USD', 'EUR', date='2019-01-05'),
+        self.assertEqual(finac.asset_rate('USD', 'EUR', date='2019-01-05'),
                          1 / 1.5)
-        self.assertEqual(finac.currency_rate('USD', 'EUR'), 1 / 2)
+        self.assertEqual(finac.asset_rate('USD', 'EUR'), 1 / 2)
 
-    def test062_currency_rate_delete(self):
-        finac.currency_set_rate('EUR', 'USD', value=1.8, date='2018-12-01')
-        self.assertEqual(finac.currency_rate('EUR', 'USD', date='2019-01-05'),
+    def test062_asset_rate_delete(self):
+        finac.asset_set_rate('EUR', 'USD', value=1.8, date='2018-12-01')
+        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'),
                          1.5)
-        finac.currency_delete_rate('EUR', 'USD', date='2019-01-01')
-        self.assertEqual(finac.currency_rate('EUR', 'USD', date='2019-01-05'),
+        finac.asset_delete_rate('EUR', 'USD', date='2019-01-01')
+        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'),
                          1.8)
 
     def test070_test_targets_and_tags(self):
@@ -245,12 +245,12 @@ class Test(unittest.TestCase):
         try:
             finac.transaction_move('usd1', 'eur1', 20)
             raise RuntimeError(
-                'Lazy exchange is off but currency mismatch not detected')
+                'Lazy exchange is off but asset mismatch not detected')
         except ValueError:
             pass
         finac.config.lazy_exchange = True
         time.sleep(1)
-        finac.currency_set_rate('EUR/USD', value=1.1)
+        finac.asset_set_rate('EUR/USD', value=1.1)
 
         finac.transaction_move('usd1', 'eur1', 20, xdt=False)
         self.assertEqual(finac.account_balance('eur1'), -20)
@@ -297,10 +297,10 @@ class Test(unittest.TestCase):
         self.assertEqual(dt[-3], 2300)
         self.assertEqual(dt[-1], 3100)
 
-    def test098_currency_update(self):
-        finac.currency_update('eur', code='euRo')
-        self.assertEqual(finac.currency_rate('EURo/USD'), 1.1)
-        finac.currency_update('euro', code='eur')
+    def test098_asset_update(self):
+        finac.asset_update('eur', code='euRo')
+        self.assertEqual(finac.asset_rate('EURo/USD'), 1.1)
+        finac.asset_update('euro', code='eur')
 
     def test099_transact_update(self):
         finac.transaction_update(41, tag='loans2', note='somenote')
@@ -309,8 +309,8 @@ class Test(unittest.TestCase):
                 self.assertEqual(t['tag'], 'loans2')
                 self.assertEqual(t['note'], 'somenote')
 
-    def test100_delete_currency(self):
-        finac.currency_delete('eur')
+    def test100_delete_asset(self):
+        finac.asset_delete('eur')
 
 
 if __name__ == '__main__':

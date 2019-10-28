@@ -18,14 +18,14 @@ from finac.core import ResourceNotFound, RateNotFound
 from finac.core import OverdraftError, OverlimitError
 from finac.core import ResourceAlreadyExists
 
-# currency methods
-from finac.core import currency_create, currency_delete
-from finac.core import currency_set_rate, currency_rate
-from finac.core import currency_delete_rate
+# asset methods
+from finac.core import asset_create, asset_delete
+from finac.core import asset_set_rate, asset_rate
+from finac.core import asset_delete_rate
 
-from finac.core import currency_update
-from finac.core import currency_precision
-from finac.core import currency_list, currency_list_rates
+from finac.core import asset_update
+from finac.core import asset_precision
+from finac.core import asset_list, asset_list_rates
 
 # account methods
 from finac.core import account_create, account_delete
@@ -87,14 +87,14 @@ neotermcolor.set_style('finac:credit_sum', color='red', attrs='bold')
 
 
 def ls(account=None,
-       currency=None,
+       asset=None,
        tp=None,
        start=None,
        end=None,
        tag=None,
        pending=False,
        hide_empty=False,
-       order_by=['tp', 'currency', 'account', 'balance'],
+       order_by=['tp', 'asset', 'account', 'balance'],
        base=None):
     """
     Primary interactive function. Prints account statement if account code
@@ -104,7 +104,7 @@ def ls(account=None,
 
     Args:
         account: account code
-        currency: filter by currency code
+        asset: filter by asset code
         tp: filter by account type (or types)
         start: start date (for statement), default: first day of current month
         end: end date (or balance date for summary)
@@ -112,7 +112,7 @@ def ls(account=None,
         pending: include pending transactions
         hide_empty: hide empty accounts (for summary)
         order_by: column ordering (ordering by base is not supported)
-        base: specify base currency
+        base: specify base asset
     """
     if account and account.find('%') != -1:
         code = account
@@ -128,7 +128,7 @@ def ls(account=None,
             pending=pending)
         stmt = result['statement'].copy()
         acc_info = account_info(account)
-        precision = currency_precision(acc_info['currency'])
+        precision = asset_precision(acc_info['asset'])
         for i, r in enumerate(stmt):
             r = r.copy()
             del r['is_completed']
@@ -163,14 +163,14 @@ def ls(account=None,
         print('Net profit/loss: ', end='')
         neotermcolor.cprint('{} {}'.format(
             format_money(result['debit'] - result['credit'], precision),
-            acc_info['currency']),
+            acc_info['asset']),
                             attrs='bold')
         print()
     else:
         if not base:
-            base = config.base_currency
+            base = config.base_asset
         base = base.upper()
-        result = account_list_summary(currency=currency,
+        result = account_list_summary(asset=asset,
                                       tp=tp,
                                       code=code,
                                       date=end,
@@ -179,11 +179,11 @@ def ls(account=None,
                                       base=base)
         accounts = result['accounts']
         data = accounts.copy()
-        bcp = currency_precision(base)
+        bcp = asset_precision(base)
         for i, r in enumerate(accounts):
             r = r.copy()
             r['balance'] = format_money(r['balance'],
-                                        currency_precision(r['currency']))
+                                        asset_precision(r['asset']))
             r['balance ' + base] = format_money(r['balance_bc'], bcp)
             del r['balance_bc']
             del r['note']
@@ -211,19 +211,19 @@ def ls(account=None,
         print()
 
 
-def lscur(currency=None, start=None, end=None):
+def lsa(asset=None, start=None, end=None):
     """
-    Print list of currencies or currency rates for the specified one
+    Print list of assets or asset rates for the specified one
 
     Currency filter can be specified either as code, or as pair "code/code"
 
     Args:
-        currency: currency code
+        asset: asset code
         start: start date (for rates), default: first day of current month
         end: end date (for rates)
     """
-    if not currency:
-        ft = rapidtables.format_table(currency_list(),
+    if not asset:
+        ft = rapidtables.format_table(asset_list(),
                                       fmt=rapidtables.FORMAT_GENERATOR,
                                       align=(rapidtables.ALIGN_LEFT,
                                              rapidtables.ALIGN_RIGHT))
@@ -235,17 +235,17 @@ def lscur(currency=None, start=None, end=None):
         for t in tbl:
             neotermcolor.cprint(t)
         neotermcolor.cprint('-' * len(h), '@finac:separator')
-        print('Base currency: ', end='')
-        neotermcolor.cprint(config.base_currency.upper(), style='finac:sum')
+        print('Base asset: ', end='')
+        neotermcolor.cprint(config.base_asset.upper(), style='finac:sum')
     else:
         rr = []
-        for r in currency_list_rates(
-                currency,
+        for r in asset_list_rates(
+                asset,
                 start=start if start else datetime.datetime.today().replace(
                     day=1),
                 end=end):
             row = OrderedDict()
-            row['pair'] = '{}/{}'.format(r['currency_from'], r['currency_to'])
+            row['pair'] = '{}/{}'.format(r['asset_from'], r['asset_to'])
             row['date'] = r['date']
             row['value'] = r['value']
             rr.append(row)

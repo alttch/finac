@@ -34,8 +34,8 @@ How to use in interactive mode
 
 Finac database contain 3 entity types:
 
--  **currency** asset currency, currencies “USD” and “EUR” are created
-   automatically
+-  **asset** currency, ISIN, stock code etc., currencies “USD” and “EUR”
+   are created automatically.
 
 -  **account** bank account, counterparty account, tax account, special
    account etc. Everything is accounts :)
@@ -85,7 +85,7 @@ bookkeeping (between debit and credit account)
 
 ::
 
-   account  type     currency   balance  balance USD
+   account  type      asset     balance  balance USD
    -------------------------------------------------
    ACC1     current    USD     5 000.00     5 000.00
    ACC2     current    USD     2 000.00     2 000.00
@@ -100,7 +100,7 @@ bookkeeping (between debit and credit account)
 
 ::
 
-   account  type     currency   balance  balance USD
+   account  type     asset     balance   balance USD
    -------------------------------------------------
    ACC1     current    USD     5 000.00     5 000.00
    ACC2     current    USD     2 000.00     2 000.00
@@ -114,8 +114,8 @@ bookkeeping (between debit and credit account)
    f.pie()
 
 Note: when addressing currencies and accounts both in interactive and
-API mode, you should use account and currency codes as object
-identifiers. **All codes are case-insensitive**.
+API mode, you should use account and asset codes as object identifiers.
+**All codes are case-insensitive**.
 
 Inside database, Finac uses numeric IDs to connect objects, so all their
 codes can be changed without any problems.
@@ -134,7 +134,7 @@ currencies, if exchange rate is set or specified in transaction details:
    # create EUR account
    f.account_create('acc5', 'eur')
    # set exchange rate (in real life you would probably use cron job)
-   f.currency_set_rate('eur/usd', value=1.1)
+   f.asset_set_rate('eur/usd', value=1.1)
    f.mv(dt='acc5', ct='acc1', amount=100)
 
 hoorah, account acc5 got 100 EUR! And exchange rate was 1.1. Let’s
@@ -258,7 +258,6 @@ TODO
 Finac is in alpha stage. We are continuously working on the features,
 speed and stability improvements as well as waiting your commits.
 
--  Cross-currency rates
 -  Wrappers around some used SQL-formats to get rid of injections
 -  Portfolio management functions
 -  finac-cli

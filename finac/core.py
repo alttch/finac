@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from functools import lru_cache
 
-# assets
+# financial assets
 ACCOUNT_CREDIT = 0
 ACCOUNT_CASH = 1
 ACCOUNT_CURRENT = 2
@@ -97,7 +97,7 @@ config = SimpleNamespace(db=None,
                          lazy_exchange=True,
                          rate_allow_reverse=True,
                          rate_allow_cross=True,
-                         base_currency='USD',
+                         base_asset='USD',
                          date_format='%Y-%m-%d %H:%M:%S')
 
 lock_purge = threading.Lock()
@@ -136,24 +136,24 @@ def parse_date(d, return_timestamp=True):
 
 
 @lru_cache(maxsize=256)
-def currency_precision(currency):
+def asset_precision(asset):
     """
-    Get precision (digits after comma) for the currency
-    Note: currency precision is cached, so process restart required if changed
+    Get precision (digits after comma) for the asset
+    Note: asset precision is cached, so process restart required if changed
     """
-    d = get_db().execute(sql('select precs from currency where code=:code'),
-                         code=currency.upper()).fetchone()
+    d = get_db().execute(sql('select precs from asset where code=:code'),
+                         code=asset.upper()).fetchone()
     if not d:
         raise ResourceNotFound
     return d.precs
 
 
-def format_amount(i, currency):
+def format_amount(i, asset):
     """
-    Format amount for values and exchange operations. Default: apply currency
+    Format amount for values and exchange operations. Default: apply asset
     precision
     """
-    return round(i, currency_precision(currency))
+    return round(i, asset_precision(asset))
 
 
 class ResourceNotFound(Exception):
@@ -165,7 +165,7 @@ class ResourceNotFound(Exception):
 
 class RateNotFound(Exception):
     """
-    Raised when accessed currency rate is not found
+    Raised when accessed asset rate is not found
     """
     pass
 
@@ -258,8 +258,8 @@ def init(db, **kwargs):
         rate_allow_reverse: allow reverse rates for lazy exchange (e.g. if
             "EUR/USD" pair exists but no USD/EUR, use 1 / "EUR/USD"
         rate_allow_cross: if exchange rate is not found, allow finac to look
-            for the nearest cross-currency rate (NOT IMPLEMENTED YET)
-        base_currency: default base currency. Default is "USD"
+            for the nearest cross-asset rate (NOT IMPLEMENTED YET)
+        base_asset: default base asset. Default is "USD"
         date_format: default date format in statements
     """
     config.db = db
@@ -277,111 +277,111 @@ def init(db, **kwargs):
     init_db(_db.engine)
 
 
-def currency_create(currency, precision=2):
+def asset_create(asset, precision=2):
     """
-    Create currency
+    Create asset
 
     Args:
-        currency: currency code (e.g. "CAD", "AUD")
+        asset: asset code (e.g. "CAD", "AUD")
         precision: precision (digits after comma) for statements and exchange
             operations. Default is 2 digits
     """
-    currency = currency.upper()
-    logger.info('Creating currency {}'.format(currency))
+    asset = asset.upper()
+    logger.info('Creating asset {}'.format(asset))
     try:
         get_db().execute(sql("""
-        insert into currency(code, precs) values(:code, :precision)"""),
-                         code=currency,
+        insert into asset(code, precs) values(:code, :precision)"""),
+                         code=asset,
                          precision=precision)
     except IntegrityError:
-        raise ResourceAlreadyExists(currency)
+        raise ResourceAlreadyExists(asset)
 
 
-def currency_list():
+def asset_list():
     """
-    List currencies
+    List es
     """
     r = get_db().execute(
         sql("""
-        select code, precs from currency order by code"""))
+        select code, precs from asset order by code"""))
     while True:
         d = r.fetchone()
         if not d: break
         row = OrderedDict()
-        row['currency'] = d.code
+        row['asset'] = d.code
         row['precision'] = d.precs
         yield row
 
 
-def currency_list_rates(currency, start=None, end=None):
+def asset_list_rates(asset, start=None, end=None):
     """
-    List currency rates
+    List asset rates
 
     Currency can be specified either as code, or as pair "code/code"
     """
     cond = ''
-    currency = currency.upper()
+    asset = asset.upper()
     if start:
         dts = parse_date(start)
         cond += (' and ' if cond else '') + 'd >= {}'.format(dts)
     if end:
         dte = parse_date(end)
         cond += (' and ' if cond else '') + 'd <= {}'.format(dte)
-    if currency.find('/') != -1:
-        currency_from, currency_to = currency.split('/')
+    if asset.find('/') != -1:
+        asset_from, asset_to = asset.split('/')
         cond += (' and '
                  if cond else '') + 'cf.code = "{}" and ct.code = "{}"'.format(
-                     currency_from, currency_to)
+                     asset_from, asset_to)
     else:
         cond += (' and ' if cond else
                  '') + '(cf.code = "{code}" or ct.code = "{code}")'.format(
-                     code=currency)
+                     code=asset)
     r = get_db().execute(
         sql("""
-        select cf.code as currency_from,
-                ct.code as currency_to,
+        select cf.code as asset_from,
+                ct.code as asset_to,
                 d, value
-        from currency_rate
-            join currency as cf on currency_from_id = cf.id
-            join currency as ct on currency_to_id = ct.id
+        from asset_rate
+            join asset as cf on asset_from_id = cf.id
+            join asset as ct on asset_to_id = ct.id
                 where {cond}
     """.format(cond=cond)))
     while True:
         d = r.fetchone()
         if not d: break
         row = OrderedDict()
-        row['currency_from'] = d.currency_from
-        row['currency_to'] = d.currency_to
+        row['asset_from'] = d.asset_from
+        row['asset_to'] = d.asset_to
         row['date'] = format_date(d.d)
         row['value'] = d.value
         yield row
 
 
-def currency_delete(currency):
+def asset_delete(asset):
     """
-    Delete currency
+    Delete asset
 
-    Warning: all accounts linked to this currency will be deleted as well
+    Warning: all accounts linked to this asset will be deleted as well
     """
-    logger.warning('Deleting currency {}'.format(currency.upper()))
+    logger.warning('Deleting asset {}'.format(asset.upper()))
     if not get_db().execute(sql("""
-    delete from currency where code=:code"""),
-                            code=currency.upper()).rowcount:
-        logger.error('Currency {} not found'.format(currency.upper()))
+    delete from asset where code=:code"""),
+                            code=asset.upper()).rowcount:
+        logger.error('Currency {} not found'.format(asset.upper()))
         raise ResourceNotFound
 
 
-def currency_set_rate(currency_from, currency_to=None, value=None, date=None):
+def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
     """
-    Set currency rate
+    Set asset rate
 
     Args:
-        currency_from: currency from code
-        currency_to: currency to code
+        asset_from: asset from code
+        asset_to: asset to code
         value: exchange rate value
         date: date/time exchange rate is set on (default: now)
 
-    Function can be also called as e.g. currency_set_rate('EUR/USD', value=1.1)
+    Function can be also called as e.g. asset_set_rate('EUR/USD', value=1.1)
     """
     if value is None:
         raise ValueError('Currency rate value is not specified')
@@ -389,81 +389,81 @@ def currency_set_rate(currency_from, currency_to=None, value=None, date=None):
         date = int(time.time())
     else:
         date = parse_date(date)
-    if currency_from.find('/') != -1 and currency_to is None:
-        currency_from, currency_to = currency_from.split('/')
+    if asset_from.find('/') != -1 and asset_to is None:
+        asset_from, asset_to = asset_from.split('/')
     logging.info('Setting rate for {}/{} to {} for {}'.format(
-        currency_from.upper(), currency_to.upper(), value, format_date(date)))
+        asset_from.upper(), asset_to.upper(), value, format_date(date)))
     get_db().execute(sql("""
-    insert into currency_rate (currency_from_id, currency_to_id, d, value)
+    insert into asset_rate (asset_from_id, asset_to_id, d, value)
     values
     (
-        (select id from currency where code=:f),
-        (select id from currency where code=:t),
+        (select id from asset where code=:f),
+        (select id from asset where code=:t),
         :d,
         :value
     )
     """),
-                     f=currency_from.upper(),
-                     t=currency_to.upper(),
+                     f=asset_from.upper(),
+                     t=asset_to.upper(),
                      d=date,
                      value=value)
 
 
-def currency_delete_rate(currency_from, currency_to=None, date=None):
+def asset_delete_rate(asset_from, asset_to=None, date=None):
     """
     Delete currrency rate
     """
     if not date:
-        raise ValueError('currency rate date not specified')
-    if currency_from.find('/') != -1 and currency_to is None:
-        currency_from, currency_to = currency_from.split('/')
+        raise ValueError('asset rate date not specified')
+    if asset_from.find('/') != -1 and asset_to is None:
+        asset_from, asset_to = asset_from.split('/')
     date = parse_date(date)
     logging.info('Deleting rate for {}/{} for {}'.format(
-        currency_from.upper(), currency_to.upper(), format_date(date)))
+        asset_from.upper(), asset_to.upper(), format_date(date)))
     if not get_db().execute(sql("""
-    delete from currency_rate where
-        currency_from_id=(select id from currency where code=:f)
+    delete from asset_rate where
+        asset_from_id=(select id from asset where code=:f)
         and
-        currency_to_id=(select id from currency where code=:t)
+        asset_to_id=(select id from asset where code=:t)
         and d=:d
         """),
-                            f=currency_from.upper(),
-                            t=currency_to.upper(),
+                            f=asset_from.upper(),
+                            t=asset_to.upper(),
                             d=date).rowcount:
         logger.error('Currency rate {}/{} for {} not found'.format(
-            currency_from.upper(), currency_to.upper(), format_date(date)))
+            asset_from.upper(), asset_to.upper(), format_date(date)))
         raise ResourceNotFound
 
 
-def currency_rate(currency_from,
-                  currency_to=None,
+def asset_rate(asset_from,
+                  asset_to=None,
                   date=None,
                   _rate_allow_cross=None,
                   _rate_allow_reverse=None):
     """
-    Get currency rate for the specified date
+    Get asset rate for the specified date
 
-    If no date is specified, get currency rate for now
+    If no date is specified, get asset rate for now
 
-    Function can be also called as e.g. currency_rate('EUR/USD')
+    Function can be also called as e.g. asset_rate('EUR/USD')
     """
     if date is None:
         date = int(time.time())
     else:
         date = parse_date(date)
-    if currency_from.find('/') != -1 and currency_to is None:
-        currency_from, currency_to = currency_from.split('/')
-    currency_from = currency_from.upper()
-    currency_to = currency_to.upper()
-    if currency_from == currency_to:
+    if asset_from.find('/') != -1 and asset_to is None:
+        asset_from, asset_to = asset_from.split('/')
+    asset_from = asset_from.upper()
+    asset_to = asset_to.upper()
+    if asset_from == asset_to:
         return 1
     db = get_db()
 
     def _get_rate(cf, ct):
         r = db.execute(sql("""
-            select value from currency_rate
-                join currency as cfrom on currency_from_id=cfrom.id
-                join currency as cto on currency_to_id=cto.id
+            select value from asset_rate
+                join asset as cfrom on asset_from_id=cfrom.id
+                join asset as cto on asset_to_id=cto.id
             where d <= :d and cfrom.code = :f and cto.code = :t
             order by d desc limit 1
             """),
@@ -472,16 +472,16 @@ def currency_rate(currency_from,
                        t=ct)
         return r.fetchone()
 
-    def _get_crossrate(currency_from, currency_to, d):
-        for cur in list(currency_list()):
-            c = cur['currency']
+    def _get_crossrate(asset_from, asset_to, d):
+        for cur in list(asset_list()):
+            c = cur['asset']
             try:
-                crossrate1 = currency_rate(currency_from,
+                crossrate1 = asset_rate(asset_from,
                                            c,
                                            d,
                                            _rate_allow_cross=False,
                                            _rate_allow_reverse=True)
-                crossrate2 = currency_rate(currency_to,
+                crossrate2 = asset_rate(asset_to,
                                            c,
                                            d,
                                            _rate_allow_cross=False,
@@ -490,16 +490,16 @@ def currency_rate(currency_from,
             except RateNotFound:
                 pass
 
-    d = _get_rate(currency_from, currency_to)
+    d = _get_rate(asset_from, asset_to)
     if not d:
         if config.rate_allow_reverse or _rate_allow_reverse is True:
-            d = _get_rate(currency_to, currency_from)
+            d = _get_rate(asset_to, asset_from)
             if not d:
                 if config.rate_allow_cross and _rate_allow_cross is not False:
-                    rate = _get_crossrate(currency_from, currency_to, date)
+                    rate = _get_crossrate(asset_from, asset_to, date)
                     if rate: return rate
                 raise RateNotFound('{}/{} for {}'.format(
-                    currency_from, currency_to, format_date(date)))
+                    asset_from, asset_to, format_date(date)))
             value = 1 / d.value
         else:
             raise RateNotFound
@@ -509,14 +509,14 @@ def currency_rate(currency_from,
 
 
 def account_create(account,
-                   currency,
+                   asset,
                    tp='current',
                    note=None,
                    max_overdraft=None,
                    max_balance=None):
     """
     Args:
-        currency: currency code
+        asset: asset code
         account: account code
         note: account notes
         tp: account type (credit, current, saving, cash etc.)
@@ -531,19 +531,19 @@ def account_create(account,
         tp_id = ACCOUNT_TYPE_IDS[tp]
     db = get_db()
     dbt = db.begin()
-    logger.info('Creating account {}, currency: {}'.format(
-        account.upper(), currency.upper()))
+    logger.info('Creating account {}, asset: {}'.format(
+        account.upper(), asset.upper()))
     try:
         r = db.execute(sql("""
-        insert into account(code, note, tp, currency_id, max_overdraft,
+        insert into account(code, note, tp, asset_id, max_overdraft,
         max_balance) values
         (:code, :note, :tp,
-            (select id from currency where code=:currency),
+            (select id from asset where code=:asset),
             :max_overdraft, :max_balance)"""),
                        code=account.upper(),
                        note=note,
                        tp=tp_id,
-                       currency=currency.upper(),
+                       asset=asset.upper(),
                        max_overdraft=max_overdraft,
                        max_balance=max_balance)
         db.execute(sql("""
@@ -572,9 +572,9 @@ def account_info(account):
     """
     r = get_db().execute(sql("""
             select account.code as account_code, account.note, account.tp,
-            currency.code as currency, max_overdraft, max_balance
+            asset.code as asset, max_overdraft, max_balance
             from account join
-            currency on account.currency_id = currency.id
+            asset on account.asset_id = asset.id
             where account.code = :account"""),
                          account=account.upper())
     d = r.fetchone()
@@ -584,7 +584,7 @@ def account_info(account):
         'note': d.note,
         'type': ACCOUNT_TYPE_NAMES[d.tp],
         'tp': d.tp,
-        'currency': d.currency,
+        'asset': d.asset,
         'max_overdraft': d.max_overdraft,
         'max_balance': d.max_balance
     }
@@ -758,14 +758,14 @@ def account_update(account, **kwargs):
     _update(account, 'account', 'code', kw)
 
 
-def currency_update(currency, **kwargs):
+def asset_update(asset, **kwargs):
     """
-    Update currency parameters
+    Update asset parameters
 
     Parameters, allowed to be updated:
         code, precision
 
-    Note that currency precision is cached and requires process restart if
+    Note that asset precision is cached and requires process restart if
     changed
     """
     _ckw(kwargs, ['code', 'precision'])
@@ -773,7 +773,7 @@ def currency_update(currency, **kwargs):
     if 'precision' in kw:
         kw['precs'] = kw['precision']
         del kw['precision']
-    _update(currency, 'currency', 'code', kw)
+    _update(asset, 'asset', 'code', kw)
 
 
 def transaction_update(transaction_id, **kwargs):
@@ -975,21 +975,21 @@ def transaction_move(dt=None,
         dtoken = account_lock(dt, debit_lock_token) if dt else None
         ct_info = account_info(ct) if ct else None
         dt_info = account_info(dt) if dt else None
-        if ct and dt and ct_info['currency'] != dt_info['currency']:
+        if ct and dt and ct_info['asset'] != dt_info['asset']:
             if config.lazy_exchange:
                 if not amount:
                     raise ValueError(
                         'Amount is required for exchange operations')
                 if not rate:
-                    rate = currency_rate(ct_info['currency'],
-                                         dt_info['currency'],
+                    rate = asset_rate(ct_info['asset'],
+                                         dt_info['asset'],
                                          date=date)
 
             else:
                 raise ValueError('Currency mismatch')
             tid1 = _transaction_move(
                 ct=ct,
-                amount=format_amount(amount / rate, ct_info['currency'])
+                amount=format_amount(amount / rate, ct_info['asset'])
                 if xdt else amount,
                 tag=tag,
                 note=note,
@@ -999,7 +999,7 @@ def transaction_move(dt=None,
                 _ct_info=ct_info)
             tid2 = _transaction_move(dt=dt,
                                      amount=amount if xdt else format_amount(
-                                         amount * rate, dt_info['currency']),
+                                         amount * rate, dt_info['asset']),
                                      tag=tag,
                                      note=note,
                                      date=date,
@@ -1205,17 +1205,17 @@ def purge():
         return result
 
 
-def account_list(currency=None,
+def account_list(asset=None,
                  tp=None,
                  code=None,
                  date=None,
-                 order_by=['tp', 'currency', 'account', 'balance'],
+                 order_by=['tp', 'asset', 'account', 'balance'],
                  hide_empty=False):
     """
     List accounts and their balances
 
     Args:
-        currency: filter by currency
+        asset: filter by asset
         tp: filter by account type (or types)
         code: filter by acocunt code (may contain '%' as a wildcards)
         date: get balances for the specified date
@@ -1241,9 +1241,9 @@ def account_list(currency=None,
                 cor = cor + (' or '
                              if cor else '') + 'account.tp = {}'.format(tp_id)
             cond += cor + ')'
-    if currency:
-        cond += (' and ' if cond else '') + 'currency.code = "{}"'.format(
-            currency.upper())
+    if asset:
+        cond += (' and ' if cond else '') + 'asset.code = "{}"'.format(
+            asset.upper())
     else:
         cond += (' and ' if cond else '') + 'account.tp < 1000'
     if date:
@@ -1261,31 +1261,31 @@ def account_list(currency=None,
             oby = order_by
     r = get_db().execute(
         sql("""
-            select sum(balance) as balance, account, note, currency, tp from 
+            select sum(balance) as balance, account, note, asset, tp from 
                 (
                 select sum(amount) as balance,
                     account.code as account,
                     account.note as note,
-                    currency.code as currency,
+                    asset.code as asset,
                     account.tp as tp
                     from transact
                     left join account on account.id=transact.account_debit_id
-                    join currency on currency.id=account.currency_id
+                    join asset on asset.id=account.asset_id
                     where d is not null and {cond_d}
                         group by account.code
                 union
                 select -1*sum(amount) as balance,
                     account.code as account,
                     account.note as note,
-                    currency.code as currency,
+                    asset.code as asset,
                     account.tp as tp
                     from transact
                     left join account on account.id=transact.account_credit_id
-                    join currency on currency.id=account.currency_id
+                    join asset on asset.id=account.asset_id
                     where {cond}
                             group by account.code
                 ) as templist
-                    group by account, note, templist.currency, templist.tp
+                    group by account, note, templist.asset, templist.tp
             {oby}
             """.format(cond=cond,
                        cond_d=cond.replace('_created', ''),
@@ -1295,7 +1295,7 @@ def account_list(currency=None,
         if not d: break
         if hide_empty is False or d.balance:
             row = OrderedDict()
-            for i in ('account', 'type', 'note', 'currency', 'balance'):
+            for i in ('account', 'type', 'note', 'asset', 'balance'):
                 if i == 'type':
                     row['type'] = ACCOUNT_TYPE_NAMES[d.tp]
                 else:
@@ -1303,66 +1303,66 @@ def account_list(currency=None,
             yield row
 
 
-def account_list_summary(currency=None,
+def account_list_summary(asset=None,
                          tp=None,
                          code=None,
                          date=None,
-                         order_by=['tp', 'currency', 'account', 'balance'],
+                         order_by=['tp', 'asset', 'account', 'balance'],
                          hide_empty=False,
                          base=None):
     """
     List accounts and their balances plus return a total sum
 
     Args:
-        currency: filter by currency
+        asset: filter by asset
         tp: filter by account type (or types)
         code: filter by acocunt code (may contain '%' as a wildcards)
         date: get balances for the specified date
         order_by: list ordering
         hide_empty: hide accounts with zero balance, default is False
-        base: base currency (if not specified, config.base_currency is used)
+        base: base asset (if not specified, config.base_asset is used)
 
     Returns:
         accounts: list of accounts
-        total: total sum in base currency
+        total: total sum in base asset
     """
     if base is None:
-        base = config.base_currency
+        base = config.base_asset
     accounts = list(
-        account_list(currency=currency,
+        account_list(asset=asset,
                      tp=tp,
                      code=code,
                      date=date,
                      order_by=order_by,
                      hide_empty=hide_empty))
     for a in accounts:
-        a['balance_bc'] = a['balance'] * currency_rate(
-            a['currency'], base, date=date)
+        a['balance_bc'] = a['balance'] * asset_rate(
+            a['asset'], base, date=date)
     return {
         'accounts':
             accounts,
         'total':
             sum(
-                format_amount(d['balance'], d['currency']) if d['currency'] ==
+                format_amount(d['balance'], d['asset']) if d['asset'] ==
                 base else format_amount(
                     d['balance'] *
-                    currency_rate(d['currency'], base, date=date), d['currency']
+                    asset_rate(d['asset'], base, date=date), d['asset']
                 ) for d in accounts)
     }
 
 
 def account_credit(account=None,
-                   currency=None,
+                   asset=None,
                    date=None,
                    tp=None,
-                   order_by=['tp', 'account', 'currency'],
+                   order_by=['tp', 'account', 'asset'],
                    hide_empty=False):
     """
     Get credit operations for the account
 
     Args:
         account: filter by account code
-        currency: filter by currency code
+        asset: filter by asset code
         date: get balance for specified date/time
         tp: FIlter by account type
         sort: field or list of sorting fields
@@ -1373,7 +1373,7 @@ def account_credit(account=None,
     """
     return _account_summary('credit',
                             account=account,
-                            currency=currency,
+                            asset=asset,
                             date=date,
                             tp=tp,
                             order_by=order_by,
@@ -1381,17 +1381,17 @@ def account_credit(account=None,
 
 
 def account_debit(account=None,
-                  currency=None,
+                  asset=None,
                   date=None,
                   tp=None,
-                  order_by=['tp', 'account', 'currency'],
+                  order_by=['tp', 'account', 'asset'],
                   hide_empty=False):
     """
     Get debit operations for the account
 
     Args:
         account: filter by account code
-        currency: filter by currency code
+        asset: filter by asset code
         date: get balance for specified date/time
         tp: FIlter by account type
         sort: field or list of sorting fields
@@ -1402,7 +1402,7 @@ def account_debit(account=None,
     """
     return _account_summary('debit',
                             account=account,
-                            currency=currency,
+                            asset=asset,
                             date=date,
                             tp=tp,
                             order_by=order_by,
@@ -1411,19 +1411,19 @@ def account_debit(account=None,
 
 def _account_summary(balance_type,
                      account=None,
-                     currency=None,
+                     asset=None,
                      date=None,
                      tp=None,
-                     order_by=['tp', 'account', 'currency'],
+                     order_by=['tp', 'account', 'asset'],
                      hide_empty=False):
     cond = 'where {} transact.deleted is null'.format(
         'transact.d is not null and ' if balance_type == 'debit' else '')
     if account:
         cond += (' and '
                  if cond else '') + 'account.code = "{}"'.format(account)
-    if currency:
+    if asset:
         cond += (' and '
-                 if cond else '') + 'currency.code = "{}"'.format(currency)
+                 if cond else '') + 'asset.code = "{}"'.format(asset)
     if date:
         dts = parse_date(date)
         cond += (' and ' if cond else '') + 'transact.d <= "{}"'.format(dts)
@@ -1442,11 +1442,11 @@ def _account_summary(balance_type,
     r = get_db().execute(
         sql("""select sum(amount) as {btype}_balance, account.id as id,
     account.tp as tp,
-    account.code as account, currency.code as currency
+    account.code as account, asset.code as asset
     from transact 
     join account on transact.account_{btype}_id = account.id
-    join currency on account.currency_id = currency.id {cond}
-    group by account.code, currency.code {oby}""".format(
+    join asset on account.asset_id = asset.id {cond}
+    group by account.code, asset.code {oby}""".format(
             btype=balance_type,
             cond=cond,
             oby=('order by ' + oby) if oby else '')))
@@ -1455,7 +1455,7 @@ def _account_summary(balance_type,
         if not d: break
         if hide_empty is False or d.balance:
             row = OrderedDict()
-            for i in ('account', 'type', 'currency', balance_type + '_balance'):
+            for i in ('account', 'type', 'asset', balance_type + '_balance'):
                 if i == 'type':
                     row['type'] = ACCOUNT_TYPE_NAMES[d.tp]
                 else:
@@ -1492,7 +1492,7 @@ def account_balance(account, date=None):
     d = r.fetchone()
     if not d or d.balance is None:
         raise ResourceNotFound
-    return format_amount(d.balance, acc_info['currency'])
+    return format_amount(d.balance, acc_info['asset'])
 
 
 def account_balance_range(account,
