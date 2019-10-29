@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 from sqlalchemy.exc import IntegrityError
 
@@ -467,11 +467,7 @@ def asset_delete_rate(asset_from, asset_to=None, date=None):
         raise ResourceNotFound
 
 
-def asset_rate(asset_from,
-               asset_to=None,
-               date=None,
-               _rate_allow_cross=None,
-               _rate_allow_reverse=None):
+def asset_rate(asset_from, asset_to=None, date=None):
     """
     Get asset rate for the specified date
 
@@ -522,11 +518,7 @@ def asset_rate(asset_from,
             paths = []
             for node in graph[start]:
                 if node not in path:
-                    newpaths = _find_path(graph, node, end, path)
-                else:
-                    newpaths = []
-                for newpath in newpaths:
-                    paths.append(newpath)
+                    paths += _find_path(graph, node, end, path)
             return paths
 
         graph = {}
@@ -547,6 +539,8 @@ def asset_rate(asset_from,
                 rates[(k[1], k[0])] = 1 / v
                 graph.setdefault(k[1], []).append(k[0])
         path = min(_find_path(graph, asset_from, asset_to), key=len)
+        if not path:
+            return
         rate = 1
         for i in range(0, len(path) - 1):
             rate *= rates[path[i], path[i + 1]]
@@ -554,10 +548,10 @@ def asset_rate(asset_from,
 
     value = _get_rate(asset_from, asset_to)
     if not value:
-        if config.rate_allow_reverse or _rate_allow_reverse is True:
+        if config.rate_allow_reverse is True:
             value = _get_rate(asset_to, asset_from)
             if not value:
-                if config.rate_allow_cross and _rate_allow_cross is not False:
+                if config.rate_allow_cross:
                     try:
                         value = _get_crossrate(asset_from, asset_to, date)
                     except:
