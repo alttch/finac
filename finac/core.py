@@ -10,7 +10,7 @@ from functools import lru_cache
 
 from cachetools import TTLCache
 
-rate_cache = TTLCache(maxsize = 100, ttl=2)
+rate_cache = TTLCache(maxsize=100, ttl=2)
 
 # financial assets
 ACCOUNT_CREDIT = 0
