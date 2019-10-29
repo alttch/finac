@@ -175,8 +175,7 @@ class Test(unittest.TestCase):
             raise RuntimeError('Rate not found not raised')
         except finac.RateNotFound:
             pass
-        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'),
-                         1.5)
+        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'), 1.5)
         self.assertEqual(finac.asset_rate('EUR', 'USD'), 2)
 
     def test061_asset_rate_easyget(self):
@@ -193,11 +192,9 @@ class Test(unittest.TestCase):
 
     def test062_asset_rate_delete(self):
         finac.asset_set_rate('EUR', 'USD', value=1.8, date='2018-12-01')
-        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'),
-                         1.5)
+        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'), 1.5)
         finac.asset_delete_rate('EUR', 'USD', date='2019-01-01')
-        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'),
-                         1.8)
+        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'), 1.8)
 
     def test070_test_targets_and_tags(self):
         finac.account_create('TT1', 'EUR', tp='credit')
@@ -275,6 +272,20 @@ class Test(unittest.TestCase):
         finac.transaction_delete(t2)
         self.assertEqual(finac.account_balance('eur1'), -38.18)
         self.assertEqual(finac.account_balance('usd1'), 42)
+
+    def test081_test_cross(self):
+        finac.asset_create('AX1')
+        finac.asset_create('AX2')
+        finac.asset_create('AX3')
+        finac.asset_create('AX4')
+        finac.asset_set_rate('AX1/AX2', value=2)
+        finac.asset_set_rate('AX2/AX3', value=2.5)
+        finac.asset_set_rate('AX3/AX4', value=3)
+        self.assertEqual(finac.asset_rate('AX1/AX4'), 15)
+        self.assertEqual(round(finac.asset_rate('AX4/AX1') * 100, 2), 6.67)
+
+    def test082_list_recent_rates(self):
+        finac.lsa('*')
 
     def test085_apply(self):
         finac.account_create('xtest1', 'eur')
