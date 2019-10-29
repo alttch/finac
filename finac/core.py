@@ -2,11 +2,15 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 from sqlalchemy.exc import IntegrityError
 
 from functools import lru_cache
+
+from cachetools import TTLCache
+
+rate_cache = TTLCache(maxsize = 100, ttl=2)
 
 # financial assets
 ACCOUNT_CREDIT = 0
@@ -313,39 +317,67 @@ def asset_list():
         yield row
 
 
-def asset_list_rates(asset, start=None, end=None):
+def asset_list_rates(asset=None, start=None, end=None):
     """
     List asset rates
 
     Currency can be specified either as code, or as pair "code/code"
+
+    If asset is not specified, "end" is used as date to get rates for all
+    assets
     """
-    cond = ''
-    asset = asset.upper()
-    if start:
-        dts = parse_date(start)
-        cond += (' and ' if cond else '') + 'd >= {}'.format(dts)
-    if end:
-        dte = parse_date(end)
-        cond += (' and ' if cond else '') + 'd <= {}'.format(dte)
-    if asset.find('/') != -1:
-        asset_from, asset_to = asset.split('/')
-        cond += (' and '
-                 if cond else '') + 'cf.code = "{}" and ct.code = "{}"'.format(
-                     asset_from, asset_to)
+    if asset:
+        cond = ''
+        asset = asset.upper()
+        if start:
+            dts = parse_date(start)
+            cond += (' and ' if cond else '') + 'd >= {}'.format(dts)
+        if end:
+            dte = parse_date(end)
+            cond += (' and ' if cond else '') + 'd <= {}'.format(dte)
+        if asset.find('/') != -1:
+            asset_from, asset_to = asset.split('/')
+            cond += (' and ' if cond else
+                     '') + 'cf.code = "{}" and ct.code = "{}"'.format(
+                         asset_from, asset_to)
+        else:
+            cond += (' and ' if cond else
+                     '') + '(cf.code = "{code}" or ct.code = "{code}")'.format(
+                         code=asset)
+        r = get_db().execute(
+            sql("""
+            select cf.code as asset_from,
+                    ct.code as asset_to,
+                    d, value
+            from asset_rate
+                join asset as cf on asset_from_id = cf.id
+                join asset as ct on asset_to_id = ct.id
+                    where {cond}
+        """.format(cond=cond)))
     else:
-        cond += (' and ' if cond else
-                 '') + '(cf.code = "{code}" or ct.code = "{code}")'.format(
-                     code=asset)
-    r = get_db().execute(
-        sql("""
-        select cf.code as asset_from,
-                ct.code as asset_to,
-                d, value
-        from asset_rate
-            join asset as cf on asset_from_id = cf.id
-            join asset as ct on asset_to_id = ct.id
-                where {cond}
-    """.format(cond=cond)))
+        d = parse_date(end) if end else int(time.time())
+        r = get_db().execute(sql("""
+            select
+                a1.code as asset_from,
+                a2.code as asset_to,
+                ar.value as value, m as d
+            from
+                (select
+                    as1.asset_from_id as fr,
+                    as1.asset_to_id as t,
+                    max(as1.d) as m
+                from asset_rate as as1
+                    inner join asset_rate as as2
+                    on as1.asset_from_id=as2.asset_from_id
+                where as1.d<=:d group by fr, t)
+            as s1
+                join asset as a1 on a1.id=fr
+                join asset as a2 on a2.id=t
+                join asset_rate as ar on ar.asset_from_id=fr
+                    and ar.asset_to_id=t and ar.d=m
+                order by asset_from, asset_to
+                    """),
+                             d=d)
     while True:
         d = r.fetchone()
         if not d: break
@@ -460,51 +492,82 @@ def asset_rate(asset_from,
     db = get_db()
 
     def _get_rate(cf, ct):
-        r = db.execute(sql("""
-            select value from asset_rate
-                join asset as cfrom on asset_from_id=cfrom.id
-                join asset as cto on asset_to_id=cto.id
-            where d <= :d and cfrom.code = :f and cto.code = :t
-            order by d desc limit 1
-            """),
-                       d=date,
-                       f=cf,
-                       t=ct)
-        return r.fetchone()
+        try:
+            return rate_cache[(cf, ct)]
+        except (KeyError, TypeError) as e:
+            r = db.execute(sql("""
+                select value from asset_rate
+                    join asset as cfrom on asset_from_id=cfrom.id
+                    join asset as cto on asset_to_id=cto.id
+                where d <= :d and cfrom.code = :f and cto.code = :t
+                order by d desc limit 1
+                """),
+                           d=date,
+                           f=cf,
+                           t=ct)
+            d = r.fetchone()
+            if d:
+                try:
+                    rate_cache[(cf, ct)] = d.value
+                except TypeError:
+                    pass
+                return d.value
 
     def _get_crossrate(asset_from, asset_to, d):
-        for cur in list(asset_list()):
-            c = cur['asset']
-            try:
-                crossrate1 = asset_rate(asset_from,
-                                        c,
-                                        d,
-                                        _rate_allow_cross=False,
-                                        _rate_allow_reverse=True)
-                crossrate2 = asset_rate(asset_to,
-                                        c,
-                                        d,
-                                        _rate_allow_cross=False,
-                                        _rate_allow_reverse=True)
-                return crossrate1 / crossrate2
-            except RateNotFound:
-                pass
 
-    d = _get_rate(asset_from, asset_to)
-    if not d:
+        def _find_path(graph, start, end, path=[]):
+            path = path + [start]
+            if start == end:
+                return [path]
+            paths = []
+            for node in graph[start]:
+                if node not in path:
+                    newpaths = _find_path(graph, node, end, path)
+                else:
+                    newpaths = []
+                for newpath in newpaths:
+                    paths.append(newpath)
+            return paths
+
+        graph = {}
+        rates = {}
+        try:
+            ratelist = rate_cache[d]
+        except (KeyError, TypeError) as e:
+            ratelist = list(asset_list_rates(end=d))
+            try:
+                rate_cache[d] = ratelist
+            except TypeError:
+                pass
+        for r in ratelist:
+            rates[(r['asset_from'], r['asset_to'])] = r['value']
+            graph.setdefault(r['asset_from'], []).append(r['asset_to'])
+        for k, v in rates.copy().items():
+            if (k[1], k[0]) not in rates:
+                rates[(k[1], k[0])] = 1 / v
+                graph.setdefault(k[1], []).append(k[0])
+        path = min(_find_path(graph, asset_from, asset_to), key=len)
+        rate = 1
+        for i in range(0, len(path) - 1):
+            rate *= rates[path[i], path[i + 1]]
+        return rate
+
+    value = _get_rate(asset_from, asset_to)
+    if not value:
         if config.rate_allow_reverse or _rate_allow_reverse is True:
-            d = _get_rate(asset_to, asset_from)
-            if not d:
+            value = _get_rate(asset_to, asset_from)
+            if not value:
                 if config.rate_allow_cross and _rate_allow_cross is not False:
-                    rate = _get_crossrate(asset_from, asset_to, date)
-                    if rate: return rate
+                    try:
+                        value = _get_crossrate(asset_from, asset_to, date)
+                    except:
+                        pass
+                    if value: return value
                 raise RateNotFound('{}/{} for {}'.format(
                     asset_from, asset_to, format_date(date)))
-            value = 1 / d.value
+            value = 1 / value
         else:
             raise RateNotFound
-    else:
-        value = d.value
     return value
 
 

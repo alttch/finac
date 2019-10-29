@@ -325,6 +325,7 @@ if __name__ == '__main__':
     except:
         pass
     finac.init(db=TEST_DB, keep_integrity=True)
+    finac.core.rate_cache = None
     test_suite = unittest.TestLoader().loadTestsFromTestCase(Test)
     test_result = unittest.TextTestRunner().run(test_suite)
     sys.exit(not test_result.wasSuccessful())

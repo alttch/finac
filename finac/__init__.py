@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 import rapidtables
 import neotermcolor
@@ -217,6 +217,8 @@ def lsa(asset=None, start=None, end=None):
 
     Currency filter can be specified either as code, or as pair "code/code"
 
+    If asset == '*' - print rates table
+
     Args:
         asset: asset code
         start: start date (for rates), default: first day of current month
@@ -240,7 +242,7 @@ def lsa(asset=None, start=None, end=None):
     else:
         rr = []
         for r in asset_list_rates(
-                asset,
+                asset if asset != '*' else None,
                 start=start if start else datetime.datetime.today().replace(
                     day=1),
                 end=end):
