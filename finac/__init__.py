@@ -95,6 +95,7 @@ def ls(account=None,
        pending=True,
        hide_empty=False,
        order_by=['tp', 'asset', 'account', 'balance'],
+       group_by=None,
        base=None):
     """
     Primary interactive function. Prints account statement if account code
@@ -175,6 +176,7 @@ def ls(account=None,
                                       code=code,
                                       date=end,
                                       order_by=order_by,
+                                      group_by=group_by,
                                       hide_empty=hide_empty,
                                       base=base)
         accounts = result['accounts']

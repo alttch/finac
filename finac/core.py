@@ -1366,6 +1366,7 @@ def account_list_summary(asset=None,
                          code=None,
                          date=None,
                          order_by=['tp', 'asset', 'account', 'balance'],
+                         group_by=None,
                          hide_empty=False,
                          base=None):
     """
