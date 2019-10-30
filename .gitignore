@@ -5,5 +5,8 @@ dist
 Makefile
 .idea/
 finac.db
+tests/123.py
+tests/2222.py
+test_rate.db
 TODO.todo
 *.pyc
