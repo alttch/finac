@@ -162,14 +162,21 @@ def ls(account=None,
                             style='finac:credit_sum')
         print()
         print('Net profit/loss: ', end='')
+        pl = result['debit'] - result['credit'] 
+        balance = account_balance(account, date=end)
+        rcur = acc_info['asset']
+        if base:
+            pl = pl * asset_rate(acc_info['asset'], base, date=end)
+            balance = balance * asset_rate(acc_info['asset'], base, date=end)
+            rcur = base.upper()
         neotermcolor.cprint('{} {}'.format(
-            format_money(result['debit'] - result['credit'], precision),
-            acc_info['asset']),
+            format_money(pl, precision),
+            rcur),
                             attrs='bold', end='')
         print(', balance{}: '.format(' to date' if end else ''), end='')
         neotermcolor.cprint('{} {}'.format(
-            format_money(account_balance(account, date=end), precision),
-            acc_info['asset']),
+            format_money(balance, precision),
+            rcur),
                             attrs='bold', end='')
         print()
     else:
