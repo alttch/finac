@@ -162,7 +162,7 @@ def ls(account=None,
                             style='finac:credit_sum')
         print()
         print('Net profit/loss: ', end='')
-        pl = result['debit'] - result['credit'] 
+        pl = result['debit'] - result['credit']
         balance = account_balance(account, date=end)
         rcur = acc_info['asset']
         if base:
