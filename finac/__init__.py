@@ -165,7 +165,12 @@ def ls(account=None,
         neotermcolor.cprint('{} {}'.format(
             format_money(result['debit'] - result['credit'], precision),
             acc_info['asset']),
-                            attrs='bold')
+                            attrs='bold', end='')
+        print(', balance{}: '.format(' to date' if end else ''), end='')
+        neotermcolor.cprint('{} {}'.format(
+            format_money(account_balance(account, date=end), precision),
+            acc_info['asset']),
+                            attrs='bold', end='')
         print()
     else:
         if not base:
