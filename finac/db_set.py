@@ -8,9 +8,9 @@ logger = logging.getLogger('finac')
 meta = MetaData()
 
 asset = Table('asset', meta,
-                 Column('id', Integer, primary_key=True, autoincrement=True),
-                 Column('code', String(20), nullable=False, unique=True),
-                 Column('precs', Integer, nullable=False, default=2))
+              Column('id', Integer, primary_key=True, autoincrement=True),
+              Column('code', String(20), nullable=False, unique=True),
+              Column('precs', Integer, nullable=False, default=2))
 
 asset_rate = Table(
     'asset_rate', meta,
@@ -25,7 +25,7 @@ asset_rate = Table(
            nullable=False,
            primary_key=True),
     Column('d', Integer, nullable=False, primary_key=True),
-    Column('value', Float, nullable=False))
+    Column('value', Float(precision=8), nullable=False))
 
 account = Table(
     'account', meta, Column('id', Integer, primary_key=True,
@@ -35,8 +35,8 @@ account = Table(
     Column('asset_id',
            Integer,
            ForeignKey('asset.id', ondelete='CASCADE'),
-           nullable=False), Column('max_overdraft', Float),
-    Column('max_balance', Float))
+           nullable=False), Column('max_overdraft', Float(precision=8)),
+    Column('max_balance', Float(precision=8)))
 
 transact = Table(
     'transact', meta, Column('id',
@@ -47,8 +47,9 @@ transact = Table(
            ForeignKey('account.id', ondelete='SET NULL')),
     Column('account_debit_id', Integer,
            ForeignKey('account.id', ondelete='SET NULL')),
-    Column('amount', Float, nullable=False), Column('tag', String(20)),
-    Column('note', String(20)), Column('note', String(20), default=''),
+    Column('amount', Float(precision=8), nullable=False),
+    Column('tag', String(20)), Column('note', String(20)),
+    Column('note', String(20), default=''),
     Column('d_created', Integer, nullable=False), Column('d', Integer),
     Column('chain_transact_id', Integer),
     Column('deleted', Integer, default=None))
