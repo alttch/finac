@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import (Table, Column, Integer, String, MetaData, TEXT, Float,
-                        ForeignKey, text)
+                        ForeignKey, text, Index)
 from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger('finac')
@@ -47,6 +47,7 @@ transact = Table('transact', meta,
                  Column('d_created', Integer, nullable=False),
                  Column('d', Integer), Column('chain_transact_id', Integer),
                  Column('deleted', Integer, default=None),
+                 Index('i_tag', 'tag'),
                  mysql_engine='InnoDB', mysql_charset='utf8mb4')
 
 
