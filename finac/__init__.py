@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.4'
+__version__ = '0.1.7'
 
 import rapidtables
 import neotermcolor
@@ -95,6 +95,7 @@ def ls(account=None,
        pending=True,
        hide_empty=False,
        order_by=['tp', 'asset', 'account', 'balance'],
+       group_by=None,
        base=None):
     """
     Primary interactive function. Prints account statement if account code
@@ -161,10 +162,22 @@ def ls(account=None,
                             style='finac:credit_sum')
         print()
         print('Net profit/loss: ', end='')
+        pl = result['debit'] - result['credit']
+        balance = account_balance(account, date=end)
+        rcur = acc_info['asset']
+        if base:
+            pl = pl * asset_rate(acc_info['asset'], base, date=end)
+            balance = balance * asset_rate(acc_info['asset'], base, date=end)
+            rcur = base.upper()
         neotermcolor.cprint('{} {}'.format(
-            format_money(result['debit'] - result['credit'], precision),
-            acc_info['asset']),
-                            attrs='bold')
+            format_money(pl, precision),
+            rcur),
+                            attrs='bold', end='')
+        print(', balance{}: '.format(' to date' if end else ''), end='')
+        neotermcolor.cprint('{} {}'.format(
+            format_money(balance, precision),
+            rcur),
+                            attrs='bold', end='')
         print()
     else:
         if not base:
@@ -175,6 +188,7 @@ def ls(account=None,
                                       code=code,
                                       date=end,
                                       order_by=order_by,
+                                      group_by=group_by,
                                       hide_empty=hide_empty,
                                       base=base)
         accounts = result['accounts']
