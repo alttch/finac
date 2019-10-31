@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 import rapidtables
 import neotermcolor
@@ -123,7 +123,8 @@ def ls(account=None,
     if account:
         result = account_statement_summary(
             account=account,
-            start=start if start else datetime.datetime.today().replace(day=1),
+            start=start if start else datetime.datetime.today().replace(
+                day=1, hour=0, minute=0, second=0, microsecond=0),
             end=end,
             tag=tag,
             pending=pending)
@@ -169,15 +170,14 @@ def ls(account=None,
             pl = pl * asset_rate(acc_info['asset'], base, date=end)
             balance = balance * asset_rate(acc_info['asset'], base, date=end)
             rcur = base.upper()
-        neotermcolor.cprint('{} {}'.format(
-            format_money(pl, precision),
-            rcur),
-                            attrs='bold', end='')
+        neotermcolor.cprint('{} {}'.format(format_money(pl, precision), rcur),
+                            attrs='bold',
+                            end='')
         print(', balance{}: '.format(' to date' if end else ''), end='')
-        neotermcolor.cprint('{} {}'.format(
-            format_money(balance, precision),
-            rcur),
-                            attrs='bold', end='')
+        neotermcolor.cprint('{} {}'.format(format_money(balance, precision),
+                                           rcur),
+                            attrs='bold',
+                            end='')
         print()
     else:
         if not base:
@@ -258,7 +258,7 @@ def lsa(asset=None, start=None, end=None):
         for r in asset_list_rates(
                 asset if asset != '*' else None,
                 start=start if start else datetime.datetime.today().replace(
-                    day=1),
+                    day=1, hour=0, minute=0, second=0, microsecond=0),
                 end=end):
             row = OrderedDict()
             row['pair'] = '{}/{}'.format(r['asset_from'], r['asset_to'])
