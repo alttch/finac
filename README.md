@@ -236,6 +236,20 @@ and that's it.
 Actually, transaction templates are useful for any recurrent operations. You
 may specify all same arguments, as for the core functions.
 
+### Number formatting
+
+Finac doesn't use system locale. If you input amounts and targets as strings,
+you may input them in any format and Finac will try converting it to the float
+numeric automatically. The following values for amounts and targets are correct
+and will be automatically parsed:
+
+* 1 000,00 = 1000.0
+* 1,000.00 = 1000.0
+* 1.000,00 = 1000.0
+* 1,000.00 = 1000.0
+* 10,0 = 10.0
+* 10.0 = 10.0
+
 ## How to embed Finac library into own project
 
 See [Finac documentation](https://finac.readthedocs.io/) for core function API

@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.10'
+__version__ = '0.1.11'
 
 from sqlalchemy.exc import IntegrityError
 
@@ -138,6 +138,31 @@ def parse_date(d, return_timestamp=True):
     else:
         dt = d
     return dt.timestamp() if return_timestamp else dt
+
+
+def parse_number(d):
+    if isinstance(d, int) or isinstance(d, float):
+        return d
+    if not isinstance(d, str):
+        raise ValueError(d)
+    try:
+        return float(d)
+    except:
+        pass
+    spaces = d.count(' ')
+    commas = d.count(',')
+    dots = d.count('.')
+    if spaces > 0:
+        return float(d.replace(' ', '').replace(',', '.'))
+    elif commas > 1:
+        return float(d.replace(',', ''))
+    elif commas == 1 and commas == dots:
+        if d.find(',') < d.find('.'):
+            return float(d.replace(',', ''))
+        else:
+            return float(d.replace('.', '').replace(',', '.'))
+    else:
+        return float(d.replace(',', '.'))
 
 
 @lru_cache(maxsize=256)
@@ -888,6 +913,7 @@ def transaction_create(account,
     token = account_lock(account, lock_token)
     try:
         if target is not None:
+            target = parse_number(target)
             balance = account_balance(account)
             if balance > target:
                 amount = -1 * (balance - target)
@@ -895,6 +921,8 @@ def transaction_create(account,
                 amount = target - balance
             else:
                 return
+        else:
+            amount = parse_number(amount)
         if amount < 0:
             return transaction_move(ct=account,
                                     amount=-1 * amount if amount else None,
@@ -946,9 +974,11 @@ def _transaction_move(dt=None,
     ct = ct.upper() if ct else None
     dt = dt.upper() if dt else None
     if target_dt is not None:
-        amount = target_dt - account_balance(dt)
+        amount = parse_number(target_dt) - account_balance(dt)
     elif target_ct is not None:
-        amount = account_balance(ct) - target_ct
+        amount = account_balance(ct) - parse_number(target_ct)
+    else:
+        amount = parse_number(amount)
     if amount == 0: return
     if amount is not None and amount < 0:
         raise ValueError('Amount should be greater than zero')

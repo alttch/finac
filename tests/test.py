@@ -97,7 +97,7 @@ class Test(unittest.TestCase):
                              'Test account',
                              max_overdraft=900)
         finac.transaction_create('TEST3.TEST', 100)
-        finac.transaction_move('TEST2.TEST', 'TEST3.TEST', 1000)
+        finac.transaction_move('TEST2.TEST', 'TEST3.TEST', '1,000.00')
         self.assertEqual(finac.account_balance('TEST3.TEST'), -900)
 
         # forbid overdraft
