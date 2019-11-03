@@ -99,6 +99,7 @@ _db = SimpleNamespace(engine=None)
 config = SimpleNamespace(db=None,
                          keep_integrity=True,
                          lazy_exchange=True,
+                         full_transaction_update=True,
                          rate_allow_reverse=True,
                          rate_allow_cross=True,
                          base_asset='USD',
@@ -263,6 +264,7 @@ def init(db, **kwargs):
             "EUR/USD" pair exists but no USD/EUR, use 1 / "EUR/USD"
         rate_allow_cross: if exchange rate is not found, allow finac to look
             for the nearest cross-asset rate
+        full_transaction_update: allow updating transaction date and amount
         base_asset: default base asset. Default is "USD"
         date_format: default date format in statements
     """
@@ -840,7 +842,10 @@ def transaction_update(transaction_id, **kwargs):
     Parameters, allowed to be updated:
         tag, note
     """
-    _ckw(kwargs, ['tag', 'note', 'created', 'completed'])
+    a = ['tag', 'note']
+    if config.full_transaction_update:
+        a += ['created', 'completed', 'amount']
+    _ckw(kwargs, a)
     kw = kwargs.copy()
     if 'created' in kw:
         kw['d_created'] = parse_date(kw['created'])
