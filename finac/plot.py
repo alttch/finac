@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.14'
+__version__ = '0.1.15'
 
 from . import core
 
@@ -30,6 +30,7 @@ def account_plot(account, start, end=None, step=1, base=None, **kwargs):
 
 
 def account_pie(tp=None,
+                asset=None,
                 mb=0,
                 base='usd',
                 group_by=None,
@@ -51,6 +52,7 @@ def account_pie(tp=None,
     x = core.account_list_summary(base=base,
                                   hide_empty=True,
                                   tp=tp,
+                                  asset=asset,
                                   group_by=group_by)
     if group_by == 'asset':
         kf = 'assets'
