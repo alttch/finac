@@ -388,7 +388,7 @@ def init(db=None, **kwargs):
     """
     for k, v in kwargs.items():
         if k == 'rate_ttl':
-            rate_cache.ttl = v
+            rate_cache.__setstate__({'_TTLCache__ttl': 600})
         else:
             if not hasattr(config, k):
                 raise RuntimeError('Parameter {} is invalid'.format(k))
