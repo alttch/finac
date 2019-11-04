@@ -15,8 +15,7 @@ import time
 
 from types import SimpleNamespace
 
-# TEST_DB = '/tmp/finac-test.db'
-TEST_DB = 'mysql+pymysql://admin:admin@localhost/my_finac'
+TEST_DB = '/tmp/finac-test.db'
 
 result = SimpleNamespace()
 
