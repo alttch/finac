@@ -32,6 +32,7 @@ def account_plot(account, start, end=None, step=1, base=None, **kwargs):
 def account_pie(tp=None,
                 mb=0,
                 base='usd',
+                group_by=None,
                 shadow=True,
                 autopct='%1.1f%%',
                 **kwargs):
@@ -47,11 +48,22 @@ def account_pie(tp=None,
         **kwargs: passed as-is to matplotlib.pyplot.pie
     """
     from matplotlib import pyplot as plt
-    x = core.account_list_summary(base=base, hide_empty=True, tp=tp)
-    sizes = [z['balance_bc'] for z in x['accounts'] if z['balance_bc'] >= mb]
-    othersum = sum(
-        z['balance_bc'] for z in x['accounts'] if z['balance_bc'] < mb)
-    labels = [z['account'] for z in x['accounts'] if z['balance_bc'] >= mb]
+    x = core.account_list_summary(base=base,
+                                  hide_empty=True,
+                                  tp=tp,
+                                  group_by=group_by)
+    if group_by == 'asset':
+        kf = 'assets'
+        kfp = 'asset'
+    elif group_by in ['type', 'tp']:
+        kf = 'account_types'
+        kfp = 'type'
+    else:
+        kf = 'accounts'
+        kfp = 'account'
+    sizes = [z['balance_bc'] for z in x[kf] if z['balance_bc'] >= mb]
+    othersum = sum(z['balance_bc'] for z in x[kf] if z['balance_bc'] < mb)
+    labels = [z[kfp] for z in x[kf] if z['balance_bc'] >= mb]
     if othersum:
         labels.append('other')
         sizes.append(othersum)

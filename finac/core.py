@@ -1447,7 +1447,7 @@ def account_list_summary(asset=None,
         else:
             filt = 'asset' if group_by == 'asset' else 'type'
             dk = ('asset', 'balance_bc', 'balance') if group_by == 'asset' \
-                else ('account_type', 'balance_bc')
+                else ('type', 'balance_bc')
             f = lambda x: x[filt]
             accounts.sort(key=f)
             for k, v in groupby(accounts, f):
