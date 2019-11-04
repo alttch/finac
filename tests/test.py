@@ -38,10 +38,10 @@ class Test(unittest.TestCase):
                                                           mark_completed=False)
         self.assertEqual(finac.account_balance('TEST.TEST'), 0)
         statement = list(
-            finac.account_statement('TEST.TEST', '2019-01-01', pending=False))
+            finac.account_statement('TEST.TEST', '20"19-01-0;1', pending=False))
         self.assertEqual(len(statement), 0)
         statement = list(
-            finac.account_statement('test.test', '2019-01-01', pending=True))
+            finac.account_statement('test.test', '201\'9-0"1-01', pending=True))
         self.assertEqual(len(statement), 1)
 
     def test004_transaction_complete(self):
@@ -67,7 +67,7 @@ class Test(unittest.TestCase):
         statement = list(
             finac.account_statement('TEST.TEST', '2019-01-01', '2119-05-22'))
         self.assertEqual(len(statement), 2)
-        statement = list(finac.account_statement('TEST.TEST', end='2119-05-22'))
+        statement = list(finac.account_statement('TEST.TEST', end='2119-0"5-22'))
         self.assertEqual(len(statement), 2)
         ss = finac.account_statement_summary('TEST.TEST', end='2119-05-22')
         self.assertEqual(ss['credit'], 25)
@@ -213,7 +213,7 @@ class Test(unittest.TestCase):
         finac.transaction_move('TT2', 'TT1', target_dt=2000, tag='loans')
         self.assertEqual(finac.account_balance('TT1'), 300)
         self.assertEqual(finac.account_balance('TT2'), 2000)
-        self.assertEqual(len(list(finac.account_statement('TT1', tag='loans'))),
+        self.assertEqual(len(list(finac.account_statement('TT1', tag='lo;an"s'))),
                          2)
         print()
         finac.ls('TT2')
@@ -340,6 +340,14 @@ class Test(unittest.TestCase):
             for t, s in zip(tbl, data):
                 finac.neotermcolor.cprint(t, '@finac:sum', attrs='')
             finac.neotermcolor.cprint('-' * len(h), '@finac:separator')
+
+    def test102_safe_format(self):
+        test_val = [1, 'te\'st', ['t"est1', 'te;st"2'], '20;19-1\'1-0"4']
+        for t in test_val:
+            res = finac.core.safe_format(t)
+            if not isinstance(res, int):
+                for i in res:
+                    self.assertNotRegex(i, r"\"|'|;", "failure safe format")
 
 
 if __name__ == '__main__':

@@ -357,15 +357,15 @@ def asset_list_rates(asset=None, start=None, end=None):
     """
     if asset:
         cond = ''
-        asset = asset.upper()
+        asset = safe_format(asset.upper())
         if start:
-            dts = parse_date(start)
+            dts = parse_date(safe_format(start))
             cond += (' and ' if cond else '') + 'd >= {}'.format(dts)
         if end:
-            dte = parse_date(end)
+            dte = parse_date(safe_format(end))
             cond += (' and ' if cond else '') + 'd <= {}'.format(dte)
         if asset.find('/') != -1:
-            asset_from, asset_to = asset.split('/')
+            asset_from, asset_to = safe_format(asset.split('/'))
             cond += (' and ' if cond else
                      '') + 'cf.code = "{}" and ct.code = "{}"'.format(
                          asset_from, asset_to)
@@ -1213,15 +1213,15 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
     cond = 'transact.deleted is null and d_created != 0'
     d_field = 'd_created' if pending else 'd'
     if start:
-        dts = parse_date(start)
+        dts = parse_date(safe_format(start))
         cond += (' and ' if cond else '') + 'transact.{} >= {}'.format(
             d_field, dts)
     if end:
-        dte = parse_date(end)
+        dte = parse_date(safe_format(end))
         cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(
             d_field, dte)
     if tag is not None:
-        cond += (' and ' if cond else '') + 'tag = "{}"'.format(tag)
+        cond += (' and ' if cond else '') + 'tag = "{}"'.format(safe_format(tag))
     r = get_db().execute(sql("""
     select transact.id, d_created, d,
             amount, tag, transact.note as note, account.code as cparty
@@ -1319,7 +1319,8 @@ def account_list(asset=None,
     """
     cond = "transact.deleted is null"
     if tp:
-        if not isinstance(tp, list) and not isinstance(tp, tuple):
+        tp = safe_format(tp)
+        if not isinstance(tp, (list, tuple)):
             if isinstance(tp, int):
                 tp_id = tp
             else:
@@ -1338,7 +1339,7 @@ def account_list(asset=None,
             cond += cor + ')'
     if asset:
         cond += (' and ' if cond else '') + 'asset.code = "{}"'.format(
-            asset.upper())
+            safe_format(asset.upper()))
     else:
         cond += (' and ' if cond else '') + 'account.tp < 1000'
     if date:
@@ -1347,9 +1348,10 @@ def account_list(asset=None,
                  if cond else '') + 'transact.d_created <= "{}"'.format(dts)
     if code:
         cond += (' and '
-                 if cond else '') + 'account.code like "{}"'.format(code)
+                 if cond else '') + 'account.code like "{}"'.format(safe_format(code))
     oby = ''
     if order_by:
+        order_by = safe_format(order_by)
         if isinstance(order_by, (list, tuple)):
             oby = ','.join(order_by)
         else:
@@ -1439,7 +1441,8 @@ def account_list_summary(asset=None,
             raise ValueError('Unresolved argument')
         else:
             filt = 'asset' if group_by == 'asset' else 'type'
-            dk = ('asset', 'balance_bs', 'balance') if group_by == 'asset' else ('account_type', 'balance_bs')
+            dk = ('asset', 'balance_bs', 'balance') if group_by == 'asset' \
+                else ('account_type', 'balance_bs')
             f = lambda x: x[filt]
             accounts.sort(key=f)
             for k, v in groupby(accounts, f):
@@ -1527,23 +1530,24 @@ def _account_summary(balance_type,
                      order_by=['tp', 'account', 'asset'],
                      hide_empty=False):
     cond = 'where {} transact.deleted is null'.format(
-        'transact.d is not null and ' if balance_type == 'debit' else '')
+        'transact.d is not null and ' if safe_format(balance_type) == 'debit' else '')
     if account:
         cond += (' and '
-                 if cond else '') + 'account.code = "{}"'.format(account)
+                 if cond else '') + 'account.code = "{}"'.format(safe_format(account))
     if asset:
-        cond += (' and ' if cond else '') + 'asset.code = "{}"'.format(asset)
+        cond += (' and ' if cond else '') + 'asset.code = "{}"'.format(safe_format(asset))
     if date:
-        dts = parse_date(date)
+        dts = parse_date(safe_format(date))
         cond += (' and ' if cond else '') + 'transact.d <= "{}"'.format(dts)
     if tp:
         if isinstance(tp, int):
             tp_id = tp
         else:
-            tp_id = ACCOUNT_TYPE_IDS[tp]
+            tp_id = ACCOUNT_TYPE_IDS[safe_format(tp)]
         cond += (' and ' if cond else '') + 'account.tp = {}'.format(tp_id)
     oby = ''
     if order_by:
+        order_by = safe_format(order_by)
         if isinstance(order_by, (list, tuple)):
             oby = ','.join(order_by)
         else:
@@ -1582,7 +1586,7 @@ def account_balance(account, date=None):
     """
     cond = "transact.deleted is null"
     if date:
-        dts = parse_date(date)
+        dts = parse_date(safe_format(date))
         cond += (' and '
                  if cond else '') + 'transact.d_created <= "{}"'.format(dts)
     acc_info = account_info(account)
@@ -1640,3 +1644,13 @@ def account_balance_range(account,
         data.append(b)
         dt += delta
     return times, data
+
+
+def safe_format(val):
+    n_allow = '\'";'
+    for al in n_allow:
+        if isinstance(val, (list, tuple)):
+            val = [v.replace(al, '') if not isinstance(v, (int, float)) and al in v else v for v in val]
+        elif isinstance(val, str):
+            val = val.replace(al, '') if al in val else val
+    return val
