@@ -32,7 +32,7 @@ def account_plot(account, start, end=None, step=1, base=None, **kwargs):
 def account_pie(tp=None,
                 asset=None,
                 mb=0,
-                base='usd',
+                base=None,
                 group_by=None,
                 shadow=True,
                 autopct='%1.1f%%',
@@ -49,6 +49,8 @@ def account_pie(tp=None,
         **kwargs: passed as-is to matplotlib.pyplot.pie
     """
     from matplotlib import pyplot as plt
+    if base is None:
+        base = core.config.base_asset
     x = core.account_list_summary(base=base,
                                   hide_empty=True,
                                   tp=tp,
