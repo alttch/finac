@@ -1,4 +1,4 @@
-__version__ = '0.1.13'
+__version__ = '0.1.14'
 
 import setuptools
 
@@ -18,7 +18,7 @@ setuptools.setup(
     license='MIT',
     install_requires=[
         'rapidtables', 'python-dateutil', 'neotermcolor', 'sqlalchemy',
-        'pyyaml', 'cachetools'
+        'pyyaml', 'cachetools', 'flask', 'requests'
     ],
     classifiers=('Programming Language :: Python :: 2',
                  'Programming Language :: Python :: 3',

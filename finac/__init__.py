@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.13'
+__version__ = '0.1.14'
 
 import rapidtables
 import neotermcolor
@@ -124,13 +124,13 @@ def ls(account=None,
         result = account_statement_summary(
             account=account,
             start=start if start else datetime.datetime.today().replace(
-                day=1, hour=0, minute=0, second=0, microsecond=0),
+                day=1, hour=0, minute=0, second=0, microsecond=0).timestamp(),
             end=end,
             tag=tag,
             pending=pending)
         stmt = result['statement'].copy()
-        acc_info = account_info(account)
-        precision = asset_precision(acc_info['asset'])
+        acc_info = account_info(account=account)
+        precision = asset_precision(asset=acc_info['asset'])
         for i, r in enumerate(stmt):
             r = r.copy()
             del r['is_completed']
@@ -164,7 +164,7 @@ def ls(account=None,
         print()
         print('Net profit/loss: ', end='')
         pl = result['debit'] - result['credit']
-        balance = account_balance(account, date=end)
+        balance = account_balance(account=account, date=end)
         rcur = acc_info['asset']
         if base:
             pl = pl * asset_rate(acc_info['asset'], base, date=end)
@@ -205,12 +205,12 @@ def ls(account=None,
             rt_align = (rapidtables.ALIGN_LEFT, rapidtables.ALIGN_RIGHT)
         res = result[kf]
         data = res.copy()
-        bcp = asset_precision(base)
+        bcp = asset_precision(asset=base)
         for i, r in enumerate(res):
             r = r.copy()
             if group_by not in ['type', 'tp']:
                 r['balance'] = format_money(r['balance'],
-                                            asset_precision(r['asset']))
+                                            asset_precision(asset=r['asset']))
             r['balance ' + base] = format_money(r['balance_bc'], bcp)
             del r['balance_bc']
             if not group_by:
@@ -225,9 +225,8 @@ def ls(account=None,
         neotermcolor.cprint(h, '@finac:title')
         neotermcolor.cprint('-' * len(h), '@finac:separator')
         for t, s in zip(tbl, data):
-            neotermcolor.cprint(t,
-                                '@finac:credit' if s['balance_bc'] < 0 else None,
-                                attrs='')
+            neotermcolor.cprint(
+                t, '@finac:credit' if s['balance_bc'] < 0 else None, attrs='')
         neotermcolor.cprint('-' * len(h), '@finac:separator')
         neotermcolor.cprint('Total: ', end='')
         neotermcolor.cprint('{} {}'.format(format_money(result['total'], bcp),
@@ -267,9 +266,10 @@ def lsa(asset=None, start=None, end=None):
     else:
         rr = []
         for r in asset_list_rates(
-                asset if asset != '*' else None,
+                asset=(asset if asset != '*' else None),
                 start=start if start else datetime.datetime.today().replace(
-                    day=1, hour=0, minute=0, second=0, microsecond=0),
+                    day=1, hour=0, minute=0, second=0,
+                    microsecond=0).timestamp(),
                 end=end):
             row = OrderedDict()
             row['pair'] = '{}/{}'.format(r['asset_from'], r['asset_to'])

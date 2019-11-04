@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.13'
+__version__ = '0.1.14'
 
 from . import core
 
@@ -21,8 +21,8 @@ def account_plot(account, start, end=None, step=1, base=None, **kwargs):
     """
     from matplotlib import pyplot as plt
     plt.plot(
-        *core.account_balance_range(account,
-                                    start,
+        *core.account_balance_range(account=account,
+                                    start=start,
                                     end=end,
                                     step=step,
                                     return_timestamp=False,

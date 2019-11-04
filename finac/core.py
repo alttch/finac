@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.13'
+__version__ = '0.1.14'
 
 from sqlalchemy.exc import IntegrityError
 
@@ -89,6 +89,7 @@ from sqlalchemy import text as sql
 
 from types import SimpleNamespace
 from collections import OrderedDict
+from functools import wraps
 
 import threading
 
@@ -105,12 +106,51 @@ config = SimpleNamespace(db=None,
                          rate_allow_reverse=True,
                          rate_allow_cross=True,
                          base_asset='USD',
+                         api_uri=None,
+                         api_key=None,
                          date_format='%Y-%m-%d %H:%M:%S')
 
 lock_purge = threading.Lock()
 lock_account_token = threading.Lock()
 
 account_lockers = {}
+
+
+def core_method(f):
+
+    import inspect
+    argspec = inspect.getfullargspec(f)
+
+    @wraps(f)
+    def do(*args, **kwargs):
+        if config.api_uri is not None:
+            import requests
+            import uuid
+            import json
+            payload = {
+                'jsonrpc': '2.0',
+                'method': f.__name__,
+                'params': kwargs,
+                'id': str(uuid.uuid4())
+            }
+            if config.api_key is not None:
+                payload['params']['_k'] = config.api_key
+            for i, a in enumerate(args):
+                payload['params'][argspec.args[i]] = a
+            r = requests.post(config.api_uri, json=payload)
+            if not r.ok:
+                raise RuntimeError('Finac server error: {}'.format(
+                    r.status_code))
+            result = json.JSONDecoder(object_pairs_hook=OrderedDict).decode(
+                r.text)
+            if 'error' in result:
+                raise _exceptions.get(result['error']['code'], RuntimeError)(
+                    result['error'].get('message'))
+            return result['result']
+        else:
+            return f(*args, **kwargs)
+
+    return do
 
 
 def gen_random_str(length=64):
@@ -168,6 +208,7 @@ def parse_number(d):
 
 
 @lru_cache(maxsize=256)
+@core_method
 def asset_precision(asset):
     """
     Get precision (digits after comma) for the asset
@@ -191,6 +232,8 @@ def format_amount(i, asset):
 class ResourceNotFound(Exception):
     """
     Raised when accessed resource is not found
+
+    JRPC code: -32001
     """
     pass
 
@@ -198,6 +241,8 @@ class ResourceNotFound(Exception):
 class RateNotFound(Exception):
     """
     Raised when accessed asset rate is not found
+
+    JRPC code: -32002
     """
     pass
 
@@ -205,6 +250,8 @@ class RateNotFound(Exception):
 class OverdraftError(Exception):
     """
     Raised when transaction is trying to break account max overdraft
+
+    JRPC code: -32003
     """
     pass
 
@@ -212,6 +259,8 @@ class OverdraftError(Exception):
 class OverlimitError(Exception):
     """
     Raised when transaction is trying to break account max balance
+
+    JRPC code: -32004
     """
     pass
 
@@ -219,8 +268,19 @@ class OverlimitError(Exception):
 class ResourceAlreadyExists(Exception):
     """
     Raised when trying to create already existing resource
+
+    JRPC code: -32005
     """
     pass
+
+
+_exceptions = {
+    -32001: ResourceNotFound,
+    -32002: RateNotFound,
+    -32003: OverdraftError,
+    -32004: OverlimitError,
+    -32005: ResourceAlreadyExists
+}
 
 
 class AccountLocker:
@@ -277,7 +337,7 @@ def get_db():
         return l.db
 
 
-def init(db, **kwargs):
+def init(db=None, **kwargs):
     """
     Initialize finac database and configuration
 
@@ -295,21 +355,23 @@ def init(db, **kwargs):
         base_asset: default base asset. Default is "USD"
         date_format: default date format in statements
     """
-    config.db = db
     for k, v in kwargs.items():
         if not hasattr(config, k):
             raise RuntimeError('Parameter {} is invalid'.format(k))
         setattr(config, k, v)
-    db_uri = db
-    if db_uri.find('.db') != -1:
-        db_uri = 'sqlite:///' + os.path.expanduser(db_uri)
-    elif not db_uri.__contains__('mysql+pymysql'):
-        raise RuntimeError(
-            'DB URI configuration: mysql+pymysql://user:pass@host/db_name')
-    _db.engine = get_db_engine(db_uri)
-    init_db(_db.engine)
+    if db is not None:
+        config.db = db
+        db_uri = db
+        if db_uri.find('.db') != -1:
+            db_uri = 'sqlite:///' + os.path.expanduser(db_uri)
+        elif not db_uri.__contains__('mysql+pymysql'):
+            raise RuntimeError(
+                'DB URI configuration: mysql+pymysql://user:pass@host/db_name')
+        _db.engine = get_db_engine(db_uri)
+        init_db(_db.engine)
 
 
+@core_method
 def asset_create(asset, precision=2):
     """
     Create asset
@@ -330,6 +392,7 @@ def asset_create(asset, precision=2):
         raise ResourceAlreadyExists(asset)
 
 
+@core_method
 def asset_list():
     """
     List es
@@ -346,6 +409,7 @@ def asset_list():
         yield row
 
 
+@core_method
 def asset_list_rates(asset=None, start=None, end=None):
     """
     List asset rates
@@ -357,15 +421,15 @@ def asset_list_rates(asset=None, start=None, end=None):
     """
     if asset:
         cond = ''
-        asset = safe_format(asset.upper())
+        asset = _safe_format(asset.upper())
         if start:
-            dts = parse_date(safe_format(start))
+            dts = parse_date(_safe_format(start))
             cond += (' and ' if cond else '') + 'd >= {}'.format(dts)
         if end:
-            dte = parse_date(safe_format(end))
+            dte = parse_date(_safe_format(end))
             cond += (' and ' if cond else '') + 'd <= {}'.format(dte)
         if asset.find('/') != -1:
-            asset_from, asset_to = safe_format(asset.split('/'))
+            asset_from, asset_to = _safe_format(asset.split('/'))
             cond += (' and ' if cond else
                      '') + 'cf.code = "{}" and ct.code = "{}"'.format(
                          asset_from, asset_to)
@@ -418,6 +482,7 @@ def asset_list_rates(asset=None, start=None, end=None):
         yield row
 
 
+@core_method
 def asset_delete(asset):
     """
     Delete asset
@@ -432,6 +497,7 @@ def asset_delete(asset):
         raise ResourceNotFound
 
 
+@core_method
 def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
     """
     Set asset rate
@@ -470,6 +536,7 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
                      value=value)
 
 
+@core_method
 def asset_delete_rate(asset_from, asset_to=None, date=None):
     """
     Delete currrency rate
@@ -496,6 +563,7 @@ def asset_delete_rate(asset_from, asset_to=None, date=None):
         raise ResourceNotFound
 
 
+@core_method
 def asset_rate(asset_from, asset_to=None, date=None):
     """
     Get asset rate for the specified date
@@ -594,6 +662,7 @@ def asset_rate(asset_from, asset_to=None, date=None):
     return value
 
 
+@core_method
 def account_create(account,
                    asset,
                    tp='current',
@@ -652,6 +721,7 @@ def account_create(account,
         raise
 
 
+@core_method
 def account_info(account):
     """
     Get dict with account info
@@ -676,6 +746,7 @@ def account_info(account):
     }
 
 
+@core_method
 def transaction_info(transaction_id):
     """
     Get dict with transaction info
@@ -743,6 +814,7 @@ def transaction_apply(fname):
             transaction_move(**t)
 
 
+@core_method
 def account_delete(account, lock_token=None):
     """
     Delete account
@@ -766,6 +838,7 @@ def account_delete(account, lock_token=None):
         account_unlock(account, token)
 
 
+@core_method
 def account_lock(account, token):
     """
     Lock account
@@ -793,6 +866,7 @@ def account_lock(account, token):
         return l.acquire(token)
 
 
+@core_method
 def account_unlock(account, token):
     """
     Unlock account
@@ -830,6 +904,7 @@ def _update(objid, tbl, objidf, kw):
             c = v
 
 
+@core_method
 def account_update(account, **kwargs):
     """
     Update account parameters
@@ -844,6 +919,7 @@ def account_update(account, **kwargs):
     _update(account, 'account', 'code', kw)
 
 
+@core_method
 def asset_update(asset, **kwargs):
     """
     Update asset parameters
@@ -862,6 +938,7 @@ def asset_update(asset, **kwargs):
     _update(asset, 'asset', 'code', kw)
 
 
+@core_method
 def transaction_update(transaction_id, **kwargs):
     """
     Update transaction parameters
@@ -883,6 +960,7 @@ def transaction_update(transaction_id, **kwargs):
     _update(transaction_id, 'transact', 'id', kw)
 
 
+@core_method
 def transaction_create(account,
                        amount=None,
                        tag=None,
@@ -1026,6 +1104,7 @@ def _transaction_move(dt=None,
                       chain_id=chain_transact_id).lastrowid
 
 
+@core_method
 def transaction_move(dt=None,
                      ct=None,
                      amount=0,
@@ -1121,6 +1200,7 @@ def transaction_move(dt=None,
         if dtoken: account_unlock(dt, dtoken)
 
 
+@core_method
 def transaction_complete(transaction_id, completion_date=None, lock_token=None):
     """
     Args:
@@ -1154,6 +1234,7 @@ def transaction_complete(transaction_id, completion_date=None, lock_token=None):
             account_unlock(dt, token)
 
 
+@core_method
 def transaction_delete(transaction_id):
     """
     Delete (mark deleted) transaction
@@ -1172,6 +1253,7 @@ def transaction_delete(transaction_id):
         transaction_delete(chid)
 
 
+@core_method
 def transaction_purge(_lock=True):
     """
     Purge deleted transactions
@@ -1199,6 +1281,7 @@ def transaction_purge(_lock=True):
         if _lock: lock_purge.release()
 
 
+@core_method
 def account_statement(account, start=None, end=None, tag=None, pending=True):
     """
     Args:
@@ -1213,16 +1296,16 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
     cond = 'transact.deleted is null and d_created != 0'
     d_field = 'd_created' if pending else 'd'
     if start:
-        dts = parse_date(safe_format(start))
+        dts = parse_date(_safe_format(start))
         cond += (' and ' if cond else '') + 'transact.{} >= {}'.format(
             d_field, dts)
     if end:
-        dte = parse_date(safe_format(end))
+        dte = parse_date(_safe_format(end))
         cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(
             d_field, dte)
     if tag is not None:
         cond += (' and ' if cond else '') + 'tag = "{}"'.format(
-            safe_format(tag))
+            _safe_format(tag))
     r = get_db().execute(sql("""
     select transact.id, d_created, d,
             amount, tag, transact.note as note, account.code as cparty
@@ -1250,6 +1333,7 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         yield row
 
 
+@core_method
 def account_statement_summary(account,
                               start=None,
                               end=None,
@@ -1291,6 +1375,7 @@ def account_statement_summary(account,
     }
 
 
+@core_method
 def purge():
     """
     Purge deleted resources
@@ -1301,6 +1386,7 @@ def purge():
         return result
 
 
+@core_method
 def account_list(asset=None,
                  tp=None,
                  code=None,
@@ -1320,7 +1406,7 @@ def account_list(asset=None,
     """
     cond = "transact.deleted is null"
     if tp:
-        tp = safe_format(tp)
+        tp = _safe_format(tp)
         if not isinstance(tp, (list, tuple)):
             if isinstance(tp, int):
                 tp_id = tp
@@ -1340,7 +1426,7 @@ def account_list(asset=None,
             cond += cor + ')'
     if asset:
         cond += (' and ' if cond else '') + 'asset.code = "{}"'.format(
-            safe_format(asset.upper()))
+            _safe_format(asset.upper()))
     else:
         cond += (' and ' if cond else '') + 'account.tp < 1000'
     if date:
@@ -1349,10 +1435,10 @@ def account_list(asset=None,
                  if cond else '') + 'transact.d_created <= "{}"'.format(dts)
     if code:
         cond += (' and ' if cond else '') + 'account.code like "{}"'.format(
-            safe_format(code))
+            _safe_format(code))
     oby = ''
     if order_by:
-        order_by = safe_format(order_by)
+        order_by = _safe_format(order_by)
         if isinstance(order_by, (list, tuple)):
             oby = ','.join(order_by)
         else:
@@ -1401,6 +1487,7 @@ def account_list(asset=None,
             yield row
 
 
+@core_method
 def account_list_summary(asset=None,
                          tp=None,
                          code=None,
@@ -1488,6 +1575,7 @@ def account_list_summary(asset=None,
     }
 
 
+@core_method
 def account_credit(account=None,
                    asset=None,
                    date=None,
@@ -1517,6 +1605,7 @@ def account_credit(account=None,
                             hide_empty=hide_empty)
 
 
+@core_method
 def account_debit(account=None,
                   asset=None,
                   date=None,
@@ -1546,6 +1635,7 @@ def account_debit(account=None,
                             hide_empty=hide_empty)
 
 
+@core_method
 def _account_summary(balance_type,
                      account=None,
                      asset=None,
@@ -1554,26 +1644,26 @@ def _account_summary(balance_type,
                      order_by=['tp', 'account', 'asset'],
                      hide_empty=False):
     cond = 'where {} transact.deleted is null'.format(
-        'transact.d is not null and ' if safe_format(balance_type) ==
+        'transact.d is not null and ' if _safe_format(balance_type) ==
         'debit' else '')
     if account:
         cond += (' and ' if cond else '') + 'account.code = "{}"'.format(
-            safe_format(account))
+            _safe_format(account))
     if asset:
         cond += (' and ' if cond else '') + 'asset.code = "{}"'.format(
-            safe_format(asset))
+            _safe_format(asset))
     if date:
-        dts = parse_date(safe_format(date))
+        dts = parse_date(_safe_format(date))
         cond += (' and ' if cond else '') + 'transact.d <= "{}"'.format(dts)
     if tp:
         if isinstance(tp, int):
             tp_id = tp
         else:
-            tp_id = ACCOUNT_TYPE_IDS[safe_format(tp)]
+            tp_id = ACCOUNT_TYPE_IDS[_safe_format(tp)]
         cond += (' and ' if cond else '') + 'account.tp = {}'.format(tp_id)
     oby = ''
     if order_by:
-        order_by = safe_format(order_by)
+        order_by = _safe_format(order_by)
         if isinstance(order_by, (list, tuple)):
             oby = ','.join(order_by)
         else:
@@ -1602,6 +1692,7 @@ def _account_summary(balance_type,
             yield row
 
 
+@core_method
 def account_balance(account, date=None):
     """
     Get account balance
@@ -1612,7 +1703,7 @@ def account_balance(account, date=None):
     """
     cond = "transact.deleted is null"
     if date:
-        dts = parse_date(safe_format(date))
+        dts = parse_date(_safe_format(date))
         cond += (' and '
                  if cond else '') + 'transact.d_created <= "{}"'.format(dts)
     acc_info = account_info(account)
@@ -1634,6 +1725,7 @@ def account_balance(account, date=None):
     return format_amount(d.balance, acc_info['asset'])
 
 
+@core_method
 def account_balance_range(account,
                           start,
                           end=None,
@@ -1672,7 +1764,7 @@ def account_balance_range(account,
     return times, data
 
 
-def safe_format(val):
+def _safe_format(val):
     n_allow = '\'";'
     for al in n_allow:
         if isinstance(val, (list, tuple)):

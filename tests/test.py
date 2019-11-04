@@ -18,6 +18,7 @@ from types import SimpleNamespace
 TEST_DB = '/tmp/finac-test.db'
 
 result = SimpleNamespace()
+config = SimpleNamespace(remote=False)
 
 
 class Test(unittest.TestCase):
@@ -237,16 +238,17 @@ class Test(unittest.TestCase):
             finac.account_info('TEST_ACC_2')['max_overdraft'], 1000)
 
     def test080_lazy_exchange(self):
-        finac.config.lazy_exchange = False
         finac.account_create('eur1', 'eur')
         finac.account_create('usd1', 'usd')
-        try:
-            finac.transaction_move('usd1', 'eur1', 20)
-            raise RuntimeError(
-                'Lazy exchange is off but asset mismatch not detected')
-        except ValueError:
-            pass
-        finac.config.lazy_exchange = True
+        if not config.remote:
+            finac.config.lazy_exchange = False
+            try:
+                finac.transaction_move('usd1', 'eur1', 20)
+                raise RuntimeError(
+                    'Lazy exchange is off but asset mismatch not detected')
+            except ValueError:
+                pass
+            finac.config.lazy_exchange = True
         time.sleep(1)
         finac.asset_set_rate('EUR/USD', value=1.1)
 
@@ -327,25 +329,34 @@ class Test(unittest.TestCase):
     def test102_safe_format(self):
         test_val = [1, 'te\'st', ['t"est1', 'te;st"2'], '20;19-1\'1-0"4']
         for t in test_val:
-            res = finac.core.safe_format(t)
+            res = finac.core._safe_format(t)
             if not isinstance(res, int):
                 for i in res:
                     self.assertNotRegex(i, r"\"|'|;", "failure safe format")
 
 
 if __name__ == '__main__':
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--debug', help='Debug mode', action='store_true')
+    ap.add_argument('--remote', help='Test remote API', action='store_true')
+    a = ap.parse_args()
     try:
-        if sys.argv[1] == 'debug':
+        if a.debug:
             logging.basicConfig(level=logging.DEBUG)
             logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
     except:
         pass
-    try:
-        os.unlink(TEST_DB)
-    except:
-        pass
-    finac.init(db=TEST_DB, keep_integrity=True)
-    finac.core.rate_cache = None
+    config.remote = a.remote
+    if a.remote:
+        finac.init(api_uri='http://localhost:5000/jrpc', api_key='secret')
+    else:
+        try:
+            os.unlink(TEST_DB)
+        except:
+            pass
+        finac.init(db=TEST_DB, keep_integrity=True)
+        finac.core.rate_cache = None
     test_suite = unittest.TestLoader().loadTestsFromTestCase(Test)
     test_result = unittest.TextTestRunner().run(test_suite)
     sys.exit(not test_result.wasSuccessful())
