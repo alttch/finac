@@ -15,7 +15,8 @@ import time
 
 from types import SimpleNamespace
 
-TEST_DB = '/tmp/finac-test.db'
+# TEST_DB = '/tmp/finac-test.db'
+TEST_DB = 'mysql+pymysql://admin:admin@localhost/my_finac'
 
 result = SimpleNamespace()
 
@@ -322,6 +323,24 @@ class Test(unittest.TestCase):
 
     def test100_delete_asset(self):
         finac.asset_delete('eur')
+
+    def test101_account_list_summary(self):
+        r = finac.account_list_summary(group_by='asset')
+        if isinstance(r, list):
+            data = r.copy()
+            ft = rapidtables.format_table(r, fmt=rapidtables.FORMAT_GENERATOR,
+                align=(rapidtables.ALIGN_LEFT, rapidtables.ALIGN_RIGHT,
+                       rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
+                       rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
+                       rapidtables.ALIGN_LEFT))
+            if not ft:
+                return
+            h, tbl = ft
+            finac.neotermcolor.cprint(h, '@finac:title')
+            finac.neotermcolor.cprint('-' * len(h), '@finac:separator')
+            for t, s in zip(tbl, data):
+                finac.neotermcolor.cprint(t, '@finac:sum', attrs='')
+            finac.neotermcolor.cprint('-' * len(h), '@finac:separator')
 
 
 if __name__ == '__main__':

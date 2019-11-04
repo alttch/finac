@@ -10,6 +10,8 @@ from functools import lru_cache
 
 from cachetools import TTLCache
 
+from itertools import groupby
+
 rate_cache = TTLCache(maxsize=100, ttl=2)
 
 # financial assets
@@ -1348,7 +1350,7 @@ def account_list(asset=None,
                  if cond else '') + 'account.code like "{}"'.format(code)
     oby = ''
     if order_by:
-        if isinstance(order_by, list):
+        if isinstance(order_by, (list, tuple)):
             oby = ','.join(order_by)
         else:
             oby = order_by
@@ -1431,6 +1433,21 @@ def account_list_summary(asset=None,
                      hide_empty=hide_empty))
     for a in accounts:
         a['balance_bc'] = a['balance'] * asset_rate(a['asset'], base, date=date)
+    if group_by:
+        res = []
+        if group_by not in ('asset', 'tp', 'type'):
+            raise ValueError('Unresolved argument')
+        else:
+            filt = 'asset' if group_by == 'asset' else 'type'
+            dk = ('asset', 'balance_bs', 'balance') if group_by == 'asset' else ('account_type', 'balance_bs')
+            f = lambda x: x[filt]
+            accounts.sort(key=f)
+            for k, v in groupby(accounts, f):
+                val = list(v).copy()
+                r = dict(zip(dk, (k, sum([z['balance_bc'] for z in val]),
+                                  sum([w['balance'] for w in val]))))
+                res.append(r)
+        return res
     return {
         'accounts':
             accounts,
@@ -1527,7 +1544,7 @@ def _account_summary(balance_type,
         cond += (' and ' if cond else '') + 'account.tp = {}'.format(tp_id)
     oby = ''
     if order_by:
-        if isinstance(order_by, list):
+        if isinstance(order_by, (list, tuple)):
             oby = ','.join(order_by)
         else:
             oby = order_by
