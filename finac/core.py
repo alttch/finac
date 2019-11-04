@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.17'
+__version__ = '0.1.18'
 
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
@@ -381,13 +381,17 @@ def init(db=None, **kwargs):
             "EUR/USD" pair exists but no USD/EUR, use 1 / "EUR/USD"
         rate_allow_cross: if exchange rate is not found, allow finac to look
             for the nearest cross-asset rate
+        rate_ttl: set rate cache ttl (default: 2 sec)
         full_transaction_update: allow updating transaction date and amount
         base_asset: default base asset. Default is "USD"
         date_format: default date format in statements
     """
     for k, v in kwargs.items():
-        if not hasattr(config, k):
-            raise RuntimeError('Parameter {} is invalid'.format(k))
+        if k == 'rate_ttl':
+            rate_cache.ttl = v
+        else:
+            if not hasattr(config, k):
+                raise RuntimeError('Parameter {} is invalid'.format(k))
         setattr(config, k, v)
     if db is not None:
         config.db = db
