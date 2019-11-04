@@ -67,7 +67,8 @@ class Test(unittest.TestCase):
         statement = list(
             finac.account_statement('TEST.TEST', '2019-01-01', '2119-05-22'))
         self.assertEqual(len(statement), 2)
-        statement = list(finac.account_statement('TEST.TEST', end='2119-0"5-22'))
+        statement = list(finac.account_statement('TEST.TEST',
+                                                 end='2119-0"5-22'))
         self.assertEqual(len(statement), 2)
         ss = finac.account_statement_summary('TEST.TEST', end='2119-05-22')
         self.assertEqual(ss['credit'], 25)
@@ -213,8 +214,8 @@ class Test(unittest.TestCase):
         finac.transaction_move('TT2', 'TT1', target_dt=2000, tag='loans')
         self.assertEqual(finac.account_balance('TT1'), 300)
         self.assertEqual(finac.account_balance('TT2'), 2000)
-        self.assertEqual(len(list(finac.account_statement('TT1', tag='lo;an"s'))),
-                         2)
+        self.assertEqual(
+            len(list(finac.account_statement('TT1', tag='lo;an"s'))), 2)
         print()
         finac.ls('TT2')
         print()
@@ -327,7 +328,9 @@ class Test(unittest.TestCase):
         r = finac.account_list_summary(group_by='asset')
         if isinstance(r, list):
             data = r.copy()
-            ft = rapidtables.format_table(r, fmt=rapidtables.FORMAT_GENERATOR,
+            ft = rapidtables.format_table(
+                r,
+                fmt=rapidtables.FORMAT_GENERATOR,
                 align=(rapidtables.ALIGN_LEFT, rapidtables.ALIGN_RIGHT,
                        rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
                        rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,

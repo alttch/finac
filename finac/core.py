@@ -1221,7 +1221,8 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(
             d_field, dte)
     if tag is not None:
-        cond += (' and ' if cond else '') + 'tag = "{}"'.format(safe_format(tag))
+        cond += (' and ' if cond else '') + 'tag = "{}"'.format(
+            safe_format(tag))
     r = get_db().execute(sql("""
     select transact.id, d_created, d,
             amount, tag, transact.note as note, account.code as cparty
@@ -1347,8 +1348,8 @@ def account_list(asset=None,
         cond += (' and '
                  if cond else '') + 'transact.d_created <= "{}"'.format(dts)
     if code:
-        cond += (' and '
-                 if cond else '') + 'account.code like "{}"'.format(safe_format(code))
+        cond += (' and ' if cond else '') + 'account.code like "{}"'.format(
+            safe_format(code))
     oby = ''
     if order_by:
         order_by = safe_format(order_by)
@@ -1447,8 +1448,9 @@ def account_list_summary(asset=None,
             accounts.sort(key=f)
             for k, v in groupby(accounts, f):
                 val = list(v).copy()
-                r = dict(zip(dk, (k, sum([z['balance_bc'] for z in val]),
-                                  sum([w['balance'] for w in val]))))
+                r = dict(
+                    zip(dk, (k, sum([z['balance_bc'] for z in val
+                                    ]), sum([w['balance'] for w in val]))))
                 res.append(r)
         return res
     return {
@@ -1530,12 +1532,14 @@ def _account_summary(balance_type,
                      order_by=['tp', 'account', 'asset'],
                      hide_empty=False):
     cond = 'where {} transact.deleted is null'.format(
-        'transact.d is not null and ' if safe_format(balance_type) == 'debit' else '')
+        'transact.d is not null and ' if safe_format(balance_type) ==
+        'debit' else '')
     if account:
-        cond += (' and '
-                 if cond else '') + 'account.code = "{}"'.format(safe_format(account))
+        cond += (' and ' if cond else '') + 'account.code = "{}"'.format(
+            safe_format(account))
     if asset:
-        cond += (' and ' if cond else '') + 'asset.code = "{}"'.format(safe_format(asset))
+        cond += (' and ' if cond else '') + 'asset.code = "{}"'.format(
+            safe_format(asset))
     if date:
         dts = parse_date(safe_format(date))
         cond += (' and ' if cond else '') + 'transact.d <= "{}"'.format(dts)
@@ -1650,7 +1654,11 @@ def safe_format(val):
     n_allow = '\'";'
     for al in n_allow:
         if isinstance(val, (list, tuple)):
-            val = [v.replace(al, '') if not isinstance(v, (int, float)) and al in v else v for v in val]
+            val = [
+                v.replace(al, '')
+                if not isinstance(v, (int, float)) and al in v else v
+                for v in val
+            ]
         elif isinstance(val, str):
             val = val.replace(al, '') if al in val else val
     return val
