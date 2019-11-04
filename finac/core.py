@@ -1418,11 +1418,15 @@ def account_list_summary(asset=None,
         code: filter by acocunt code (may contain '%' as a wildcards)
         date: get balances for the specified date
         order_by: list ordering
+        group_by: 'asset' or 'type'
         hide_empty: hide accounts with zero balance, default is False
         base: base asset (if not specified, config.base_asset is used)
 
     Returns:
-        accounts: list of accounts
+        accounts: list of accounts or
+        assets: list of assets or
+        account_types: list of accoun types
+
         total: total sum in base asset
     """
     if base is None:
@@ -1439,11 +1443,11 @@ def account_list_summary(asset=None,
     if group_by:
         res = []
         if group_by not in ('asset', 'tp', 'type'):
-            raise ValueError('Unresolved argument')
+            raise ValueError('Invalid group_by value')
         else:
             filt = 'asset' if group_by == 'asset' else 'type'
-            dk = ('asset', 'balance_bs', 'balance') if group_by == 'asset' \
-                else ('account_type', 'balance_bs')
+            dk = ('asset', 'balance_bc', 'balance') if group_by == 'asset' \
+                else ('account_type', 'balance_bc')
             f = lambda x: x[filt]
             accounts.sort(key=f)
             for k, v in groupby(accounts, f):
@@ -1452,7 +1456,25 @@ def account_list_summary(asset=None,
                     zip(dk, (k, sum([z['balance_bc'] for z in val
                                     ]), sum([w['balance'] for w in val]))))
                 res.append(r)
-        return res
+        if group_by == 'asset':
+            return {
+                'assets':
+                    res,
+                'total':
+                    sum(
+                        format_amount(d['balance'], d['asset']) if d['asset'] ==
+                        base else format_amount(
+                            d['balance'] *
+                            asset_rate(d['asset'], base, date=date), d['asset'])
+                        for d in accounts)
+            }
+        else:
+            return {
+                'account_types':
+                    res,
+                'total':
+                    sum(format_amount(d['balance_bc'], base) for d in accounts)
+            }
     return {
         'accounts':
             accounts,

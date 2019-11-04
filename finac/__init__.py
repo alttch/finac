@@ -191,23 +191,34 @@ def ls(account=None,
                                       group_by=group_by,
                                       hide_empty=hide_empty,
                                       base=base)
-        accounts = result['accounts']
-        data = accounts.copy()
+        if not group_by:
+            kf = 'accounts'
+            rt_align = (rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
+                        rapidtables.ALIGN_CENTER, rapidtables.ALIGN_RIGHT,
+                        rapidtables.ALIGN_RIGHT)
+        elif group_by == 'asset':
+            kf = 'assets'
+            rt_align = (rapidtables.ALIGN_LEFT, rapidtables.ALIGN_RIGHT,
+                        rapidtables.ALIGN_RIGHT)
+        else:
+            kf = 'account_types'
+            rt_align = (rapidtables.ALIGN_LEFT, rapidtables.ALIGN_RIGHT)
+        res = result[kf]
+        data = res.copy()
         bcp = asset_precision(base)
-        for i, r in enumerate(accounts):
+        for i, r in enumerate(res):
             r = r.copy()
-            r['balance'] = format_money(r['balance'],
-                                        asset_precision(r['asset']))
+            if group_by not in ['type', 'tp']:
+                r['balance'] = format_money(r['balance'],
+                                            asset_precision(r['asset']))
             r['balance ' + base] = format_money(r['balance_bc'], bcp)
             del r['balance_bc']
-            del r['note']
-            accounts[i] = r
-        ft = rapidtables.format_table(
-            accounts,
-            fmt=rapidtables.FORMAT_GENERATOR,
-            align=(rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
-                   rapidtables.ALIGN_CENTER, rapidtables.ALIGN_RIGHT,
-                   rapidtables.ALIGN_RIGHT))
+            if not group_by:
+                del r['note']
+            res[i] = r
+        ft = rapidtables.format_table(res,
+                                      fmt=rapidtables.FORMAT_GENERATOR,
+                                      align=rt_align)
         if not ft:
             return
         h, tbl = ft
@@ -215,7 +226,7 @@ def ls(account=None,
         neotermcolor.cprint('-' * len(h), '@finac:separator')
         for t, s in zip(tbl, data):
             neotermcolor.cprint(t,
-                                '@finac:credit' if s['balance'] < 0 else None,
+                                '@finac:credit' if s['balance_bc'] < 0 else None,
                                 attrs='')
         neotermcolor.cprint('-' * len(h), '@finac:separator')
         neotermcolor.cprint('Total: ', end='')

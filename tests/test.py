@@ -324,26 +324,6 @@ class Test(unittest.TestCase):
     def test100_delete_asset(self):
         finac.asset_delete('eur')
 
-    def test101_account_list_summary(self):
-        r = finac.account_list_summary(group_by='asset')
-        if isinstance(r, list):
-            data = r.copy()
-            ft = rapidtables.format_table(
-                r,
-                fmt=rapidtables.FORMAT_GENERATOR,
-                align=(rapidtables.ALIGN_LEFT, rapidtables.ALIGN_RIGHT,
-                       rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
-                       rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
-                       rapidtables.ALIGN_LEFT))
-            if not ft:
-                return
-            h, tbl = ft
-            finac.neotermcolor.cprint(h, '@finac:title')
-            finac.neotermcolor.cprint('-' * len(h), '@finac:separator')
-            for t, s in zip(tbl, data):
-                finac.neotermcolor.cprint(t, '@finac:sum', attrs='')
-            finac.neotermcolor.cprint('-' * len(h), '@finac:separator')
-
     def test102_safe_format(self):
         test_val = [1, 'te\'st', ['t"est1', 'te;st"2'], '20;19-1\'1-0"4']
         for t in test_val:
