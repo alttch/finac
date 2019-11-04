@@ -297,6 +297,13 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('xtest1'), 300)
         self.assertEqual(finac.account_balance('xtest2'), 200)
 
+    def test096_asset_precision(self):
+        self.assertEqual(finac.asset_precision('eur'), 2)
+        precs = list(finac.core._asset_precision())
+        self.assertEqual(precs[0]['asset'], 'AUD')
+        self.assertEqual(precs[0]['precision'], 2)
+        finac.preload()
+
     def test097_balance_range(self):
         finac.account_create('tr', 'eur')
         finac.transaction_create('tr', 1000, date='2019-01-05')

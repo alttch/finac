@@ -2,17 +2,15 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.16'
+__version__ = '0.1.17'
 
 from sqlalchemy.exc import IntegrityError
-
-from functools import lru_cache
-
 from cachetools import TTLCache
-
 from itertools import groupby
 
 rate_cache = TTLCache(maxsize=100, ttl=2)
+
+asset_precision_cache = {}
 
 # financial assets
 ACCOUNT_CREDIT = 0
@@ -207,18 +205,50 @@ def parse_number(d):
         return float(d.replace(',', '.'))
 
 
-@lru_cache(maxsize=256)
-@core_method
+def preload():
+    """
+    Preload static data
+    """
+    for a in _asset_precision():
+        asset_precision_cache[a['asset']] = a['precision']
+
+
 def asset_precision(asset):
     """
     Get precision (digits after comma) for the asset
     Note: asset precision is cached, so process restart required if changed
     """
-    d = get_db().execute(sql('select precs from asset where code=:code'),
-                         code=asset.upper()).fetchone()
-    if not d:
-        raise ResourceNotFound
-    return d.precs
+    return asset_precision_cache[
+        asset] if asset in asset_precision_cache else _asset_precision(
+            asset=asset)
+
+
+@core_method
+def _asset_precision(asset=None):
+    if asset:
+        if asset in asset_precision_cache:
+            return asset_precision_cache[asset]
+        d = get_db().execute(sql('select precs from asset where code=:code'),
+                             code=asset.upper()).fetchone()
+        if not d:
+            raise ResourceNotFound
+        precs = d.precs
+        asset_precision_cache[asset] = precs
+        return precs
+    else:
+
+        def all_precs():
+            d = get_db().execute(
+                sql('select code, precs from asset order by code'))
+            while True:
+                r = d.fetchone()
+                if not r: break
+                row = OrderedDict()
+                row['asset'] = r.code
+                row['precision'] = r.precs
+                yield row
+
+        return all_precs()
 
 
 def format_amount(i, asset):

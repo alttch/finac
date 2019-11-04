@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.16'
+__version__ = '0.1.17'
 
 import rapidtables
 import neotermcolor
@@ -49,6 +49,9 @@ from finac.core import account_list, account_list_summary
 
 # purges
 from finac.core import purge, transaction_purge
+
+# caches
+from finac.core import preload
 
 # plots
 from finac.plot import account_plot as plot
