@@ -1183,6 +1183,7 @@ def transaction_move(dt=None,
         ct_info = account_info(ct) if ct else None
         dt_info = account_info(dt) if dt else None
         if ct and dt and ct_info['asset'] != dt_info['asset']:
+            amount = parse_number(amount)
             if config.lazy_exchange:
                 if not amount:
                     raise ValueError(
