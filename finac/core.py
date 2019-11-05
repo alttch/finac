@@ -181,7 +181,7 @@ def parse_date(d, return_timestamp=True):
 
 
 def parse_number(d):
-    if isinstance(d, int) or isinstance(d, float):
+    if isinstance(d, int) or isinstance(d, float) or d is None:
         return d
     if not isinstance(d, str):
         raise ValueError(d)
