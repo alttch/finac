@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.20'
+__version__ = '0.1.21'
 
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
@@ -836,19 +836,24 @@ def transaction_apply(fname):
 
     If "account" is specified, function transaction_create is called, otherwise
     transaction_move. All arguments are passed to the functions as-is
+
+    Returns:
+        list of transaction IDs
     """
     import yaml
     try:
         yaml.warnings({'YAMLLoadWarning': False})
     except:
         pass
+    result = []
     with open(fname) as fh:
         transactions = yaml.load(fh)['transactions']
     for t in transactions:
         if 'account' in t:
-            transaction_create(**t)
+            result.append(transaction_create(**t))
         else:
-            transaction_move(**t)
+            result.append(transaction_move(**t))
+    return result
 
 
 @core_method
