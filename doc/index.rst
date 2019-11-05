@@ -5,6 +5,7 @@
     plot
     core
     accounts
+    api
 
 .. include:: readme.rst
 

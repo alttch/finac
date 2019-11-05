@@ -271,12 +271,16 @@ How to embed Finac library into own project
 See `Finac documentation <https://finac.readthedocs.io/>`__ for core
 function API details.
 
+Client-server mode and HTTP API
+-------------------------------
+
+See `Finac documentation <https://finac.readthedocs.io/>`__ for server
+mode and HTTP API details.
+
 TODO
 ----
 
 Finac is in alpha stage. We are continuously working on the features,
 speed and stability improvements as well as waiting your commits.
 
--  Wrappers around some used SQL-formats to get rid of injections
--  Portfolio management functions
 -  finac-cli
