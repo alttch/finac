@@ -106,6 +106,7 @@ config = SimpleNamespace(db=None,
                          base_asset='USD',
                          api_uri=None,
                          api_key=None,
+                         api_timeout=5,
                          date_format='%Y-%m-%d %H:%M:%S')
 
 lock_purge = threading.Lock()
@@ -135,7 +136,9 @@ def core_method(f):
                 payload['params']['_k'] = config.api_key
             for i, a in enumerate(args):
                 payload['params'][argspec.args[i]] = a
-            r = requests.post(config.api_uri, json=payload)
+            r = requests.post(config.api_uri,
+                              json=payload,
+                              timeout=config.api_timeout)
             if not r.ok:
                 raise RuntimeError('Finac server error: {}'.format(
                     r.status_code))
