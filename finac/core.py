@@ -999,6 +999,8 @@ def transaction_update(transaction_id, **kwargs):
     if 'completed' in kw:
         kw['d'] = parse_date(kw['completed'])
         del kw['completed']
+    if 'amount' in kw:
+        kw['amount'] = parse_number(kw['amount'])
     _update(transaction_id, 'transact', 'id', kw)
 
 
