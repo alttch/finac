@@ -341,6 +341,16 @@ class Test(unittest.TestCase):
                 for i in res:
                     self.assertNotRegex(i, r"\"|'|;", "failure safe format")
 
+    def test999_parse_number(self):
+        parse = finac.core.parse_number
+        self.assertEqual(parse('1,000.00'), 1000)
+        self.assertEqual(parse('1.000,00'), 1000)
+        self.assertEqual(parse('1 000,00'), 1000)
+        self.assertEqual(parse('1 000.00'), 1000)
+        self.assertEqual(parse('1.000.000,00'), 1000000)
+        self.assertEqual(parse('1 000 000.00'), 1000000)
+        self.assertEqual(parse('1 000 000,00'), 1000000)
+        self.assertEqual(parse('1,000,000.00'), 1000000)
 
 if __name__ == '__main__':
     import argparse

@@ -199,7 +199,7 @@ def parse_number(d):
         return float(d.replace(' ', '').replace(',', '.'))
     elif commas > 1:
         return float(d.replace(',', ''))
-    elif commas == 1 and commas == dots:
+    elif commas == 1 and commas <= dots:
         if d.find(',') < d.find('.'):
             return float(d.replace(',', ''))
         else:
