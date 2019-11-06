@@ -168,6 +168,8 @@ def ls(account=None,
         neotermcolor.cprint(format_money(result['credit'], precision),
                             style='finac:credit_sum')
         print()
+        if base:
+            precision = asset_precision(base)
         print('Net profit/loss: ', end='')
         pl = result['debit'] - result['credit']
         balance = account_balance(account=account, date=end)
