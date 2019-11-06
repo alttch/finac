@@ -57,6 +57,9 @@ from finac.core import preload
 from finac.plot import account_plot as plot
 from finac.plot import account_pie as pie
 
+# tools
+from finac.core import parse_number, parse_date
+
 tr = transaction_create
 mv = transaction_move
 rm = transaction_delete
