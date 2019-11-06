@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.25'
+__version__ = '0.1.27'
 
 import rapidtables
 import neotermcolor
@@ -149,37 +149,43 @@ def ls(account=None,
                    rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
                    rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
                    rapidtables.ALIGN_LEFT))
-        if not ft:
-            return
-        h, tbl = ft
-        neotermcolor.cprint(h, '@finac:title')
-        neotermcolor.cprint('-' * len(h), '@finac:separator')
-        for t, s in zip(tbl, result['statement']):
-            neotermcolor.cprint(
-                t,
-                '@finac:credit' if s['amount'] < 0 else '@finac:debit',
-                attrs='')
-        neotermcolor.cprint('-' * len(h), '@finac:separator')
-        print('Debit turnover: ', end='')
-        neotermcolor.cprint(format_money(result['debit'], precision),
-                            style='finac:debit_sum',
-                            end=', ')
-        print('credit turnover: ', end='')
-        neotermcolor.cprint(format_money(result['credit'], precision),
-                            style='finac:credit_sum')
-        print()
-        print('Net profit/loss: ', end='')
-        pl = result['debit'] - result['credit']
-        balance = account_balance(account=account, date=end)
         rcur = acc_info['asset']
+        if ft:
+            h, tbl = ft
+            neotermcolor.cprint(h, '@finac:title')
+            neotermcolor.cprint('-' * len(h), '@finac:separator')
+            for t, s in zip(tbl, result['statement']):
+                neotermcolor.cprint(
+                    t,
+                    '@finac:credit' if s['amount'] < 0 else '@finac:debit',
+                    attrs='')
+            neotermcolor.cprint('-' * len(h), '@finac:separator')
+            print('Debit turnover: ', end='')
+            neotermcolor.cprint(format_money(result['debit'], precision),
+                                style='finac:debit_sum',
+                                end=', ')
+            print('credit turnover: ', end='')
+            neotermcolor.cprint(format_money(result['credit'], precision),
+                                style='finac:credit_sum')
+            print()
+            if base:
+                precision = asset_precision(base)
+            print('Net profit/loss: ', end='')
+            pl = result['debit'] - result['credit']
+            if base:
+                pl = pl * asset_rate(acc_info['asset'], base, date=end)
+                rcur = base.upper()
+            neotermcolor.cprint('{} {}'.format(format_money(pl, precision),
+                                               rcur),
+                                attrs='bold',
+                                end='')
+            print(', balance', end='')
+        else:
+            print('Balance', end='')
+        balance = account_balance(account=account, date=end)
         if base:
-            pl = pl * asset_rate(acc_info['asset'], base, date=end)
             balance = balance * asset_rate(acc_info['asset'], base, date=end)
-            rcur = base.upper()
-        neotermcolor.cprint('{} {}'.format(format_money(pl, precision), rcur),
-                            attrs='bold',
-                            end='')
-        print(', balance{}: '.format(' to date' if end else ''), end='')
+        print('{}: '.format(' to date' if end else ''), end='')
         neotermcolor.cprint('{} {}'.format(format_money(balance, precision),
                                            rcur),
                             attrs='bold',
