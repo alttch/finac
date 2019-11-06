@@ -327,6 +327,27 @@ class Test(unittest.TestCase):
     def test100_delete_asset(self):
         finac.asset_delete('eur')
 
+    def test103_trans_move(self):
+        finac.asset_create('UAH')
+        finac.asset_set_rate('UAH/USD', value=0.04)
+        finac.account_create('move.test', 'usd', 'current', 'Test move acc')
+        finac.account_create('move1.TEST', 'UAH', 'current', 'Test move acc2')
+        finac.transaction_create('move.test', 100, 'for move test')
+        self.assertEqual(finac.account_balance('move.test'), 100)
+        target_ct = 80
+        target_dt = 1200
+        finac.transaction_move('move1.TEST', 'move.test', target_ct=target_ct,
+                               note='cross currency: target_ct')
+        self.assertEqual(finac.account_balance('move.test'), target_ct)
+        finac.transaction_move('move1.TEST', 'move.test', target_dt=target_dt,
+                               note='cross currency: target_dt')
+        self.assertEqual(finac.account_balance('move1.test'), target_dt)
+        self.assertRaises(ValueError, finac.transaction_move, 'move1.TEST', 'move.test', target_dt=100)
+        print()
+        finac.ls('move.test')
+        finac.ls('move1.test')
+        print()
+
     def test_104_check_currency_exist(self):
         try:
             finac.asset_create('burg')

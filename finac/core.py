@@ -1175,7 +1175,7 @@ def transaction_move(dt=None,
         amount: transaction amount (always >0)
         tag: transaction tag
         descrption: transaction note
-        date: transaction creation daate (default: now)
+        date: transaction creation date (default: now)
         completion_date: transaction completion date (default: now)
         mark_completed: mark transaction completed (set completion date)
         target_ct: target credit account balance
@@ -1197,6 +1197,18 @@ def transaction_move(dt=None,
         dt_info = account_info(dt) if dt else None
         if ct and dt and ct_info['asset'] != dt_info['asset']:
             amount = parse_number(amount)
+            if not amount:
+                if target_ct and target_dt:
+                    raise ValueError(
+                        'Target should be specified either for dt or for ct')
+                elif target_ct:
+                    amount = abs(parse_number(target_ct) - account_balance(ct))
+                    xdt = False
+                elif target_dt:
+                    current_balance = account_balance(dt)
+                    if current_balance > parse_number(target_dt):
+                        raise ValueError('The current balance is more than target')
+                    amount = parse_number(target_dt) - current_balance
             if config.lazy_exchange:
                 if not amount:
                     raise ValueError(
