@@ -7,7 +7,7 @@ __version__ = '0.1.25'
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
 from itertools import groupby
-
+from .currencies import currencies
 rate_cache = TTLCache(maxsize=100, ttl=2)
 
 asset_precision_cache = {}
@@ -419,6 +419,9 @@ def asset_create(asset, precision=2):
             operations. Default is 2 digits
     """
     asset = asset.upper()
+    if asset not in [c['cc'] for c in currencies]:
+        logger.error('Currency {} not found'.format(asset))
+        raise ResourceNotFound
     logger.info('Creating asset {}'.format(asset))
     try:
         get_db().execute(sql("""
