@@ -1470,8 +1470,14 @@ def account_list(asset=None,
                              if cor else '') + 'account.tp = {}'.format(tp_id)
             cond += cor + ')'
     if asset:
-        cond += (' and ' if cond else '') + 'asset.code = "{}"'.format(
-            _safe_format(asset.upper()))
+        first = True
+        cond += (' and ' if cond else '') + '('
+        for a in asset if isinstance(asset, list) or isinstance(
+                asset, tuple) else [asset]:
+            if first: first = False
+            else: cond += ' or '
+            cond += 'asset.code = "{}"'.format(_safe_format(a.upper()))
+        cond += ')'
     else:
         cond += (' and ' if cond else '') + 'account.tp < 1000'
     if date:
