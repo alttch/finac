@@ -1808,7 +1808,7 @@ def account_balance_range(account,
     ) if end else datetime.datetime.now() + datetime.timedelta(days=1)
     delta = datetime.timedelta(days=step)
     last_record = False
-    while dt < end_date and not last_record:
+    while dt < end_date or not last_record:
         times.append(dt.timestamp() if return_timestamp else dt)
         b = account_balance(account, date=dt)
         if base:
