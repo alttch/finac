@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.1.27'
+__version__ = '0.1.29'
 
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
@@ -1004,6 +1004,8 @@ def transaction_update(transaction_id, **kwargs):
         del kw['completed']
     if 'amount' in kw:
         kw['amount'] = parse_number(kw['amount'])
+        if kw['amount'] <= 0:
+            raise ValueError('Amount should be greater than zero')
     _update(transaction_id, 'transact', 'id', kw)
 
 
@@ -1821,17 +1823,17 @@ def account_balance_range(account,
     ) if end else datetime.datetime.now() + datetime.timedelta(days=1)
     delta = datetime.timedelta(days=step)
     last_record = False
-    while dt < end_date and not last_record:
+    while dt < end_date or not last_record:
+        if dt == end_date:
+            break
+        elif dt > end_date:
+            last_record = True
         times.append(dt.timestamp() if return_timestamp else dt)
         b = account_balance(account, date=dt)
         if base:
             b *= asset_rate(acc_info['asset'], base, date=dt)
         data.append(b)
         dt += delta
-        if dt == end_date:
-            break
-        elif dt > end_date:
-            last_record = True
     return times, data
 
 
