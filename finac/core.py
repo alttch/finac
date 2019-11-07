@@ -1001,6 +1001,8 @@ def transaction_update(transaction_id, **kwargs):
         del kw['completed']
     if 'amount' in kw:
         kw['amount'] = parse_number(kw['amount'])
+        if kw['amount'] <= 0:
+            raise ValueError('Amount should be greater than zero')
     _update(transaction_id, 'transact', 'id', kw)
 
 
