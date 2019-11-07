@@ -1809,16 +1809,16 @@ def account_balance_range(account,
     delta = datetime.timedelta(days=step)
     last_record = False
     while dt < end_date or not last_record:
+        if dt == end_date:
+            break
+        elif dt > end_date:
+            last_record = True
         times.append(dt.timestamp() if return_timestamp else dt)
         b = account_balance(account, date=dt)
         if base:
             b *= asset_rate(acc_info['asset'], base, date=dt)
         data.append(b)
         dt += delta
-        if dt == end_date:
-            break
-        elif dt > end_date:
-            last_record = True
     return times, data
 
 
