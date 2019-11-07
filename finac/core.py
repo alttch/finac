@@ -4,6 +4,7 @@ __license__ = 'MIT'
 
 __version__ = '0.1.29'
 
+import re
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
 from itertools import groupby
@@ -1761,36 +1762,57 @@ def _account_summary(balance_type,
 
 
 @core_method
-def account_balance(account, date=None):
+def account_balance(account=None, tp=None, base=None, date=None):
     """
     Get account balance
 
     Args:
         account: account code
+        tp: account type
+        base: base asset (if not specified, config.base_asset is used)
         date: get balance for specified date/time
     """
+    if account and tp:
+        raise ValueError('Account and type can not be specified together')
+    elif not account and not tp:
+        raise ValueError('Specify account or type')
     cond = "transact.deleted is null"
     if date:
         dts = parse_date(_safe_format(date))
         cond += (' and '
                  if cond else '') + 'transact.d_created <= "{}"'.format(dts)
-    acc_info = account_info(account)
-    r = get_db().execute(sql("""
-        select debit-credit as balance from
-            (select sum(amount) as debit from transact
-                where account_debit_id=
-                    (select id from account where code=:account)
-                        and d is not null and {cond_d}) as f,
-            (select sum(amount) as credit from transact
-                where account_credit_id=
-                    (select id from account where code=:account) and {cond})
-                        as s
-            """.format(cond=cond, cond_d=cond.replace('_created', ''))),
-                         account=account.upper())
-    d = r.fetchone()
-    if not d or d.balance is None:
-        raise ResourceNotFound
-    return format_amount(d.balance, acc_info['asset'])
+    balance = None
+    if account:
+        acc_info = account_info(account)
+        r = get_db().execute(sql("""
+            select debit-credit as balance from
+                (select sum(amount) as debit from transact
+                    where account_debit_id=
+                        (select id from account where code=:account)
+                            and d is not null and {cond_d}) as f,
+                (select sum(amount) as credit from transact
+                    where account_credit_id=
+                        (select id from account where code=:account) and {cond})
+                            as s
+                """.format(cond=cond, cond_d=cond.replace('_created', ''))),
+                             account=account.upper())
+        d = r.fetchone()
+        if not d or d.balance is None:
+            raise ResourceNotFound
+        if base and acc_info['asset'] != base:
+            balance = d.balance * asset_rate(acc_info['asset'], base, date=date)
+        else:
+            balance = format_amount(d.balance, acc_info['asset'])
+    elif tp:
+        if not base:
+            base = config.base_asset
+        tp = re.findall(r'\w+', tp) if isinstance(tp, str) else tp
+        accounts = account_list_summary(tp=tp, group_by='tp', date=date,
+                                        base=base, hide_empty=True)
+        if not accounts.get('account_types'):
+            raise ResourceNotFound
+        balance = accounts['total']
+    return balance
 
 
 @core_method
