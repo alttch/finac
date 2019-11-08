@@ -300,17 +300,25 @@ class Test(unittest.TestCase):
         finac.preload()
 
     def test097_balance_range(self):
-        finac.account_create('tr', 'eur')
+        finac.account_create('tr', 'eur', tp='cash')
         finac.transaction_create('tr', 1000, date='2019-01-05')
         finac.transaction_create('tr', 2000, date='2019-02-05')
         finac.transaction_create('tr', -500, date='2019-04-05')
         finac.transaction_create('tr', -200, date='2019-06-05')
         finac.transaction_create('tr', 800, date='2019-08-05')
-        t, dt = finac.account_balance_range('tr', start='2019-01-05',
+        self.assertRaises(ValueError, finac.account_balance_range, account='tr',
+                                            tp='cash', start='2019-01-05',
+                                            end='2019-8-07', base='usd')
+        t, dt = finac.account_balance_range(start='2019-01-05', account='tr',
                                             end='2019-8-07',
                                             return_timestamp=False)
         self.assertEqual(dt[-3], 2300)
         self.assertEqual(dt[-1], 3100)
+        t1, dt1 = finac.account_balance_range(start='2019-01-05', tp='cash',
+                                              end='2019-8-07', base='usd',
+                                              return_timestamp=False)
+        self.assertEqual(dt1[-3], 4140)
+        self.assertEqual(dt1[-1], 5580)
 
     def test098_asset_update(self):
         finac.asset_update('eur', code='euRo')

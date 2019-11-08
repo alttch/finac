@@ -1768,7 +1768,7 @@ def account_balance(account=None, tp=None, base=None, date=None):
 
     Args:
         account: account code
-        tp: account type
+        tp: account type/types
         base: base asset (if not specified, config.base_asset is used)
         date: get balance for specified date/time
     """
@@ -1816,8 +1816,9 @@ def account_balance(account=None, tp=None, base=None, date=None):
 
 
 @core_method
-def account_balance_range(account,
-                          start,
+def account_balance_range(start,
+                          account=None,
+                          tp=None,
                           end=None,
                           step=1,
                           return_timestamp=True,
@@ -1827,6 +1828,7 @@ def account_balance_range(account,
 
     Args:
         account: account code
+        tp: account type/types
         start: start date/time, required
         end: end date/time, if not specified, current time is used
         step: list step in days
@@ -1836,9 +1838,13 @@ def account_balance_range(account,
     Returns:
         tuple with time series list and corresponding balance list
     """
+    if account and tp:
+        raise ValueError('Account and type can not be specified together')
+    elif not account and not tp:
+        tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] < 1000]
     times = []
     data = []
-    acc_info = account_info(account)
+    acc_info = {'account': account} if account else {'tp': tp}
     dt = parse_date(start, return_timestamp=False)
     end_date = parse_date(
         end, return_timestamp=False
@@ -1851,9 +1857,7 @@ def account_balance_range(account,
         elif dt > end_date:
             last_record = True
         times.append(dt.timestamp() if return_timestamp else dt)
-        b = account_balance(account, date=dt)
-        if base:
-            b *= asset_rate(acc_info['asset'], base, date=dt)
+        b = account_balance(**acc_info, base=base, date=dt)
         data.append(b)
         dt += delta
     return times, data
