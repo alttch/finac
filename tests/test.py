@@ -367,9 +367,9 @@ class Test(unittest.TestCase):
 
     def test1000_account_balance(self):
         self.assertRaises(ValueError, finac.account_balance, account='USD1', tp='current')
-        self.assertRaises(ValueError, finac.account_balance, account=None, tp=None)
         self.assertRaises(finac.core.ResourceNotFound, finac.account_balance, tp='gs')
         finac.account_balance(tp='current', base='usd')
+        finac.account_balance(account=None, base='usd')
 
 
 if __name__ == '__main__':

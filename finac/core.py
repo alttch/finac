@@ -1201,13 +1201,13 @@ def transaction_move(dt=None,
         if ct and dt and ct_info['asset'] != dt_info['asset']:
             amount = parse_number(amount)
             if not amount:
-                if target_ct and target_dt:
+                if target_ct is None and target_dt is None:
                     raise ValueError(
                         'Target should be specified either for dt or for ct')
-                elif target_ct:
+                elif target_ct is not None:
                     amount = abs(parse_number(target_ct) - account_balance(ct))
                     xdt = False
-                elif target_dt:
+                elif target_dt is not None:
                     current_balance = account_balance(dt)
                     if current_balance > parse_number(target_dt):
                         raise ValueError('The current balance is more than target')
@@ -1775,7 +1775,7 @@ def account_balance(account=None, tp=None, base=None, date=None):
     if account and tp:
         raise ValueError('Account and type can not be specified together')
     elif not account and not tp:
-        raise ValueError('Specify account or type')
+        tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] < 1000]
     cond = "transact.deleted is null"
     if date:
         dts = parse_date(_safe_format(date))
