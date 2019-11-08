@@ -4,7 +4,6 @@ __license__ = 'MIT'
 
 __version__ = '0.1.29'
 
-import re
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
 from itertools import groupby
@@ -1210,7 +1209,8 @@ def transaction_move(dt=None,
                 elif target_dt is not None:
                     current_balance = account_balance(dt)
                     if current_balance > parse_number(target_dt):
-                        raise ValueError('The current balance is more than target')
+                        raise ValueError(
+                            'The current balance is higher than target')
                     amount = parse_number(target_dt) - current_balance
             if config.lazy_exchange:
                 if not amount:
@@ -1806,11 +1806,11 @@ def account_balance(account=None, tp=None, base=None, date=None):
     elif tp:
         if not base:
             base = config.base_asset
-        tp = re.findall(r'\w+', tp) if isinstance(tp, str) else tp
-        accounts = account_list_summary(tp=tp, group_by='tp', date=date,
-                                        base=base, hide_empty=True)
-        if not accounts.get('account_types'):
-            raise ResourceNotFound
+        accounts = account_list_summary(tp=tp,
+                                        group_by='tp',
+                                        date=date,
+                                        base=base,
+                                        hide_empty=True)
         balance = accounts['total']
     return balance
 
