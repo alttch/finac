@@ -168,18 +168,19 @@ def format_date(d):
 
 
 def parse_date(d, return_timestamp=True):
-    try:
-        d = float(d)
-        if d > 3000:
-            return d
-        else:
-            d = int(d)
-    except:
-        pass
-    if not isinstance(d, datetime.datetime):
-        dt = dateutil.parser.parse(str(d))
-    else:
+    if isinstance(d, datetime.datetime):
         dt = d
+    else:
+        try:
+            d = float(d)
+            if d > 3000:
+                return d if return_timestamp else \
+                        datetime.datetime.fromtimestamp(d)
+            else:
+                d = int(d)
+        except:
+            pass
+        dt = dateutil.parser.parse(str(d))
     return dt.timestamp() if return_timestamp else dt
 
 

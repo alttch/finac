@@ -7,26 +7,39 @@ __version__ = '0.1.29'
 from . import core
 
 
-def account_plot(account, start, end=None, step=1, base=None, **kwargs):
+def account_plot(account=None,
+                 tp=None,
+                 start=None,
+                 end=None,
+                 step=1,
+                 base=None,
+                 **kwargs):
     """
     Plot account balance chart for the specified time range
 
+    Either account code or account types must be specified
+
     Args:
         account: account code
-        start: start date/time, required
+        tp: account type (or types)
+        start: start date/time, default: first day of current month
         end: end date/time, if not specified, current time is used
         step: chart step in days
         base: base currency
         **kwargs: passed as-is to matplotlib.pyplot.plot
     """
     from matplotlib import pyplot as plt
+    import datetime
     plt.plot(
-        *core.account_balance_range(account=account,
-                                    start=start,
-                                    end=end,
-                                    step=step,
-                                    return_timestamp=False,
-                                    base=base), **kwargs)
+        *core.account_balance_range(
+            account=account,
+            tp=tp,
+            start=start if start else datetime.datetime.today().replace(
+                day=1, hour=0, minute=0, second=0, microsecond=0).timestamp(),
+            end=end,
+            step=step,
+            return_timestamp=False,
+            base=base), **kwargs)
 
 
 def account_pie(tp=None,
