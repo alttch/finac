@@ -32,16 +32,17 @@ class Test(unittest.TestCase):
         finac.account_create('TEST2.TEST', 'eur', 'current', 'Test acc2')
 
     def test003_create_transaction(self):
-        result.transaction1_id = finac.transaction_create('test.test', 100,
+        result.transaction1_id = finac.transaction_create('test.test',
+                                                          100,
                                                           'test',
                                                           'Test balance import',
                                                           mark_completed=False)
         self.assertEqual(finac.account_balance('TEST.TEST'), 0)
-        statement = list(finac.account_statement('TEST.TEST', '20"19-01-0;1',
-                                                 pending=False))
+        statement = list(
+            finac.account_statement('TEST.TEST', '20"19-01-0;1', pending=False))
         self.assertEqual(len(statement), 0)
-        statement = list(finac.account_statement('test.test', '201\'9-0"1-01',
-                                                 pending=True))
+        statement = list(
+            finac.account_statement('test.test', '201\'9-0"1-01', pending=True))
         self.assertEqual(len(statement), 1)
 
     def test004_transaction_complete(self):
@@ -52,8 +53,8 @@ class Test(unittest.TestCase):
 
     def test005_transaction_move(self):
         result.transaction2_id = finac.transaction_move('TEST2.TEST',
-                                                        'TEST.TEST', 25,
-                                                        'test', 'Test move')
+                                                        'TEST.TEST', 25, 'test',
+                                                        'Test move')
         self.assertEqual(finac.account_balance('TEST.TEST'), 75)
         self.assertEqual(finac.account_balance('TEST2.TEST'), 25)
 
@@ -67,13 +68,24 @@ class Test(unittest.TestCase):
         statement = list(
             finac.account_statement('TEST.TEST', '2019-01-01', '2119-05-22'))
         self.assertEqual(len(statement), 2)
-        statement = list(
-            finac.account_statement('TEST.TEST', end='2119-0"5-22'))
+        statement = list(finac.account_statement('TEST.TEST',
+                                                 end='2119-0"5-22'))
         self.assertEqual(len(statement), 2)
         ss = finac.account_statement_summary('TEST.TEST', end='2119-05-22')
         self.assertEqual(ss['credit'], 25)
         self.assertEqual(ss['debit'], 100)
         self.assertEqual(ss['net'], 75)
+
+    def test007_list_summary_and_passive(self):
+        finac.config.base_asset = 'eur'
+        self.assertEqual(finac.account_list_summary()['total'], 100)
+        finac.account_create('supplier1', 'eur', tp='supplier')
+        finac.account_create('taxes1', 'eur', tp='tax', passive=False)
+        finac.tr('supplier1', 10)
+        finac.tr('taxes1', 10)
+        self.assertEqual(finac.account_list_summary()['total'], 100)
+        finac.account_update('taxes1', passive=True)
+        self.assertEqual(finac.account_list_summary()['total'], 80)
 
     def test020_transaction_delete(self):
         finac.transaction_delete(result.transaction2_id)
@@ -92,14 +104,20 @@ class Test(unittest.TestCase):
     def test040_overdraft(self):
 
         # allow overdraft
-        finac.account_create('TEST3.TEST', 'eur', 'current', 'Test account',
+        finac.account_create('TEST3.TEST',
+                             'eur',
+                             'current',
+                             'Test account',
                              max_overdraft=900)
         finac.transaction_create('TEST3.TEST', 100)
         finac.transaction_move('TEST2.TEST', 'TEST3.TEST', '1,000.00')
         self.assertEqual(finac.account_balance('TEST3.TEST'), -900)
 
         # forbid overdraft
-        finac.account_create('TEST4.TEST', 'eur', 'current', 'Test account',
+        finac.account_create('TEST4.TEST',
+                             'eur',
+                             'current',
+                             'Test account',
                              max_overdraft=200)
         finac.transaction_create('TEST3.TEST', 1200)
         try:
@@ -128,10 +146,12 @@ class Test(unittest.TestCase):
     def test042_overdraft_and_delete(self):
         finac.account_create('TEST42.TEST', 'EUR', max_overdraft=100)
         finac.transaction_create('TEST42.TEST', 10)
-        tid = finac.transaction_create('TEST42.TEST', -100,
+        tid = finac.transaction_create('TEST42.TEST',
+                                       -100,
                                        mark_completed=False)
         finac.transaction_delete(tid)
-        tid = finac.transaction_create('TEST42.TEST', -100,
+        tid = finac.transaction_create('TEST42.TEST',
+                                       -100,
                                        mark_completed=False)
         finac.transaction_delete(tid)
         self.assertEqual(finac.account_balance('TEST42.TEST'), 10)
@@ -169,8 +189,7 @@ class Test(unittest.TestCase):
             raise RuntimeError('Rate not found not raised')
         except finac.RateNotFound:
             pass
-        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'),
-                         1.5)
+        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'), 1.5)
         self.assertEqual(finac.asset_rate('EUR', 'USD'), 2)
 
     def test061_asset_rate_easyget(self):
@@ -187,11 +206,9 @@ class Test(unittest.TestCase):
 
     def test062_asset_rate_delete(self):
         finac.asset_set_rate('EUR', 'USD', value=1.8, date='2018-12-01')
-        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'),
-                         1.5)
+        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'), 1.5)
         finac.asset_delete_rate('EUR', 'USD', date='2019-01-01')
-        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'),
-                         1.8)
+        self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'), 1.8)
 
     def test070_test_targets_and_tags(self):
         finac.account_create('TT1', 'EUR', tp='credit')
@@ -229,8 +246,8 @@ class Test(unittest.TestCase):
     def test072_account_update(self):
         finac.account_update('TT2', code='TEST_ACC_2', note='Test acc #2')
         finac.account_update('TEST_ACC_2', max_overdraft=1000)
-        self.assertEqual(finac.account_info('TEST_ACC_2')['max_overdraft'],
-            1000)
+        self.assertEqual(
+            finac.account_info('TEST_ACC_2')['max_overdraft'], 1000)
 
     def test080_lazy_exchange(self):
         finac.account_create('eur1', 'eur')
@@ -306,16 +323,23 @@ class Test(unittest.TestCase):
         finac.transaction_create('tr', -500, date='2019-04-05')
         finac.transaction_create('tr', -200, date='2019-06-05')
         finac.transaction_create('tr', 800, date='2019-08-05')
-        self.assertRaises(ValueError, finac.account_balance_range, account='tr',
-                                            tp='cash', start='2019-01-05',
-                                            end='2019-8-07', base='usd')
-        t, dt = finac.account_balance_range(start='2019-01-05', account='tr',
+        self.assertRaises(ValueError,
+                          finac.account_balance_range,
+                          account='tr',
+                          tp='cash',
+                          start='2019-01-05',
+                          end='2019-8-07',
+                          base='usd')
+        t, dt = finac.account_balance_range(start='2019-01-05',
+                                            account='tr',
                                             end='2019-8-07',
                                             return_timestamp=False)
         self.assertEqual(dt[-3], 2300)
         self.assertEqual(dt[-1], 3100)
-        t1, dt1 = finac.account_balance_range(start='2019-01-05', tp='cash',
-                                              end='2019-8-07', base='usd',
+        t1, dt1 = finac.account_balance_range(start='2019-01-05',
+                                              tp='cash',
+                                              end='2019-8-07',
+                                              base='usd',
                                               return_timestamp=False)
         self.assertEqual(dt1[-3], 4140)
         self.assertEqual(dt1[-1], 5580)
@@ -344,13 +368,21 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('move.test'), 100)
         target_ct = 80
         target_dt = 1200
-        finac.transaction_move('move1.TEST', 'move.test', target_ct=target_ct,
+        finac.transaction_move('move1.TEST',
+                               'move.test',
+                               target_ct=target_ct,
                                note='cross currency: target_ct')
         self.assertEqual(finac.account_balance('move.test'), target_ct)
-        finac.transaction_move('move1.TEST', 'move.test', target_dt=target_dt,
+        finac.transaction_move('move1.TEST',
+                               'move.test',
+                               target_dt=target_dt,
                                note='cross currency: target_dt')
         self.assertEqual(finac.account_balance('move1.test'), target_dt)
-        self.assertRaises(ValueError, finac.transaction_move, 'move1.TEST', 'move.test', target_dt=100)
+        self.assertRaises(ValueError,
+                          finac.transaction_move,
+                          'move1.TEST',
+                          'move.test',
+                          target_dt=100)
         print()
         finac.ls('move.test')
         finac.ls('move1.test')
@@ -374,7 +406,10 @@ class Test(unittest.TestCase):
         self.assertEqual(parse('1,000,000.00'), 1000000)
 
     def test1000_account_balance(self):
-        self.assertRaises(ValueError, finac.account_balance, account='USD1', tp='current')
+        self.assertRaises(ValueError,
+                          finac.account_balance,
+                          account='USD1',
+                          tp='current')
         finac.account_balance(tp='current', base='usd')
         finac.account_balance(account=None, base='usd')
 

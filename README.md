@@ -250,6 +250,17 @@ and will be automatically parsed:
 * 10,0 = 10.0
 * 10.0 = 10.0
 
+### Passive accounts
+
+If account is passive, its assets are decremented from totals. To create
+passive account, use *passive* argument:
+
+```python
+f.account_create('passive1', 'usd', passive=True)
+```
+
+Accounts of types "tax", "supplier" and "finagent" are passive by default.
+
 ## How to embed Finac library into own project
 
 See [Finac documentation](https://finac.readthedocs.io/) for core function API
@@ -264,5 +275,3 @@ HTTP API details.
 
 Finac is in alpha stage. We are continuously working on the features, speed and
 stability improvements as well as waiting your commits.
-
-* finac-cli

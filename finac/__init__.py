@@ -206,8 +206,8 @@ def ls(account=None,
         if not group_by:
             kf = 'accounts'
             rt_align = (rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
-                        rapidtables.ALIGN_CENTER, rapidtables.ALIGN_RIGHT,
-                        rapidtables.ALIGN_RIGHT)
+                        rapidtables.ALIGN_CENTER, rapidtables.ALIGN_CENTER,
+                        rapidtables.ALIGN_RIGHT, rapidtables.ALIGN_RIGHT)
         elif group_by == 'asset':
             kf = 'assets'
             rt_align = (rapidtables.ALIGN_LEFT, rapidtables.ALIGN_RIGHT,
@@ -227,6 +227,7 @@ def ls(account=None,
             del r['balance_bc']
             if not group_by:
                 del r['note']
+            r['passive'] = 'P' if r['passive'] else ''
             res[i] = r
         ft = rapidtables.format_table(res,
                                       fmt=rapidtables.FORMAT_GENERATOR,

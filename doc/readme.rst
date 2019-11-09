@@ -256,7 +256,7 @@ Number formatting
 Finac doesn’t use system locale. If you input amounts and targets as
 strings, you may input them in any format and Finac will try converting
 it to the float numeric automatically. The following values for amounts
-and targets are correct and will be automatically parsed:
+and targets are valid and will be automatically parsed:
 
 -  1 000,00 = 1000.0
 -  1,000.00 = 1000.0
@@ -264,6 +264,19 @@ and targets are correct and will be automatically parsed:
 -  1,000.00 = 1000.0
 -  10,0 = 10.0
 -  10.0 = 10.0
+
+Passive accounts
+~~~~~~~~~~~~~~~~
+
+If account is passive, its assets are decremented from totals. To create
+passive account, use *passive* argument:
+
+.. code:: python
+
+   f.account_create('passive1', 'usd', passive=True)
+
+Accounts of types “tax”, “supplier” and “finagent” are passive by
+default.
 
 How to embed Finac library into own project
 -------------------------------------------
@@ -282,5 +295,3 @@ TODO
 
 Finac is in alpha stage. We are continuously working on the features,
 speed and stability improvements as well as waiting your commits.
-
--  finac-cli

@@ -70,6 +70,8 @@ ACCOUNT_TYPE_NAMES = {
     ACCOUNT_TAX: 'tax'
 }
 
+PASSIVE_ACCOUNTS = [ACCOUNT_SUPPLIER, ACCOUNT_FINAGENT, ACCOUNT_TAX]
+
 ACCOUNT_TYPE_IDS = {v: k for k, v in ACCOUNT_TYPE_NAMES.items()}
 
 LOCK_DELAY = 0.1
@@ -158,6 +160,15 @@ def core_method(f):
 def gen_random_str(length=64):
     symbols = string.ascii_letters + '0123456789'
     return ''.join(random.choice(symbols) for i in range(length))
+
+
+def val_to_boolean(s):
+    if isinstance(s, bool): return s
+    if s is None: return None
+    val = str(s)
+    if val.lower() in ['1', 'true', 'yes', 'on', 'y']: return True
+    if val.lower() in ['0', 'false', 'no', 'off', 'n']: return False
+    return None
 
 
 def format_date(d):
@@ -256,12 +267,12 @@ def _asset_precision(asset=None):
         return all_precs()
 
 
-def format_amount(i, asset):
+def format_amount(i, asset, passive=False):
     """
     Format amount for values and exchange operations. Default: apply asset
     precision
     """
-    return round(i, asset_precision(asset))
+    return round(i, asset_precision(asset)) * (-1 if passive else 1)
 
 
 class ResourceNotFound(Exception):
@@ -715,6 +726,7 @@ def account_create(account,
                    asset,
                    tp='current',
                    note=None,
+                   passive=None,
                    max_overdraft=None,
                    max_balance=None):
     """
@@ -722,30 +734,38 @@ def account_create(account,
         asset: asset code
         account: account code
         note: account notes
+        passive: if True, account is considered as passive
         tp: account type (credit, current, saving, cash etc.)
         max_overdraft: maximum allowed overdraft (set to negative to force
             account to have minimal positive balance), default is None
             (unlimited)
         max_balance: max allowed account balance, default is None (unlimited)
+
+    Accounts of type 'tax', 'supplier' and 'finagent' are passive by default
     """
     if isinstance(tp, int):
         tp_id = tp
     else:
         tp_id = ACCOUNT_TYPE_IDS[tp]
+    if passive is None and tp_id in PASSIVE_ACCOUNTS:
+        passive = True
+    else:
+        passive = val_to_boolean(passive)
     db = get_db()
     dbt = db.begin()
     logger.info('Creating account {}, asset: {}'.format(account.upper(),
                                                         asset.upper()))
     try:
         r = db.execute(sql("""
-        insert into account(code, note, tp, asset_id, max_overdraft,
+        insert into account(code, note, tp, passive, asset_id, max_overdraft,
         max_balance) values
-        (:code, :note, :tp,
+        (:code, :note, :tp, :passive,
             (select id from asset where code=:asset),
             :max_overdraft, :max_balance)"""),
                        code=account.upper(),
                        note=note,
                        tp=tp_id,
+                       passive=passive,
                        asset=asset.upper(),
                        max_overdraft=max_overdraft,
                        max_balance=max_balance)
@@ -776,7 +796,7 @@ def account_info(account):
     """
     r = get_db().execute(sql("""
             select account.code as account_code, account.note, account.tp,
-            asset.code as asset, max_overdraft, max_balance
+            account.passive, asset.code as asset, max_overdraft, max_balance
             from account join
             asset on account.asset_id = asset.id
             where account.code = :account"""),
@@ -788,6 +808,7 @@ def account_info(account):
         'note': d.note,
         'type': ACCOUNT_TYPE_NAMES[d.tp],
         'tp': d.tp,
+        'passive': d.passive,
         'asset': d.asset,
         'max_overdraft': d.max_overdraft,
         'max_balance': d.max_balance
@@ -965,10 +986,13 @@ def account_update(account, **kwargs):
     Parameters, allowed to be updated:
         code, note, tp, max_balance, max_overdraft
     """
-    _ckw(kwargs, ['code', 'note', 'tp', 'max_balance', 'max_overdraft'])
+    _ckw(kwargs,
+         ['code', 'note', 'tp', 'passive', 'max_balance', 'max_overdraft'])
     kw = kwargs.copy()
     if 'tp' in kw:
         kw['tp'] = ACCOUNT_TYPE_IDS[kw['tp']]
+    if 'passive' in kw:
+        kw['passive'] = val_to_boolean(kw['passive'])
     _update(account, 'account', 'code', kw)
 
 
@@ -1505,7 +1529,7 @@ def account_list(asset=None,
             cond += 'asset.code = "{}"'.format(_safe_format(a.upper()))
         cond += ')'
     else:
-        cond += (' and ' if cond else '') + 'account.tp < 1000'
+        cond += (' and ' if cond else '') + 'account.tp <= 1000'
     if date:
         dts = parse_date(date)
         cond += (' and '
@@ -1522,11 +1546,13 @@ def account_list(asset=None,
             oby = order_by
     r = get_db().execute(
         sql("""
-            select sum(balance) as balance, account, note, asset, tp from 
+            select sum(balance) as balance, account, note, passive,
+                asset, tp from 
                 (
                 select sum(amount) as balance,
                     account.code as account,
                     account.note as note,
+                    account.passive as passive,
                     asset.code as asset,
                     account.tp as tp
                     from transact
@@ -1538,6 +1564,7 @@ def account_list(asset=None,
                 select -1*sum(amount) as balance,
                     account.code as account,
                     account.note as note,
+                    account.passive as passive,
                     asset.code as asset,
                     account.tp as tp
                     from transact
@@ -1546,7 +1573,7 @@ def account_list(asset=None,
                     where {cond}
                             group by account.code
                 ) as templist
-                    group by account, note, templist.asset, templist.tp
+                    group by account, note, passive, templist.asset, templist.tp
             {oby}
             """.format(cond=cond,
                        cond_d=cond.replace('_created', ''),
@@ -1556,9 +1583,11 @@ def account_list(asset=None,
         if not d: break
         if hide_empty is False or d.balance:
             row = OrderedDict()
-            for i in ('account', 'type', 'note', 'asset', 'balance'):
+            for i in ('account', 'type', 'passive', 'note', 'asset', 'balance'):
                 if i == 'type':
                     row['type'] = ACCOUNT_TYPE_NAMES[d.tp]
+                elif i == 'passive':
+                    row['passive'] = False if not d.passive else True
                 else:
                     row[i] = getattr(d, i)
             yield row
@@ -1626,29 +1655,31 @@ def account_list_summary(asset=None,
                     res,
                 'total':
                     sum(
-                        format_amount(d['balance'], d['asset']) if d['asset'] ==
-                        base else format_amount(
+                        format_amount(d['balance'], d['asset'], d['passive'])
+                        if d['asset'] == base else format_amount(
                             d['balance'] *
-                            asset_rate(d['asset'], base, date=date), d['asset'])
-                        for d in accounts)
+                            asset_rate(d['asset'], base, date=date), d['asset'],
+                            d['passive']) for d in accounts)
             }
         else:
             return {
                 'account_types':
                     res,
                 'total':
-                    sum(format_amount(d['balance_bc'], base) for d in accounts)
+                    sum(
+                        format_amount(d['balance_bc'], base, d['passive'])
+                        for d in accounts)
             }
     return {
         'accounts':
             accounts,
         'total':
             sum(
-                format_amount(d['balance'], d['asset']) if d['asset'] ==
-                base else format_amount(
-                    d['balance'] *
-                    asset_rate(d['asset'], base, date=date), d['asset'])
-                for d in accounts)
+                format_amount(d['balance'], d['asset'], d['passive']
+                             ) if d['asset'] == base else format_amount(
+                                 d['balance'] *
+                                 asset_rate(d['asset'], base, date=date),
+                                 d['asset'], d['passive']) for d in accounts)
     }
 
 
@@ -1783,7 +1814,7 @@ def account_balance(account=None, tp=None, base=None, date=None):
     if account and tp:
         raise ValueError('Account and type can not be specified together')
     elif not account and not tp:
-        tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] < 1000]
+        tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
     cond = "transact.deleted is null"
     if date:
         dts = parse_date(_safe_format(date))
@@ -1849,7 +1880,7 @@ def account_balance_range(start,
     if account and tp:
         raise ValueError('Account and type can not be specified together')
     elif not account and not tp:
-        tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] < 1000]
+        tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
     times = []
     data = []
     acc_info = {'account': account} if account else {'tp': tp}
