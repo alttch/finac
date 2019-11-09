@@ -84,6 +84,7 @@ import os
 import logging
 
 from sqlalchemy import text as sql
+from atasker import g
 
 from types import SimpleNamespace
 from collections import OrderedDict
@@ -361,21 +362,20 @@ def get_db_engine(db_uri):
 
 
 def get_db():
-    l = threading.local()
     try:
-        l.db.execute('select 1')
-        return l.db
+        g.db.execute('select 1')
+        return g.db
     except AttributeError:
         pass
     except:
         try:
-            l.db.close()
+            g.db.close()
         except:
             pass
     if not _db.engine:
         raise RuntimeError('finac not initialized')
-    l.db = _db.engine.connect()
-    return l.db
+    g.db = _db.engine.connect()
+    return g.db
 
 
 def init(db=None, **kwargs):
