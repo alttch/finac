@@ -28,10 +28,13 @@ Special accounts
 Customers, counterparties and company assets
 --------------------------------------------
 
+Finac considers accounts with the below types are primary financial assets and
+includes them in various listings by default.
+
 * **gs** goods and services
-* **supplier** supplier accounts
+* **supplier** supplier accounts, *passive by default*
 * **customer** customer accounts
-* **finagent** financial agent accounts
+* **finagent** financial agent accounts, *passive by default*
 
 Investment accounts
 -------------------
@@ -45,4 +48,5 @@ Investment accounts
 Taxes
 -----
 
-All tax accounts have the same type: **tax**
+All tax accounts have the same type: **tax**. Taxes are included in listings by
+default, all tax accounts are passive (unless changed).
