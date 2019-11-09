@@ -86,6 +86,7 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_list_summary()['total'], 100)
         finac.account_update('taxes1', passive=True)
         self.assertEqual(finac.account_list_summary()['total'], 80)
+        finac.ls(group_by='asset')
 
     def test020_transaction_delete(self):
         finac.transaction_delete(result.transaction2_id)

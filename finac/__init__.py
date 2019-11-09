@@ -227,7 +227,8 @@ def ls(account=None,
             del r['balance_bc']
             if not group_by:
                 del r['note']
-            r['passive'] = 'P' if r['passive'] else ''
+            if 'passive' in r:
+                r['passive'] = 'P' if r['passive'] else ''
             res[i] = r
         ft = rapidtables.format_table(res,
                                       fmt=rapidtables.FORMAT_GENERATOR,
