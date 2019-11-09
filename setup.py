@@ -20,8 +20,7 @@ setuptools.setup(
         'rapidtables', 'python-dateutil', 'neotermcolor', 'sqlalchemy',
         'pyyaml', 'cachetools', 'flask', 'requests'
     ],
-    classifiers=('Programming Language :: Python :: 2',
-                 'Programming Language :: Python :: 3',
+    classifiers=('Programming Language :: Python :: 3',
                  'License :: OSI Approved :: MIT License',
                  'Topic :: Software Development :: Libraries',
                  'Intended Audience :: Financial and Insurance Industry',
