@@ -364,11 +364,18 @@ def get_db():
     l = threading.local()
     try:
         l.db.execute('select 1')
-    except:
-        if not _db.engine:
-            raise RuntimeError('finac not initialized')
-        l.db = _db.engine.connect()
         return l.db
+    except AttributeError:
+        pass
+    except:
+        try:
+            l.db.close()
+        except:
+            pass
+    if not _db.engine:
+        raise RuntimeError('finac not initialized')
+    l.db = _db.engine.connect()
+    return l.db
 
 
 def init(db=None, **kwargs):
