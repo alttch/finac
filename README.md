@@ -240,7 +240,7 @@ may specify all same arguments, as for the core functions.
 
 Finac doesn't use system locale. If you input amounts and targets as strings,
 you may input them in any format and Finac will try converting it to the float
-numeric automatically. The following values for amounts and targets are correct
+numeric automatically. The following values for amounts and targets are valid
 and will be automatically parsed:
 
 * 1 000,00 = 1000.0
