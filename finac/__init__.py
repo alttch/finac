@@ -96,6 +96,7 @@ neotermcolor.set_style('finac:credit_sum', color='red', attrs='bold')
 def ls(account=None,
        asset=None,
        tp=None,
+       passive=None,
        start=None,
        end=None,
        tag=None,
@@ -114,6 +115,7 @@ def ls(account=None,
         account: account code
         asset: filter by asset code
         tp: filter by account type (or types)
+        passive: list passive, active or all (if None) accounts
         start: start date (for statement), default: first day of current month
         end: end date (or balance date for summary)
         tag: filter transactions by tag (for statement)
@@ -198,6 +200,7 @@ def ls(account=None,
         base = base.upper()
         result = account_list_summary(asset=asset,
                                       tp=tp,
+                                      passive=passive,
                                       code=code,
                                       date=end,
                                       order_by=order_by,

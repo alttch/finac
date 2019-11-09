@@ -1484,6 +1484,7 @@ def purge():
 @core_method
 def account_list(asset=None,
                  tp=None,
+                 passive=None,
                  code=None,
                  date=None,
                  order_by=['tp', 'asset', 'account', 'balance'],
@@ -1494,6 +1495,7 @@ def account_list(asset=None,
     Args:
         asset: filter by asset
         tp: filter by account type (or types)
+        passive: list passive, active or all (if None) accounts
         code: filter by acocunt code (may contain '%' as a wildcards)
         date: get balances for the specified date
         order_by: list ordering
@@ -1537,6 +1539,11 @@ def account_list(asset=None,
     if code:
         cond += (' and ' if cond else '') + 'account.code like "{}"'.format(
             _safe_format(code))
+    passive = val_to_boolean(passive)
+    if passive is True:
+        cond += (' and ' if cond else '') + 'account.passive is True'
+    elif passive is False:
+        cond += (' and ' if cond else '') + 'account.passive is not True'
     oby = ''
     if order_by:
         order_by = _safe_format(order_by)
@@ -1596,6 +1603,7 @@ def account_list(asset=None,
 @core_method
 def account_list_summary(asset=None,
                          tp=None,
+                         passive=None,
                          code=None,
                          date=None,
                          order_by=['tp', 'asset', 'account', 'balance'],
@@ -1608,6 +1616,7 @@ def account_list_summary(asset=None,
     Args:
         asset: filter by asset
         tp: filter by account type (or types)
+        passive: list passive, active or all (if None) accounts
         code: filter by acocunt code (may contain '%' as a wildcards)
         date: get balances for the specified date
         order_by: list ordering
@@ -1627,6 +1636,7 @@ def account_list_summary(asset=None,
     accounts = list(
         account_list(asset=asset,
                      tp=tp,
+                     passive=passive,
                      code=code,
                      date=date,
                      order_by=order_by,
