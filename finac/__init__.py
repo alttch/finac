@@ -88,6 +88,7 @@ neotermcolor.set_style('finac:separator', color='grey')
 neotermcolor.set_style('finac:sum', attrs='bold')
 neotermcolor.set_style('finac:debit', color='green')
 neotermcolor.set_style('finac:credit', color='red')
+neotermcolor.set_style('finac:passive', color='grey', attrs='bold')
 neotermcolor.set_style('finac:debit_sum', color='green', attrs='bold')
 neotermcolor.set_style('finac:credit_sum', color='red', attrs='bold')
 
@@ -239,8 +240,11 @@ def ls(account=None,
         neotermcolor.cprint(h, '@finac:title')
         neotermcolor.cprint('-' * len(h), '@finac:separator')
         for t, s in zip(tbl, data):
-            neotermcolor.cprint(
-                t, '@finac:credit' if s['balance_bc'] < 0 else None, attrs='')
+            if s.get('passive'):
+                style = 'finac:passive'
+            else:
+                style = 'finac:credit' if s['balance_bc'] < 0 else None
+            neotermcolor.cprint(t, style=style, attrs='')
         neotermcolor.cprint('-' * len(h), '@finac:separator')
         neotermcolor.cprint('Total: ', end='')
         neotermcolor.cprint('{} {}'.format(format_money(result['total'], bcp),
