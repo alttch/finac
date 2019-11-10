@@ -80,11 +80,9 @@ class Test(unittest.TestCase):
         finac.config.base_asset = 'eur'
         self.assertEqual(finac.account_list_summary()['total'], 100)
         finac.account_create('supplier1', 'eur', tp='supplier')
-        finac.account_create('taxes1', 'eur', tp='tax', passive=False)
+        finac.account_create('taxes1', 'eur', tp='tax')
         finac.tr('supplier1', 10)
         finac.tr('taxes1', 10)
-        self.assertEqual(finac.account_list_summary()['total'], 100)
-        finac.account_update('taxes1', passive=True)
         self.assertEqual(finac.account_list_summary()['total'], 80)
         finac.ls(group_by='asset')
 

@@ -986,13 +986,10 @@ def account_update(account, **kwargs):
     Parameters, allowed to be updated:
         code, note, tp, max_balance, max_overdraft
     """
-    _ckw(kwargs,
-         ['code', 'note', 'tp', 'passive', 'max_balance', 'max_overdraft'])
+    _ckw(kwargs, ['code', 'note', 'tp', 'max_balance', 'max_overdraft'])
     kw = kwargs.copy()
     if 'tp' in kw:
         kw['tp'] = ACCOUNT_TYPE_IDS[kw['tp']]
-    if 'passive' in kw:
-        kw['passive'] = val_to_boolean(kw['passive'])
     _update(account, 'account', 'code', kw)
 
 
@@ -1072,9 +1069,12 @@ def transaction_create(account,
     elif amount is None and target is None:
         raise ValueError('Specify amount or target')
     token = account_lock(account, lock_token)
+    acc_info = account_info(account)
     try:
         if target is not None:
             target = parse_number(target)
+            if acc_info['passive']:
+                target *= -1
             balance = account_balance(account)
             if balance > target:
                 amount = -1 * (balance - target)
@@ -1084,6 +1084,8 @@ def transaction_create(account,
                 return
         else:
             amount = parse_number(amount)
+            if acc_info['passive']:
+                amount *= -1
         if amount < 0:
             return transaction_move(ct=account,
                                     amount=-1 * amount if amount else None,
@@ -1388,6 +1390,7 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
     Returns:
         generator object
     """
+    acc_info = account_info(account)
     cond = 'transact.deleted is null and d_created != 0'
     d_field = 'd_created' if pending else 'd'
     if start:
@@ -1425,6 +1428,8 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         row['created'] = format_date(d.d_created)
         row['completed'] = format_date(d.d)
         row['is_completed'] = d.d is not None
+        if acc_info['passive'] and row['amount']:
+            row['amount'] *= -1
         yield row
 
 
@@ -1852,6 +1857,8 @@ def account_balance(account=None, tp=None, base=None, date=None):
             balance = d.balance * asset_rate(acc_info['asset'], base, date=date)
         else:
             balance = format_amount(d.balance, acc_info['asset'])
+        if acc_info['passive'] and balance:
+            balance *= -1
     elif tp:
         if not base:
             base = config.base_asset
