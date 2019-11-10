@@ -1073,8 +1073,6 @@ def transaction_create(account,
     try:
         if target is not None:
             target = parse_number(target)
-            if acc_info['passive']:
-                target *= -1
             balance = account_balance(account)
             if balance > target:
                 amount = -1 * (balance - target)
@@ -1084,8 +1082,8 @@ def transaction_create(account,
                 return
         else:
             amount = parse_number(amount)
-            if acc_info['passive']:
-                amount *= -1
+        if acc_info['passive']:
+            amount *= -1
         if amount < 0:
             return transaction_move(ct=account,
                                     amount=-1 * amount if amount else None,
@@ -1137,9 +1135,13 @@ def _transaction_move(dt=None,
     ct = ct.upper() if ct else None
     dt = dt.upper() if dt else None
     if target_dt is not None:
-        amount = parse_number(target_dt) - account_balance(dt)
+        if _dt_info['passive']:
+            target_dt *= -1
+        amount = parse_number(target_dt) - account_balance(dt, _natural=True)
     elif target_ct is not None:
-        amount = account_balance(ct) - parse_number(target_ct)
+        if _ct_info['passive']:
+            target_ct *= -1
+        amount = account_balance(ct, _natural=True) - parse_number(target_ct)
     else:
         amount = parse_number(amount)
     if amount == 0: return
@@ -1818,7 +1820,8 @@ def _account_summary(balance_type,
 
 
 @core_method
-def account_balance(account=None, tp=None, base=None, date=None):
+def account_balance(account=None, tp=None, base=None, date=None,
+                    _natural=False):
     """
     Get account balance
 
@@ -1859,7 +1862,7 @@ def account_balance(account=None, tp=None, base=None, date=None):
             balance = d.balance * asset_rate(acc_info['asset'], base, date=date)
         else:
             balance = format_amount(d.balance, acc_info['asset'])
-        if acc_info['passive'] and balance:
+        if not _natural and acc_info['passive'] and balance:
             balance *= -1
     elif tp:
         if not base:
