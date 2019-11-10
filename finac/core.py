@@ -1602,6 +1602,8 @@ def account_list(asset=None,
                     row['passive'] = False if not d.passive else True
                 else:
                     row[i] = getattr(d, i)
+            if row['passive'] and row['balance']:
+                row['balance'] *= -1
             yield row
 
 
