@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.2.6'
+__version__ = '0.2.7'
 
 import rapidtables
 import neotermcolor
@@ -88,7 +88,7 @@ neotermcolor.set_style('finac:separator', color='grey')
 neotermcolor.set_style('finac:sum', attrs='bold')
 neotermcolor.set_style('finac:debit', color='green')
 neotermcolor.set_style('finac:credit', color='red')
-neotermcolor.set_style('finac:passive', color='grey', attrs='bold')
+neotermcolor.set_style('finac:passive', color='magenta')
 neotermcolor.set_style('finac:debit_sum', color='green', attrs='bold')
 neotermcolor.set_style('finac:credit_sum', color='red', attrs='bold')
 
