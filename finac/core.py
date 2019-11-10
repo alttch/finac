@@ -1144,6 +1144,11 @@ def _transaction_move(dt=None,
         amount = account_balance(ct, _natural=True) - parse_number(target_ct)
     else:
         amount = parse_number(amount)
+        if _ct_info is not None and _dt_info is not None and _ct_info[
+                'passive'] and _dt_info['passive']:
+            tmp = ct
+            ct = dt
+            dt = tmp
     if amount == 0: return
     if amount is not None and amount < 0:
         raise ValueError('Amount should be greater than zero')
