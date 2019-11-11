@@ -387,11 +387,19 @@ class Test(unittest.TestCase):
         finac.ls('move1.test')
         print()
 
-    def test_104_check_currency_exist(self):
+    def test104_check_currency_exist(self):
         try:
             finac.asset_create('burg')
         except finac.core.ResourceNotFound:
             pass
+
+    def test200_account_balance(self):
+        self.assertRaises(ValueError,
+                          finac.account_balance,
+                          account='USD1',
+                          tp='current')
+        finac.account_balance(tp='current', base='usd')
+        finac.account_balance(account=None, base='usd')
 
     def test999_parse_number(self):
         parse = finac.core.parse_number
@@ -403,14 +411,6 @@ class Test(unittest.TestCase):
         self.assertEqual(parse('1 000 000.00'), 1000000)
         self.assertEqual(parse('1 000 000,00'), 1000000)
         self.assertEqual(parse('1,000,000.00'), 1000000)
-
-    def test1000_account_balance(self):
-        self.assertRaises(ValueError,
-                          finac.account_balance,
-                          account='USD1',
-                          tp='current')
-        finac.account_balance(tp='current', base='usd')
-        finac.account_balance(account=None, base='usd')
 
 
 if __name__ == '__main__':

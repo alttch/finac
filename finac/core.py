@@ -454,7 +454,7 @@ def asset_create(asset, precision=2):
 @core_method
 def asset_list():
     """
-    List es
+    List assets
     """
     r = get_db().execute(
         sql("""
@@ -1135,20 +1135,28 @@ def _transaction_move(dt=None,
     ct = ct.upper() if ct else None
     dt = dt.upper() if dt else None
     if target_dt is not None:
-        if _dt_info['passive']:
-            target_dt *= -1
-        amount = parse_number(target_dt) - account_balance(dt, _natural=True)
+        if _ct_info and _dt_info['passive'] and _ct_info['passive']:
+            amount = parse_number(target_dt) - account_balance(dt)
+            ct, dt = dt, ct
+        else:
+            if _dt_info['passive']:
+                target_dt *= -1
+            amount = parse_number(target_dt) - account_balance(dt,
+                                                               _natural=True)
     elif target_ct is not None:
-        if _ct_info['passive']:
-            target_ct *= -1
-        amount = account_balance(ct, _natural=True) - parse_number(target_ct)
+        if _dt_info and _dt_info['passive'] and _ct_info['passive']:
+            amount = account_balance(ct) - parse_number(target_ct)
+            ct, dt = dt, ct
+        else:
+            if _ct_info['passive']:
+                target_ct *= -1
+            amount = account_balance(ct,
+                                     _natural=True) - parse_number(target_ct)
     else:
         amount = parse_number(amount)
         if _ct_info is not None and _dt_info is not None and _ct_info[
                 'passive'] and _dt_info['passive']:
-            tmp = ct
-            ct = dt
-            dt = tmp
+            ct, dt = dt, ct
     if amount == 0: return
     if amount is not None and amount < 0:
         raise ValueError('Amount should be greater than zero')
