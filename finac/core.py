@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.2.8'
+__version__ = '0.2.9'
 
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
@@ -1247,6 +1247,10 @@ def transaction_move(dt=None,
         ct_info = account_info(ct) if ct else None
         dt_info = account_info(dt) if dt else None
         if ct and dt and ct_info['asset'] != dt_info['asset']:
+            if ct_info['passive'] and dt_info['passive']:
+                raise RuntimeError(
+                    'Transfers between passive accounts ' +
+                    'in different currencies is not supoorted yed')
             amount = parse_number(amount)
             if not amount:
                 if target_ct is None and target_dt is None:

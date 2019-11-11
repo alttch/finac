@@ -90,6 +90,10 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('passive2'), 0)
         self.assertEqual(finac.account_balance('active1'), 189)
 
+    def test711_passive_mv_to_active_crosscur(self):
+        # TODO
+        pass
+
     def test720_mv_between_passive(self):
         finac.mv(dt='passive3', ct='passive1', amount=30)
         self.assertEqual(finac.account_balance('passive1'), 100)
@@ -115,10 +119,6 @@ class Test(unittest.TestCase):
         pass
 
     def test732_mv_btw_passive_target_ct_crosscur(self):
-        # TODO
-        pass
-
-    def test751_passive_mv_to_active_crosscur(self):
         # TODO
         pass
 
