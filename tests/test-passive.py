@@ -23,6 +23,10 @@ config = SimpleNamespace(remote=False)
 
 class Test(unittest.TestCase):
 
+    def set_balance(self, account, balance):
+        finac.tr(account, target=balance)
+        self.assertEqual(finac.account_balance(account), balance)
+
     def run(self, result=None):
         if not result.errors:
             super(Test, self).run(result)
@@ -38,8 +42,6 @@ class Test(unittest.TestCase):
         finac.account_create('passive1', 'usd', tp='finagent')
         finac.account_create('passive3', 'usd', tp='finagent')
         finac.account_create('passive2', 'eur', tp='finagent')
-        finac.tr('active1', 100)
-        finac.tr('active2', 100)
 
     def test701_passive_tr_debit(self):
         finac.tr('passive1', 100)
@@ -50,63 +52,86 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('passive1'), 20)
 
     def test703_passive_mv_from_active(self):
+        self.set_balance('active1', 100)
+        self.set_balance('passive1', 10)
         finac.mv(dt='passive1', ct='active1', amount=10)
-        self.assertEqual(finac.account_balance('passive1'), 10)
+        self.assertEqual(finac.account_balance('passive1'), 0)
         self.assertEqual(finac.account_balance('active1'), 90)
 
     def test704_passive_mv_to_active(self):
+        self.set_balance('active1', 100)
+        self.set_balance('passive1', 10)
         finac.mv(dt='active1', ct='passive1', amount=10)
         self.assertEqual(finac.account_balance('passive1'), 20)
-        self.assertEqual(finac.account_balance('active1'), 100)
+        self.assertEqual(finac.account_balance('active1'), 110)
 
     def test705_target_ct_from_active(self):
+        self.set_balance('active1', 100)
+        self.set_balance('passive1', 10)
         finac.mv(dt='passive1', ct='active1', target_ct=90)
-        self.assertEqual(finac.account_balance('passive1'), 10)
+        self.assertEqual(finac.account_balance('passive1'), 0)
         self.assertEqual(finac.account_balance('active1'), 90)
 
     def test705_target_dt_from_active(self):
-        finac.tr('passive1', 10)
+        self.set_balance('active1', 100)
+        self.set_balance('passive1', 10)
         finac.mv(dt='passive1', ct='active1', target_dt=0)
         self.assertEqual(finac.account_balance('passive1'), 0)
-        self.assertEqual(finac.account_balance('active1'), 70)
+        self.assertEqual(finac.account_balance('active1'), 90)
 
     def test706_target_ct_to_active(self):
-        finac.mv(dt='active1', ct='passive1', target_ct=30)
-        self.assertEqual(finac.account_balance('passive1'), 30)
-        self.assertEqual(finac.account_balance('active1'), 100)
+        self.set_balance('active1', 100)
+        self.set_balance('passive1', 10)
+        finac.mv(dt='active1', ct='passive1', target_ct=20)
+        self.assertEqual(finac.account_balance('passive1'), 20)
+        self.assertEqual(finac.account_balance('active1'), 110)
 
     def test706_target_dt_to_active(self):
-        finac.mv(dt='active1', ct='passive1', target_dt=200)
-        self.assertEqual(finac.account_balance('passive1'), 130)
-        self.assertEqual(finac.account_balance('active1'), 200)
+        self.set_balance('active1', 100)
+        self.set_balance('passive1', 10)
+        finac.mv(dt='active1', ct='passive1', target_dt=110)
+        self.assertEqual(finac.account_balance('passive1'), 20)
+        self.assertEqual(finac.account_balance('active1'), 110)
 
     def test710_passive_mv_from_active_crosscur(self):
-        finac.tr('passive2', 10)
-        self.assertEqual(finac.account_balance('passive2'), 10)
+        self.set_balance('active1', 100)
+        self.set_balance('passive2', 10)
         finac.mv(dt='passive2', ct='active1', amount=5.5, xdt=False)
         self.assertEqual(finac.account_balance('passive2'), 5)
-        self.assertEqual(finac.account_balance('active1'), 194.5)
+        self.assertEqual(finac.account_balance('active1'), 94.5)
         finac.mv(dt='passive2', ct='active1', amount=5, xdt=True)
         self.assertEqual(finac.account_balance('passive2'), 0)
-        self.assertEqual(finac.account_balance('active1'), 189)
+        self.assertEqual(finac.account_balance('active1'), 89)
 
     def test711_passive_mv_to_active_crosscur(self):
-        # TODO
-        pass
+        self.set_balance('active1', 100)
+        self.set_balance('passive2', 10)
+        finac.mv(dt='active1', ct='passive2', amount=5, xdt=False)
+        self.assertEqual(finac.account_balance('passive2'), 15)
+        self.assertEqual(finac.account_balance('active1'), 105.5)
+        finac.mv(dt='active1', ct='passive2', amount=5.5, xdt=True)
+        self.assertEqual(finac.account_balance('passive2'), 20)
+        self.assertEqual(finac.account_balance('active1'), 111)
 
     def test720_mv_between_passive(self):
+        self.set_balance('passive1', 100)
+        self.set_balance('passive3', 100)
         finac.mv(dt='passive3', ct='passive1', amount=30)
-        self.assertEqual(finac.account_balance('passive1'), 100)
-        self.assertEqual(finac.account_balance('passive3'), 30)
+        self.assertEqual(finac.account_balance('passive1'), 70)
+        self.assertEqual(finac.account_balance('passive3'), 130)
 
     def test721_mv_target_dt_between_passive(self):
-        finac.mv(dt='passive3', ct='passive1', target_dt=40)
-        self.assertEqual(finac.account_balance('passive3'), 40)
-        self.assertEqual(finac.account_balance('passive1'), 90)
+        self.set_balance('passive1', 100)
+        self.set_balance('passive3', 100)
+        finac.mv(dt='passive3', ct='passive1', target_dt=140)
+        self.assertEqual(finac.account_balance('passive3'), 140)
+        self.assertEqual(finac.account_balance('passive1'), 60)
 
     def test722_mv_target_ct_between_passive(self):
+        self.set_balance('passive1', 100)
+        self.set_balance('passive3', 100)
         finac.mv(dt='passive3', ct='passive1', target_ct=80)
-        self.assertEqual(finac.account_balance('passive3'), 50)
+        self.assertEqual(finac.account_balance('passive3'), 120)
         self.assertEqual(finac.account_balance('passive1'), 80)
 
     def test730_mv_btw_passive_crosscur(self):
