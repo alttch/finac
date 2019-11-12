@@ -84,9 +84,11 @@ import string
 import random
 import os
 import logging
+import threading
 
 from sqlalchemy import text as sql
-from atasker import g
+
+g = threading.local()
 
 from types import SimpleNamespace
 from collections import OrderedDict
