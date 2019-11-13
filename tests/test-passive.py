@@ -15,7 +15,8 @@ import time
 
 from types import SimpleNamespace
 
-TEST_DB = '/tmp/finac-test.db'
+# TEST_DB = '/tmp/finac-test.db'
+TEST_DB = 'mysql+pymysql://admin:admin@localhost/my_finac'
 
 result = SimpleNamespace()
 config = SimpleNamespace(remote=False)
@@ -135,33 +136,45 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('passive1'), 80)
 
     def test730_mv_btw_passive_crosscur(self):
-        # DOESN'T WORK
-        # TODO
-        pass
+        finac.account_create('pass.supplier', 'eur', tp='supplier')
+        finac.account_create('pass.finagent', 'usd', tp='finagent')
+        self.set_balance('pass.supplier', 100)
+        self.set_balance('pass.finagent', 500)
+        finac.mv(dt='pass.finagent', ct='pass.supplier', amount=10, xdt=False)
+        self.assertEqual(finac.account_balance('pass.supplier'), 90)
+        self.assertEqual(finac.account_balance('pass.finagent'), 511)
 
     def test731_mv_btw_passive_target_dt_crosscur(self):
-        # TODO
-        pass
+        finac.mv(dt='pass.finagent', ct='pass.supplier', target_dt=522)
+        self.assertEqual(finac.account_balance('pass.supplier'), 80)
+        self.assertEqual(finac.account_balance('pass.finagent'), 522)
 
     def test732_mv_btw_passive_target_ct_crosscur(self):
-        # TODO
-        pass
+        finac.mv(dt='pass.finagent', ct='pass.supplier', target_ct=60)
+        self.assertEqual(finac.account_balance('pass.supplier'), 60)
+        self.assertEqual(finac.account_balance('pass.finagent'), 544)
 
     def test752_passive_mv_taget_ct_from_active(self):
-        # TODO
-        pass
+        finac.account_create('active.supplier', 'usd')
+        self.set_balance('active.supplier', 50)
+        finac.mv(dt='pass.supplier', ct='active.supplier', target_ct=40)
+        self.assertEqual(finac.account_balance('pass.supplier'), 50.91)
+        self.assertEqual(finac.account_balance('active.supplier'), 40)
 
     def test753_passive_mv_taget_dt_from_active(self):
-        # TODO
-        pass
+        finac.mv(dt='pass.supplier', ct='active.supplier', target_dt=40)
+        self.assertEqual(finac.account_balance('pass.supplier'), 40)
+        self.assertEqual(finac.account_balance('active.supplier'), 28)
 
     def test754_passive_mv_taget_dt_to_active(self):
-        # TODO
-        pass
+        finac.mv(dt='active.supplier', ct='pass.supplier', target_dt=40)
+        self.assertEqual(finac.account_balance('pass.supplier'), 50.91)
+        self.assertEqual(finac.account_balance('active.supplier'), 40)
 
     def test755_passive_mv_taget_ct_to_active(self):
-        # TODO
-        pass
+        finac.mv(dt='active.supplier', ct='pass.supplier', target_ct=70)
+        self.assertEqual(finac.account_balance('pass.supplier'), 70)
+        self.assertEqual(finac.account_balance('active.supplier'), 61)
 
 
 if __name__ == '__main__':

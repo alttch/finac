@@ -1225,7 +1225,7 @@ def transaction_move(dt=None,
         dt: target (debit) account code
         amount: transaction amount (always >0)
         tag: transaction tag
-        descrption: transaction note
+        note: transaction note
         date: transaction creation date (default: now)
         completion_date: transaction completion date (default: now)
         mark_completed: mark transaction completed (set completion date)
@@ -1247,10 +1247,6 @@ def transaction_move(dt=None,
         ct_info = account_info(ct) if ct else None
         dt_info = account_info(dt) if dt else None
         if ct and dt and ct_info['asset'] != dt_info['asset']:
-            if ct_info['passive'] and dt_info['passive']:
-                raise RuntimeError(
-                    'Transfers between passive accounts ' +
-                    'in different currencies is not supoorted yed')
             amount = parse_number(amount)
             if not amount:
                 if target_ct is None and target_dt is None:
@@ -1260,11 +1256,19 @@ def transaction_move(dt=None,
                     amount = abs(parse_number(target_ct) - account_balance(ct))
                     xdt = False
                 elif target_dt is not None:
-                    current_balance = account_balance(dt)
-                    if current_balance > parse_number(target_dt):
-                        raise ValueError(
-                            'The current balance is higher than target')
-                    amount = parse_number(target_dt) - current_balance
+                    if dt_info['passive'] and not ct_info['passive']:
+                        amount = abs(account_balance(dt) - parse_number(target_dt))
+                    else:
+                        current_balance = account_balance(dt)
+                        if current_balance > parse_number(target_dt):
+                            raise ValueError(
+                                'The current balance is higher than target')
+                        amount = parse_number(target_dt) - current_balance
+            if ct_info['passive'] and dt_info['passive']:
+                ct, dt = dt, ct
+                ctoken, dtoken = dtoken, ctoken
+                ct_info, dt_info = dt_info, ct_info
+                xdt = False if xdt else True
             if config.lazy_exchange:
                 if not amount:
                     raise ValueError(
