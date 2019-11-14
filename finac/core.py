@@ -1323,56 +1323,62 @@ def transaction_move(dt=None,
 
 
 @core_method
-def transaction_complete(transaction_id, completion_date=None, lock_token=None):
+def transaction_complete(transaction_ids, completion_date=None, lock_token=None):
     """
     Args:
-        transaction_id: transaction ID
+        transaction_ids: single or list/tuple of transaction ID
         completion_date: completion date (default: now)
     """
-    logging.info('Completing transaction {}'.format(transaction_id))
+    logging.info('Completing transaction {}'.format(transaction_ids))
     if completion_date is None: completion_date = int(time.time())
     if config.keep_integrity:
-        dt = None
-        with lock_account_token:
-            tinfo = transaction_info(transaction_id)
-            dt = tinfo['dt']
-            if dt:
-                amount = tinfo['amount']
-                acc_info = account_info(dt)
-        token = account_lock(dt, lock_token)
-    try:
-        if config.keep_integrity and dt:
-            if amount > 0 and acc_info['max_balance'] and account_balance(
-                    dt) + amount > acc_info['max_balance']:
-                raise OverlimitError
-        if not get_db().execute(sql("""
-        update transact set d=:d where id=:id"""),
-                                d=completion_date,
-                                id=transaction_id).rowcount:
-            logging.error('Transaction {} not found'.format(transaction_id))
-            raise ResourceNotFound
-    finally:
-        if config.keep_integrity and dt:
-            account_unlock(dt, token)
+        ids = transaction_ids if isinstance(transaction_ids, (list, tuple)
+                                            ) else [transaction_ids]
+        for transaction_id in ids:
+            dt = None
+            with lock_account_token:
+                tinfo = transaction_info(transaction_id)
+                dt = tinfo['dt']
+                if dt:
+                    amount = tinfo['amount']
+                    acc_info = account_info(dt)
+            token = account_lock(dt, lock_token)
+            try:
+                if config.keep_integrity and dt:
+                    if amount > 0 and acc_info['max_balance'] and account_balance(
+                            dt) + amount > acc_info['max_balance']:
+                        raise OverlimitError
+                if not get_db().execute(sql("""
+                update transact set d=:d where id=:id"""),
+                                        d=completion_date,
+                                        id=transaction_id).rowcount:
+                    logging.error('Transaction {} not found'.format(transaction_id))
+                    raise ResourceNotFound
+            finally:
+                if config.keep_integrity and dt:
+                    account_unlock(dt, token)
 
 
 @core_method
-def transaction_delete(transaction_id):
+def transaction_delete(transaction_ids):
     """
     Delete (mark deleted) transaction
     """
-    logging.warning('Deleting transaction {}'.format(transaction_id))
-    tinfo = transaction_info(transaction_id)
-    if not get_db().execute(sql("""
-    update transact set
-    deleted=:ts where id=:id or chain_transact_id=:id"""),
-                            ts=int(time.time()),
-                            id=transaction_id).rowcount:
-        logging.error('Transaction {} not found'.format(transaction_id))
-        raise ResourceNotFound
-    chid = tinfo.get('chain_transact_id')
-    if chid:
-        transaction_delete(chid)
+    logging.warning('Deleting transaction {}'.format(transaction_ids))
+    ids = transaction_ids if isinstance(transaction_ids, (list, tuple)
+                                        ) else [transaction_ids]
+    for transaction_id in ids:
+        tinfo = transaction_info(transaction_id)
+        if not get_db().execute(sql("""
+        update transact set
+        deleted=:ts where id=:id or chain_transact_id=:id"""),
+                                ts=int(time.time()),
+                                id=transaction_id).rowcount:
+            logging.error('Transaction {} not found'.format(transaction_id))
+            raise ResourceNotFound
+        chid = tinfo.get('chain_transact_id')
+        if chid:
+            transaction_delete(chid)
 
 
 @core_method
@@ -1427,8 +1433,11 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(
             d_field, dte)
     if tag is not None:
-        cond += (' and ' if cond else '') + 'tag = "{}"'.format(
-            _safe_format(tag))
+        tag = _safe_format(tag) if isinstance(tag, (list, tuple)) else [
+                                                            _safe_format(tag)]
+        tf = ['tag LIKE "%{}%"'.format(t) for t in _safe_format(tag)]
+        tags = ' or '.join(tf)
+        cond += (' and ' if cond else '') + '({tags})'.format(tags=tags)
     r = get_db().execute(sql("""
     select transact.id, d_created, d,
             amount, tag, transact.note as note, account.code as cparty
