@@ -1433,8 +1433,11 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(
             d_field, dte)
     if tag is not None:
-        cond += (' and ' if cond else '') + 'tag = "{}"'.format(
-            _safe_format(tag))
+        tag = _safe_format(tag) if isinstance(tag, (list, tuple)) else [
+                                                            _safe_format(tag)]
+        tf = ['tag LIKE "%{}%"'.format(t) for t in _safe_format(tag)]
+        tags = ' or '.join(tf)
+        cond += (' and ' if cond else '') + '({tags})'.format(tags=tags)
     r = get_db().execute(sql("""
     select transact.id, d_created, d,
             amount, tag, transact.note as note, account.code as cparty

@@ -15,8 +15,7 @@ import time
 
 from types import SimpleNamespace
 
-# TEST_DB = '/tmp/finac-test.db'
-TEST_DB = 'mysql+pymysql://admin:admin@localhost/my_finac'
+TEST_DB = '/tmp/finac-test.db'
 
 result = SimpleNamespace()
 config = SimpleNamespace(remote=False)
@@ -356,10 +355,10 @@ class Test(unittest.TestCase):
         target_ct = 80
         target_dt = 1200
         finac.transaction_move('move1.TEST', 'move.test', target_ct=target_ct,
-                               note='cross currency: target_ct')
+                               tag='go ahead', note='cross currency: target_ct')
         self.assertEqual(finac.account_balance('move.test'), target_ct)
         finac.transaction_move('move1.TEST', 'move.test', target_dt=target_dt,
-                               note='cross currency: target_dt')
+                               tag='ahead', note='cross currency: target_dt')
         self.assertEqual(finac.account_balance('move1.test'), target_dt)
         self.assertRaises(ValueError, finac.transaction_move, 'move1.TEST',
                           'move.test', target_dt=100)
@@ -397,7 +396,11 @@ class Test(unittest.TestCase):
         finac.transaction_complete((t1, t2))
         finac.transaction_delete([t1, t2])
 
-    # # passive block
+    def test401_account_statement_list_tag(self):
+        d = finac.account_statement('MOVE.TEST', tag=['go', 'move'])
+        self.assertEqual(len(list(d)), 2)
+
+    # passive block
     def set_balance(self, account, balance):
         finac.tr(account, target=balance)
         self.assertEqual(finac.account_balance(account), balance)
