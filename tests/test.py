@@ -397,7 +397,7 @@ class Test(unittest.TestCase):
         finac.transaction_delete([t1, t2])
 
     def test401_account_statement_list_tag(self):
-        d = finac.account_statement('MOVE.TEST', tag=['go', 'move'])
+        d = finac.account_statement('MOVE.TEST', tag=['go ahead', 'ahead'])
         self.assertEqual(len(list(d)), 2)
 
     # passive block

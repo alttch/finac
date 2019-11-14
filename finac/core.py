@@ -242,6 +242,11 @@ def asset_precision(asset):
 
 
 @core_method
+def get_version():
+    return __version__
+
+
+@core_method
 def _asset_precision(asset=None):
     if asset:
         if asset in asset_precision_cache:
@@ -1259,7 +1264,8 @@ def transaction_move(dt=None,
                     xdt = False
                 elif target_dt is not None:
                     if dt_info['passive'] and not ct_info['passive']:
-                        amount = abs(account_balance(dt) - parse_number(target_dt))
+                        amount = abs(
+                            account_balance(dt) - parse_number(target_dt))
                     else:
                         current_balance = account_balance(dt)
                         if current_balance > parse_number(target_dt):
@@ -1323,7 +1329,8 @@ def transaction_move(dt=None,
 
 
 @core_method
-def transaction_complete(transaction_ids, completion_date=None, lock_token=None):
+def transaction_complete(transaction_ids, completion_date=None,
+                         lock_token=None):
     """
     Args:
         transaction_ids: single or list/tuple of transaction ID
@@ -1332,8 +1339,9 @@ def transaction_complete(transaction_ids, completion_date=None, lock_token=None)
     logging.info('Completing transaction {}'.format(transaction_ids))
     if completion_date is None: completion_date = int(time.time())
     if config.keep_integrity:
-        ids = transaction_ids if isinstance(transaction_ids, (list, tuple)
-                                            ) else [transaction_ids]
+        ids = transaction_ids if isinstance(transaction_ids,
+                                            (list,
+                                             tuple)) else [transaction_ids]
         for transaction_id in ids:
             dt = None
             with lock_account_token:
@@ -1345,14 +1353,16 @@ def transaction_complete(transaction_ids, completion_date=None, lock_token=None)
             token = account_lock(dt, lock_token)
             try:
                 if config.keep_integrity and dt:
-                    if amount > 0 and acc_info['max_balance'] and account_balance(
-                            dt) + amount > acc_info['max_balance']:
+                    if amount > 0 and acc_info[
+                            'max_balance'] and account_balance(
+                                dt) + amount > acc_info['max_balance']:
                         raise OverlimitError
                 if not get_db().execute(sql("""
                 update transact set d=:d where id=:id"""),
                                         d=completion_date,
                                         id=transaction_id).rowcount:
-                    logging.error('Transaction {} not found'.format(transaction_id))
+                    logging.error(
+                        'Transaction {} not found'.format(transaction_id))
                     raise ResourceNotFound
             finally:
                 if config.keep_integrity and dt:
@@ -1365,8 +1375,8 @@ def transaction_delete(transaction_ids):
     Delete (mark deleted) transaction
     """
     logging.warning('Deleting transaction {}'.format(transaction_ids))
-    ids = transaction_ids if isinstance(transaction_ids, (list, tuple)
-                                        ) else [transaction_ids]
+    ids = transaction_ids if isinstance(transaction_ids,
+                                        (list, tuple)) else [transaction_ids]
     for transaction_id in ids:
         tinfo = transaction_info(transaction_id)
         if not get_db().execute(sql("""
@@ -1433,9 +1443,10 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(
             d_field, dte)
     if tag is not None:
-        tag = _safe_format(tag) if isinstance(tag, (list, tuple)) else [
-                                                            _safe_format(tag)]
-        tf = ['tag LIKE "%{}%"'.format(t) for t in _safe_format(tag)]
+        tag = _safe_format(tag) if isinstance(tag,
+                                              (list,
+                                               tuple)) else [_safe_format(tag)]
+        tf = ['tag = "{}"'.format(t) for t in _safe_format(tag)]
         tags = ' or '.join(tf)
         cond += (' and ' if cond else '') + '({tags})'.format(tags=tags)
     r = get_db().execute(sql("""
