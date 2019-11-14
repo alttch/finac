@@ -67,7 +67,24 @@ apply = transaction_apply
 complete = transaction_complete
 
 stmt = account_statement_summary
-balance = account_balance
+
+
+def balance(account=None,
+            asset=None,
+            tp=None,
+            passive=None,
+            base=None,
+            date=None):
+    if account.find('%') == -1:
+        return account_balance(account, tp=tp, base=base, date=date)
+    else:
+        return account_list_summary(asset=asset,
+                                    tp=tp,
+                                    passive=passive,
+                                    code=account,
+                                    date=date,
+                                    base=base)['total']
+
 
 balance_range = partial(account_balance_range, return_timestamp=False)
 
