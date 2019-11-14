@@ -15,7 +15,8 @@ import time
 
 from types import SimpleNamespace
 
-TEST_DB = '/tmp/finac-test.db'
+# TEST_DB = '/tmp/finac-test.db'
+TEST_DB = 'mysql+pymysql://admin:admin@localhost/my_finac'
 
 result = SimpleNamespace()
 config = SimpleNamespace(remote=False)
@@ -175,9 +176,30 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('pass.supplier'), 70)
         self.assertEqual(finac.account_balance('active.supplier'), 61)
 
+    def test755_passive_mv_targets_from_active_minus(self):
+        finac.account_create('active.sup', 'usd')
+        finac.account_create('pass.sup', 'eur', tp='tax')
+        self.set_balance('active.sup', -50)
+        self.set_balance('pass.sup', 0)
+        finac.mv(dt='pass.sup', ct='active.sup', target_ct=-60)
+        self.assertEqual(finac.account_balance('pass.sup'), -9.09)
+        self.assertEqual(finac.account_balance('active.sup'), -60)
+        finac.mv(dt='pass.sup', ct='active.sup', target_dt=-20)
+        self.assertEqual(finac.account_balance('pass.sup'), -20)
+        self.assertEqual(finac.account_balance('active.sup'), -72)
+
+    def test756_passive_mv_targets_to_active_minus(self):
+        finac.mv(dt='active.sup', ct='pass.sup', target_dt=-52)
+        self.assertEqual(finac.account_balance('pass.sup'), -1.82)
+        self.assertEqual(finac.account_balance('active.sup'), -52)
+        finac.mv(dt='active.sup', ct='pass.sup', target_ct=-1)
+        self.assertEqual(finac.account_balance('pass.sup'), -1)
+        self.assertEqual(finac.account_balance('active.sup'), -51.10)
+
 
 if __name__ == '__main__':
     import argparse
+
     ap = argparse.ArgumentParser()
     ap.add_argument('--debug', help='Debug mode', action='store_true')
     ap.add_argument('--remote', help='Test remote API', action='store_true')
