@@ -15,7 +15,8 @@ import time
 
 from types import SimpleNamespace
 
-TEST_DB = '/tmp/finac-test.db'
+# TEST_DB = '/tmp/finac-test.db'
+TEST_DB = 'mysql+pymysql://admin:admin@localhost/my_finac'
 
 result = SimpleNamespace()
 config = SimpleNamespace(remote=False)
@@ -379,7 +380,7 @@ class Test(unittest.TestCase):
         finac.account_balance(tp='current', base='usd')
         finac.account_balance(account=None, base='usd')
 
-    def test999_parse_number(self):
+    def test300_parse_number(self):
         parse = finac.core.parse_number
         self.assertEqual(parse('1,000.00'), 1000)
         self.assertEqual(parse('1.000,00'), 1000)
@@ -390,7 +391,13 @@ class Test(unittest.TestCase):
         self.assertEqual(parse('1 000 000,00'), 1000000)
         self.assertEqual(parse('1,000,000.00'), 1000000)
 
-    # passive block
+    def test400_list_complete_delete(self):
+        t1 = finac.transaction_create('move.test', 1, mark_completed=False)
+        t2 = finac.transaction_create('move1.test', 1, mark_completed=False)
+        finac.transaction_complete((t1, t2))
+        finac.transaction_delete([t1, t2])
+
+    # # passive block
     def set_balance(self, account, balance):
         finac.tr(account, target=balance)
         self.assertEqual(finac.account_balance(account), balance)
