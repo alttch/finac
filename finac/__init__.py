@@ -69,6 +69,17 @@ complete = transaction_complete
 stmt = account_statement_summary
 
 
+def check_version(warn=False):
+    core_version = get_version()
+    if __version__ != core_version:
+        if warn:
+            print('WARNING: client version: {}, core version: {}'.format(
+                __version__, core_version))
+        return False
+    else:
+        return True
+
+
 def balance(account=None,
             asset=None,
             tp=None,
