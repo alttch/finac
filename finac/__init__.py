@@ -89,7 +89,7 @@ def balance(account=None,
 balance_range = partial(account_balance_range, return_timestamp=False)
 
 
-def format_money(amnt, precision):
+def format_money(amnt, precision=2):
     """
     Format output for money values
 
