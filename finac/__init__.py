@@ -86,7 +86,7 @@ def balance(account=None,
             passive=None,
             base=None,
             date=None):
-    if account.find('%') == -1:
+    if account and account.find('%') == -1:
         return account_balance(account, tp=tp, base=base, date=date)
     else:
         return account_list_summary(asset=asset,
