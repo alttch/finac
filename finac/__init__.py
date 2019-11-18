@@ -65,6 +65,7 @@ mv = transaction_move
 rm = transaction_delete
 apply = transaction_apply
 complete = transaction_complete
+rate = asset_rate
 
 stmt = account_statement_summary
 
