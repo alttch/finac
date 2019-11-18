@@ -343,7 +343,7 @@ class Test(unittest.TestCase):
                 self.assertEqual(t['note'], 'somenote')
 
     def test100_delete_asset(self):
-        finac.asset_delete('eur')
+        finac.asset_delete('kpw')
 
     def test103_trans_move(self):
         finac.asset_create('UAH')
@@ -399,6 +399,17 @@ class Test(unittest.TestCase):
     def test401_account_statement_list_tag(self):
         d = finac.account_statement('MOVE.TEST', tag=['go ahead', 'ahead'])
         self.assertEqual(len(list(d)), 2)
+
+    def test402_transaction_copy(self):
+        finac.account_create('test.usd', 'usd')
+        finac.account_create('test.eur', 'eur')
+        finac.asset_set_rate('eur/usd', value=1.1)
+        t = finac.transaction_create('test.usd', 100, tag='test', note='for move test')
+        t1 = finac.transaction_move(dt='move.test', ct='test.usd', tag='copy 1', amount=10)
+        t_cros = finac.transaction_move(dt='test.eur', ct='test.usd', amount=10)
+        self.assertRaises(ValueError, finac.tc, transaction_ids=t_cros[1], amount=100)
+        finac.tc(transaction_ids=t1, date='2019-11-15', amount=30)
+        finac.tc(transaction_ids=[t, t_cros[1]])
 
     # passive block
     def set_balance(self, account, balance):

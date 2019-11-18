@@ -36,6 +36,7 @@ from finac.core import account_update
 # transaction methods
 from finac.core import transaction_create, transaction_complete
 from finac.core import transaction_move, transaction_delete
+from finac.core import transaction_copy
 
 from finac.core import transaction_update, transaction_apply
 
@@ -61,6 +62,7 @@ from finac.plot import account_pie as pie
 from finac.core import parse_number, parse_date, get_version
 
 tr = transaction_create
+tc = transaction_copy
 mv = transaction_move
 rm = transaction_delete
 apply = transaction_apply
