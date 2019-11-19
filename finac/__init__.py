@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.2.13'
+__version__ = '0.2.14'
 
 import rapidtables
 import neotermcolor
@@ -67,6 +67,7 @@ mv = transaction_move
 rm = transaction_delete
 apply = transaction_apply
 complete = transaction_complete
+rate = asset_rate
 
 stmt = account_statement_summary
 
@@ -88,7 +89,7 @@ def balance(account=None,
             passive=None,
             base=None,
             date=None):
-    if account.find('%') == -1:
+    if account and account.find('%') == -1:
         return account_balance(account, tp=tp, base=base, date=date)
     else:
         return account_list_summary(asset=asset,
