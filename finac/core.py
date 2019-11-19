@@ -1352,14 +1352,15 @@ def transaction_copy(transaction_ids,
                 'note': tinfo['note'],
                 'date': date if date is not None else None,
                 'completion_date': (completion_date if completion_date is not
-                                                            None else None),
+                                                            None else tinfo['completed']),
                 'mark_completed': mark_completed,
                 **chain
             }
             new_tr = _transaction_move(**params)
             tr.append(new_tr)
             res[i] = tr
-    return [i for x in res.values() for i in x]
+    result = [i for x in res.values() for i in x]
+    return result if len(result) > 1 else result[0]
 
 
 @core_method
