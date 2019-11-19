@@ -65,6 +65,7 @@ tr = transaction_create
 tc = transaction_copy
 mv = transaction_move
 rm = transaction_delete
+cp = transaction_copy
 apply = transaction_apply
 complete = transaction_complete
 rate = asset_rate
