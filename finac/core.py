@@ -48,17 +48,28 @@ ACCOUNT_TEMP = 2003
 # service
 ACCOUNT_EXCHANGE = 5000
 
-ACCOUNT_TYPE_NAMES = {ACCOUNT_CREDIT: 'credit', ACCOUNT_CASH: 'cash',
-                      ACCOUNT_CURRENT: 'current', ACCOUNT_SAVING: 'saving',
-                      ACCOUNT_STOCK: 'stock', ACCOUNT_BOND: 'bond',
-                      ACCOUNT_FUND: 'fund', ACCOUNT_METAL: 'metal',
-                      ACCOUNT_REALITY: 'reality', ACCOUNT_TRANSIT: 'transit',
-                      ACCOUNT_ESCROW: 'escrow', ACCOUNT_HOLDING: 'holding',
-                      ACCOUNT_VIRTUAL: 'virtual', ACCOUNT_TEMP: 'temp',
-                      ACCOUNT_EXCHANGE: 'exchange', ACCOUNT_GS: 'gs',
-                      ACCOUNT_SUPPLIER: 'supplier',
-                      ACCOUNT_CUSTOMER: 'customer',
-                      ACCOUNT_FINAGENT: 'finagent', ACCOUNT_TAX: 'tax'}
+ACCOUNT_TYPE_NAMES = {
+    ACCOUNT_CREDIT: 'credit',
+    ACCOUNT_CASH: 'cash',
+    ACCOUNT_CURRENT: 'current',
+    ACCOUNT_SAVING: 'saving',
+    ACCOUNT_STOCK: 'stock',
+    ACCOUNT_BOND: 'bond',
+    ACCOUNT_FUND: 'fund',
+    ACCOUNT_METAL: 'metal',
+    ACCOUNT_REALITY: 'reality',
+    ACCOUNT_TRANSIT: 'transit',
+    ACCOUNT_ESCROW: 'escrow',
+    ACCOUNT_HOLDING: 'holding',
+    ACCOUNT_VIRTUAL: 'virtual',
+    ACCOUNT_TEMP: 'temp',
+    ACCOUNT_EXCHANGE: 'exchange',
+    ACCOUNT_GS: 'gs',
+    ACCOUNT_SUPPLIER: 'supplier',
+    ACCOUNT_CUSTOMER: 'customer',
+    ACCOUNT_FINAGENT: 'finagent',
+    ACCOUNT_TAX: 'tax'
+}
 
 PASSIVE_ACCOUNTS = [ACCOUNT_SUPPLIER, ACCOUNT_FINAGENT, ACCOUNT_TAX]
 
@@ -92,10 +103,16 @@ logger = logging.getLogger('finac')
 
 _db = SimpleNamespace(engine=None)
 
-config = SimpleNamespace(db=None, keep_integrity=True, lazy_exchange=True,
-                         full_transaction_update=True, rate_allow_reverse=True,
-                         rate_allow_cross=True, base_asset='USD', api_uri=None,
-                         api_key=None, api_timeout=5,
+config = SimpleNamespace(db=None,
+                         keep_integrity=True,
+                         lazy_exchange=True,
+                         full_transaction_update=True,
+                         rate_allow_reverse=True,
+                         rate_allow_cross=True,
+                         base_asset='USD',
+                         api_uri=None,
+                         api_key=None,
+                         api_timeout=5,
                          date_format='%Y-%m-%d %H:%M:%S')
 
 lock_purge = threading.Lock()
@@ -114,17 +131,22 @@ def core_method(f):
             import requests
             import uuid
             import json
-            payload = {'jsonrpc': '2.0', 'method': f.__name__,
-                       'params': kwargs, 'id': str(uuid.uuid4())}
+            payload = {
+                'jsonrpc': '2.0',
+                'method': f.__name__,
+                'params': kwargs,
+                'id': str(uuid.uuid4())
+            }
             if config.api_key is not None:
                 payload['params']['_k'] = config.api_key
             for i, a in enumerate(args):
                 payload['params'][argspec.args[i]] = a
-            r = requests.post(config.api_uri, json=payload,
+            r = requests.post(config.api_uri,
+                              json=payload,
                               timeout=config.api_timeout)
             if not r.ok:
-                raise RuntimeError(
-                    'Finac server error: {}'.format(r.status_code))
+                raise RuntimeError('Finac server error: {}'.format(
+                    r.status_code))
             result = json.JSONDecoder(object_pairs_hook=OrderedDict).decode(
                 r.text)
             if 'error' in result:
@@ -167,8 +189,8 @@ def parse_date(d, return_timestamp=True):
         try:
             d = float(d)
             if d > 3000:
-                return d if return_timestamp else datetime.datetime.fromtimestamp(
-                    d)
+                return d if \
+                        return_timestamp else datetime.datetime.fromtimestamp(d)
             else:
                 d = int(d)
         except:
@@ -217,7 +239,7 @@ def asset_precision(asset):
     """
     return asset_precision_cache[
         asset] if asset in asset_precision_cache else _asset_precision(
-        asset=asset)
+            asset=asset)
 
 
 @core_method
@@ -306,9 +328,13 @@ class ResourceAlreadyExists(Exception):
     pass
 
 
-_exceptions = {-32001: ResourceNotFound, -32002: RateNotFound,
-               -32003: OverdraftError, -32004: OverlimitError,
-               -32005: ResourceAlreadyExists}
+_exceptions = {
+    -32001: ResourceNotFound,
+    -32002: RateNotFound,
+    -32003: OverdraftError,
+    -32004: OverlimitError,
+    -32005: ResourceAlreadyExists
+}
 
 
 class AccountLocker:
@@ -427,7 +453,8 @@ def asset_create(asset, precision=2):
     try:
         get_db().execute(sql("""
         insert into asset(code, precs) values(:code, :precision)"""),
-                         code=asset, precision=precision)
+                         code=asset,
+                         precision=precision)
     except IntegrityError:
         raise ResourceAlreadyExists(asset)
 
@@ -437,7 +464,8 @@ def asset_list():
     """
     List assets
     """
-    r = get_db().execute(sql("""
+    r = get_db().execute(
+        sql("""
         select code, precs from asset order by code"""))
     while True:
         d = r.fetchone()
@@ -469,14 +497,15 @@ def asset_list_rates(asset=None, start=None, end=None):
             cond += (' and ' if cond else '') + 'd <= {}'.format(dte)
         if asset.find('/') != -1:
             asset_from, asset_to = _safe_format(asset.split('/'))
-            cond += (
-                        ' and ' if cond else '') + 'cf.code = "{}" and ct.code = "{}"'.format(
-                asset_from, asset_to)
+            cond += (' and ' if cond else
+                     '') + 'cf.code = "{}" and ct.code = "{}"'.format(
+                         asset_from, asset_to)
         else:
-            cond += (
-                        ' and ' if cond else '') + '(cf.code = "{code}" or ct.code = "{code}")'.format(
-                code=asset)
-        r = get_db().execute(sql("""
+            cond += (' and ' if cond else
+                     '') + '(cf.code = "{code}" or ct.code = "{code}")'.format(
+                         code=asset)
+        r = get_db().execute(
+            sql("""
             select cf.code as asset_from,
                     ct.code as asset_to,
                     d, value
@@ -507,7 +536,8 @@ def asset_list_rates(asset=None, start=None, end=None):
                 join asset_rate as ar on ar.asset_from_id=fr
                     and ar.asset_to_id=t and ar.d=m
                 order by asset_from, asset_to
-                    """), d=d)
+                    """),
+                             d=d)
     while True:
         d = r.fetchone()
         if not d: break
@@ -528,7 +558,8 @@ def asset_delete(asset):
     """
     logger.warning('Deleting asset {}'.format(asset.upper()))
     if not get_db().execute(sql("""
-    delete from asset where code=:code"""), code=asset.upper()).rowcount:
+    delete from asset where code=:code"""),
+                            code=asset.upper()).rowcount:
         logger.error('Currency {} not found'.format(asset.upper()))
         raise ResourceNotFound
 
@@ -554,10 +585,8 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
         date = parse_date(date)
     if asset_from.find('/') != -1 and asset_to is None:
         asset_from, asset_to = asset_from.split('/')
-    logging.info(
-        'Setting rate for {}/{} to {} for {}'.format(asset_from.upper(),
-                                                     asset_to.upper(), value,
-                                                     format_date(date)))
+    logging.info('Setting rate for {}/{} to {} for {}'.format(
+        asset_from.upper(), asset_to.upper(), value, format_date(date)))
     get_db().execute(sql("""
     insert into asset_rate (asset_from_id, asset_to_id, d, value)
     values
@@ -567,7 +596,11 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
         :d,
         :value
     )
-    """), f=asset_from.upper(), t=asset_to.upper(), d=date, value=value)
+    """),
+                     f=asset_from.upper(),
+                     t=asset_to.upper(),
+                     d=date,
+                     value=value)
 
 
 @core_method
@@ -580,20 +613,20 @@ def asset_delete_rate(asset_from, asset_to=None, date=None):
     if asset_from.find('/') != -1 and asset_to is None:
         asset_from, asset_to = asset_from.split('/')
     date = parse_date(date)
-    logging.info('Deleting rate for {}/{} for {}'.format(asset_from.upper(),
-                                                         asset_to.upper(),
-                                                         format_date(date)))
+    logging.info('Deleting rate for {}/{} for {}'.format(
+        asset_from.upper(), asset_to.upper(), format_date(date)))
     if not get_db().execute(sql("""
     delete from asset_rate where
         asset_from_id=(select id from asset where code=:f)
         and
         asset_to_id=(select id from asset where code=:t)
         and d=:d
-        """), f=asset_from.upper(), t=asset_to.upper(), d=date).rowcount:
-        logger.error(
-            'Currency rate {}/{} for {} not found'.format(asset_from.upper(),
-                                                          asset_to.upper(),
-                                                          format_date(date)))
+        """),
+                            f=asset_from.upper(),
+                            t=asset_to.upper(),
+                            d=date).rowcount:
+        logger.error('Currency rate {}/{} for {} not found'.format(
+            asset_from.upper(), asset_to.upper(), format_date(date)))
         raise ResourceNotFound
 
 
@@ -628,7 +661,10 @@ def asset_rate(asset_from, asset_to=None, date=None):
                     join asset as cto on asset_to_id=cto.id
                 where d <= :d and cfrom.code = :f and cto.code = :t
                 order by d desc limit 1
-                """), d=date, f=cf, t=ct)
+                """),
+                           d=date,
+                           f=cf,
+                           t=ct)
             d = r.fetchone()
             if d:
                 try:
@@ -685,8 +721,8 @@ def asset_rate(asset_from, asset_to=None, date=None):
                     except:
                         pass
                     if value: return value
-                raise RateNotFound('{}/{} for {}'.format(asset_from, asset_to,
-                                                         format_date(date)))
+                raise RateNotFound('{}/{} for {}'.format(
+                    asset_from, asset_to, format_date(date)))
             value = 1 / value
         else:
             raise RateNotFound
@@ -694,8 +730,13 @@ def asset_rate(asset_from, asset_to=None, date=None):
 
 
 @core_method
-def account_create(account, asset, tp='current', note=None, passive=None,
-                   max_overdraft=None, max_balance=None):
+def account_create(account,
+                   asset,
+                   tp='current',
+                   note=None,
+                   passive=None,
+                   max_overdraft=None,
+                   max_balance=None):
     """
     Args:
         asset: asset code
@@ -728,17 +769,24 @@ def account_create(account, asset, tp='current', note=None, passive=None,
         max_balance) values
         (:code, :note, :tp, :passive,
             (select id from asset where code=:asset),
-            :max_overdraft, :max_balance)"""), code=account.upper(), note=note,
-                       tp=tp_id, passive=passive, asset=asset.upper(),
-                       max_overdraft=max_overdraft, max_balance=max_balance)
+            :max_overdraft, :max_balance)"""),
+                       code=account.upper(),
+                       note=note,
+                       tp=tp_id,
+                       passive=passive,
+                       asset=asset.upper(),
+                       max_overdraft=max_overdraft,
+                       max_balance=max_balance)
         db.execute(sql("""
             insert into transact(account_debit_id, amount, d_created, d) values
             (:account_id, 0, 0, 0)
-            """), account_id=r.lastrowid)
+            """),
+                   account_id=r.lastrowid)
         db.execute(sql("""
             insert into transact(account_credit_id, amount, d_created, d) values
             (:account_id, 0, 0, 0)
-            """), account_id=r.lastrowid)
+            """),
+                   account_id=r.lastrowid)
         dbt.commit()
     except IntegrityError:
         dbt.rollback()
@@ -759,13 +807,20 @@ def account_info(account):
             account.passive, asset.code as asset, max_overdraft, max_balance
             from account join
             asset on account.asset_id = asset.id
-            where account.code = :account"""), account=account.upper())
+            where account.code = :account"""),
+                         account=account.upper())
     d = r.fetchone()
     if not d: raise ResourceNotFound
-    return {'code': d.account_code, 'note': d.note,
-            'type': ACCOUNT_TYPE_NAMES[d.tp], 'tp': d.tp, 'passive': d.passive,
-            'asset': d.asset, 'max_overdraft': d.max_overdraft,
-            'max_balance': d.max_balance}
+    return {
+        'code': d.account_code,
+        'note': d.note,
+        'type': ACCOUNT_TYPE_NAMES[d.tp],
+        'tp': d.tp,
+        'passive': d.passive,
+        'asset': d.asset,
+        'max_overdraft': d.max_overdraft,
+        'max_balance': d.max_balance
+    }
 
 
 @core_method
@@ -791,11 +846,17 @@ def transaction_info(transaction_id):
                          transaction_id=transaction_id)
     d = r.fetchone()
     if not d: raise ResourceNotFound
-    return {'id': transaction_id, 'amount': d.amount, 'tag': d.tag,
-            'note': d.note, 'created': d.d_created, 'completed': d.d,
-            'chain_transact_id': d.chain_transact_id,
-            'dt': d.debit if hasattr(d, 'debit') else None,
-            'ct': d.credit if hasattr(d, 'credit') else None, }
+    return {
+        'id': transaction_id,
+        'amount': d.amount,
+        'tag': d.tag,
+        'note': d.note,
+        'created': d.d_created,
+        'completed': d.d,
+        'chain_transact_id': d.chain_transact_id,
+        'dt': d.debit if hasattr(d, 'debit') else None,
+        'ct': d.credit if hasattr(d, 'credit') else None,
+    }
 
 
 def transaction_apply(fname):
@@ -851,7 +912,8 @@ def account_delete(account, lock_token=None):
                                 code=account).rowcount:
             raise ResourceNotFound
         if not get_db().execute(sql("""
-        delete from account where code=:code"""), code=account).rowcount:
+        delete from account where code=:code"""),
+                                code=account).rowcount:
             logger.error('Account {} not found'.format(account))
             raise ResourceNotFound
     finally:
@@ -916,7 +978,9 @@ def _update(objid, tbl, objidf, kw):
             v = v.upper()
         if not get_db().execute(sql("""
         update {tbl} set {f} = :val where {objidf} = :id
-        """.format(tbl=tbl, f=k, objidf=objidf)), val=v, id=c).rowcount:
+        """.format(tbl=tbl, f=k, objidf=objidf)),
+                                val=v,
+                                id=c).rowcount:
             raise ResourceNotFound('{} {}'.format(tbl, objid))
         if k == 'code':
             c = v
@@ -983,8 +1047,14 @@ def transaction_update(transaction_id, **kwargs):
 
 
 @core_method
-def transaction_create(account, amount=None, tag=None, note=None, date=None,
-                       completion_date=None, mark_completed=True, target=None,
+def transaction_create(account,
+                       amount=None,
+                       tag=None,
+                       note=None,
+                       date=None,
+                       completion_date=None,
+                       mark_completed=True,
+                       target=None,
                        lock_token=None):
     """
     Create new simple transaction on account
@@ -1025,24 +1095,40 @@ def transaction_create(account, amount=None, tag=None, note=None, date=None,
         if amount < 0:
             return transaction_move(ct=account,
                                     amount=-1 * amount if amount else None,
-                                    tag=tag, note=note, date=date,
+                                    tag=tag,
+                                    note=note,
+                                    date=date,
                                     completion_date=completion_date,
                                     mark_completed=mark_completed,
-                                    target_ct=target, credit_lock_token=token)
+                                    target_ct=target,
+                                    credit_lock_token=token)
         else:
-            return transaction_move(dt=account, amount=amount, tag=tag,
-                                    note=note, date=date,
+            return transaction_move(dt=account,
+                                    amount=amount,
+                                    tag=tag,
+                                    note=note,
+                                    date=date,
                                     completion_date=completion_date,
                                     mark_completed=mark_completed,
-                                    target_dt=None, debit_lock_token=token)
+                                    target_dt=None,
+                                    debit_lock_token=token)
     finally:
         account_unlock(account, token)
 
 
-def _transaction_move(dt=None, ct=None, amount=0, tag=None, note=None,
-                      date=None, completion_date=None, chain_transact_id=None,
-                      mark_completed=True, target_ct=None, target_dt=None,
-                      _ct_info=None, _dt_info=None):
+def _transaction_move(dt=None,
+                      ct=None,
+                      amount=0,
+                      tag=None,
+                      note=None,
+                      date=None,
+                      completion_date=None,
+                      chain_transact_id=None,
+                      mark_completed=True,
+                      target_ct=None,
+                      target_dt=None,
+                      _ct_info=None,
+                      _dt_info=None):
     if ct == dt:
         raise ValueError('Debit and credit account can not be the same')
     if amount is None and target_ct is None and target_dt is None:
@@ -1072,12 +1158,12 @@ def _transaction_move(dt=None, ct=None, amount=0, tag=None, note=None,
         else:
             if _ct_info['passive']:
                 target_ct *= -1
-            amount = account_balance(ct, _natural=True) - parse_number(
-                target_ct)
+            amount = account_balance(ct,
+                                     _natural=True) - parse_number(target_ct)
     else:
         amount = parse_number(amount)
         if _ct_info is not None and _dt_info is not None and _ct_info[
-            'passive'] and _dt_info['passive']:
+                'passive'] and _dt_info['passive']:
             ct, dt = dt, ct
     if amount == 0: return
     if amount is not None and amount < 0:
@@ -1113,15 +1199,32 @@ def _transaction_move(dt=None, ct=None, amount=0, tag=None, note=None,
     (select id from account where code=:ct),
     (select id from account where code=:dt),
     :amount, :tag, :note, :d_created, :d, :chain_id)
-    """), ct=ct, dt=dt, amount=amount, tag=tag, note=note, d_created=date,
-                      d=completion_date, chain_id=chain_transact_id).lastrowid
+    """),
+                      ct=ct,
+                      dt=dt,
+                      amount=amount,
+                      tag=tag,
+                      note=note,
+                      d_created=date,
+                      d=completion_date,
+                      chain_id=chain_transact_id).lastrowid
 
 
 @core_method
-def transaction_move(dt=None, ct=None, amount=0, tag=None, note=None,
-                     date=None, completion_date=None, mark_completed=True,
-                     target_ct=None, target_dt=None, rate=None, xdt=True,
-                     credit_lock_token=None, debit_lock_token=None):
+def transaction_move(dt=None,
+                     ct=None,
+                     amount=0,
+                     tag=None,
+                     note=None,
+                     date=None,
+                     completion_date=None,
+                     mark_completed=True,
+                     target_ct=None,
+                     target_dt=None,
+                     rate=None,
+                     xdt=True,
+                     credit_lock_token=None,
+                     debit_lock_token=None):
     """
     Create new standard (double-entry bookkeeping) transaction
 
@@ -1180,33 +1283,47 @@ def transaction_move(dt=None, ct=None, amount=0, tag=None, note=None,
                     raise ValueError(
                         'Amount is required for exchange operations')
                 if not rate:
-                    rate = asset_rate(ct_info['asset'], dt_info['asset'],
+                    rate = asset_rate(ct_info['asset'],
+                                      dt_info['asset'],
                                       date=date)
 
             else:
                 raise ValueError('Currency mismatch')
-            tid1 = _transaction_move(ct=ct, amount=format_amount(amount / rate,
-                                                                 ct_info[
-                                                                     'asset']) if xdt else amount,
-                                     tag=tag, note=note, date=date,
-                                     completion_date=completion_date,
-                                     mark_completed=mark_completed,
-                                     _ct_info=ct_info)
-            tid2 = _transaction_move(dt=dt,
-                                     amount=amount if xdt else format_amount(
-                                         amount * rate, dt_info['asset']),
-                                     tag=tag, note=note, date=date,
-                                     completion_date=completion_date,
-                                     mark_completed=mark_completed,
-                                     chain_transact_id=tid1, _dt_info=dt_info)
+            tid1 = _transaction_move(
+                ct=ct,
+                amount=format_amount(amount /
+                                     rate, ct_info['asset']) if xdt else amount,
+                tag=tag,
+                note=note,
+                date=date,
+                completion_date=completion_date,
+                mark_completed=mark_completed,
+                _ct_info=ct_info)
+            tid2 = _transaction_move(
+                dt=dt,
+                amount=amount if xdt else format_amount(amount *
+                                                        rate, dt_info['asset']),
+                tag=tag,
+                note=note,
+                date=date,
+                completion_date=completion_date,
+                mark_completed=mark_completed,
+                chain_transact_id=tid1,
+                _dt_info=dt_info)
             return tid1, tid2
         else:
-            return _transaction_move(dt=dt, ct=ct, amount=amount, tag=tag,
-                                     note=note, date=date,
+            return _transaction_move(dt=dt,
+                                     ct=ct,
+                                     amount=amount,
+                                     tag=tag,
+                                     note=note,
+                                     date=date,
                                      completion_date=completion_date,
                                      mark_completed=mark_completed,
-                                     target_ct=target_ct, target_dt=target_dt,
-                                     _ct_info=ct_info, _dt_info=dt_info)
+                                     target_ct=target_ct,
+                                     target_dt=target_dt,
+                                     _ct_info=ct_info,
+                                     _dt_info=dt_info)
     finally:
         if ctoken: account_unlock(ct, ctoken)
         if dtoken: account_unlock(dt, dtoken)
@@ -1224,8 +1341,8 @@ def transaction_complete(transaction_ids, completion_date=None,
     if completion_date is None: completion_date = int(time.time())
     if config.keep_integrity:
         ids = transaction_ids if isinstance(transaction_ids,
-                                            (list, tuple)) else [
-            transaction_ids]
+                                            (list,
+                                             tuple)) else [transaction_ids]
         for transaction_id in ids:
             dt = None
             with lock_account_token:
@@ -1242,7 +1359,8 @@ def transaction_complete(transaction_ids, completion_date=None,
                             acc_info['max_balance']:
                         raise OverlimitError
                 if not get_db().execute(sql("""
-                update transact set d=:d where id=:id"""), d=completion_date,
+                update transact set d=:d where id=:id"""),
+                                        d=completion_date,
                                         id=transaction_id).rowcount:
                     logging.error(
                         'Transaction {} not found'.format(transaction_id))
@@ -1258,8 +1376,8 @@ def transaction_delete(transaction_ids):
     Delete (mark deleted) transaction
     """
     logging.warning('Deleting transaction {}'.format(transaction_ids))
-    ids = transaction_ids if isinstance(transaction_ids, (list, tuple)) else [
-        transaction_ids]
+    ids = transaction_ids if isinstance(transaction_ids,
+                                        (list, tuple)) else [transaction_ids]
     for transaction_id in ids:
         tinfo = transaction_info(transaction_id)
         if not get_db().execute(sql("""
@@ -1286,10 +1404,13 @@ def transaction_purge(_lock=True):
         dbt = db.begin()
         logging.info('Purging deleted transactions')
         try:
-            db.execute(sql("""delete from transact where
-                    account_credit_id is null and account_debit_id is null""")).rowcount
-            result = db.execute(sql(
-                """delete from transact where deleted is not null""")).rowcount
+            db.execute(
+                sql("""delete from transact where
+                    account_credit_id is null and account_debit_id is null""")
+            ).rowcount
+            result = db.execute(
+                sql("""delete from transact where deleted is not null""")
+            ).rowcount
             dbt.commit()
             return result
         except:
@@ -1310,24 +1431,28 @@ def transaction_copy(transaction_ids,
     :param transaction_ids: one or list/tuple of transaction id
     :param date: transaction date
     :param completion_date: transaction completion date
-    :param mark_completed: if no completion_date is specified, set completion date
-            equal to creation. Default is True
+    :param mark_completed: if no completion_date is specified, set completion
+        date equal to creation. Default is True
     :param amount: new amount, if old transaction has chain_transact_id will be
             exception
     :return: list with id/ids new transaction
     """
     res = {}
-    ids = transaction_ids if isinstance(transaction_ids, (list, tuple)) else [
-        transaction_ids]
+    ids = transaction_ids if isinstance(transaction_ids,
+                                        (list, tuple)) else [transaction_ids]
     for i, transaction_id in enumerate(ids):
-        all_tr = [i[0] for i in (get_db().execute(sql("""
+        all_tr = [
+            i[0] for i in (get_db().execute(sql("""
         select id from 
-        transact where id=(select chain_transact_id from transact where id=:tr_id and chain_transact_id is not null)
+        transact where id=(select chain_transact_id from transact
+            where id=:tr_id and chain_transact_id is not null)
         or id=(select id from transact where chain_transact_id=:tr_id);"""),
-                                            tr_id=transaction_id)).fetchall()]
+                                            tr_id=transaction_id)).fetchall()
+        ]
         if all_tr and amount:
-            raise ValueError('Unable to change amount for transaction {}'.
-                                                        format(transaction_id))
+            raise ValueError(
+                'Unable to change amount for transaction {}'.format(
+                    transaction_id))
         all_tr.append(transaction_id)
         tr = []
         for t_id in sorted(all_tr):
@@ -1337,8 +1462,9 @@ def transaction_copy(transaction_ids,
             dt_info = account_info(tinfo['dt']) if tinfo['dt'] is not None \
                                                                     else None
             if tinfo['chain_transact_id'] != t_id:
-                all_tr.insert((all_tr.index(t_id) - 1 if all_tr.index(t_id)
-                                    != 0 else 0), tinfo['chain_transact_id'])
+                all_tr.insert(
+                    (all_tr.index(t_id) - 1 if all_tr.index(t_id) != 0 else 0),
+                    tinfo['chain_transact_id'])
             chain = {'chain_transact_id': tr[0]} if tinfo[
                                             'chain_transact_id'] is not None\
                                             else {'chain_transact_id': None}
@@ -1351,8 +1477,9 @@ def transaction_copy(transaction_ids,
                 'tag': tinfo['tag'],
                 'note': tinfo['note'],
                 'date': date if date is not None else None,
-                'completion_date': (completion_date if completion_date is not
-                                                            None else tinfo['completed']),
+                'completion_date':
+                    (completion_date
+                     if completion_date is not None else tinfo['completed']),
                 'mark_completed': mark_completed,
                 **chain
             }
@@ -1380,15 +1507,16 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
     d_field = 'd_created' if pending else 'd'
     if start:
         dts = parse_date(_safe_format(start))
-        cond += (' and ' if cond else '') + 'transact.{} >= {}'.format(d_field,
-                                                                       dts)
+        cond += (' and ' if cond else '') + 'transact.{} >= {}'.format(
+            d_field, dts)
     if end:
         dte = parse_date(_safe_format(end))
-        cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(d_field,
-                                                                       dte)
+        cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(
+            d_field, dte)
     if tag is not None:
-        tag = _safe_format(tag) if isinstance(tag, (list, tuple)) else [
-            _safe_format(tag)]
+        tag = _safe_format(tag) if isinstance(tag,
+                                              (list,
+                                               tuple)) else [_safe_format(tag)]
         tf = ['tag = "{}"'.format(t) for t in tag]
         tags = ' or '.join(tf)
         cond += (' and ' if cond else '') + '({tags})'.format(tags=tags)
@@ -1405,7 +1533,8 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
             account_debit_id=account.id where account_credit_id=
                 (select id from account where code=:account) and {cond}
         order by d_created, d
-    """.format(cond=cond)), account=account.upper())
+    """.format(cond=cond)),
+                         account=account.upper())
     while True:
         d = r.fetchone()
         if not d: break
@@ -1421,7 +1550,10 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
 
 
 @core_method
-def account_statement_summary(account, start=None, end=None, tag=None,
+def account_statement_summary(account,
+                              start=None,
+                              end=None,
+                              tag=None,
                               pending=True):
     """
     Args:
@@ -1438,8 +1570,11 @@ def account_statement_summary(account, start=None, end=None, tag=None,
             statement: list of transactions
     """
     statement = list(
-        account_statement(account=account.upper(), start=start, end=end,
-                          tag=tag, pending=pending))
+        account_statement(account=account.upper(),
+                          start=start,
+                          end=end,
+                          tag=tag,
+                          pending=pending))
     credit = 0
     debit = 0
     for row in statement:
@@ -1448,8 +1583,12 @@ def account_statement_summary(account, start=None, end=None, tag=None,
                 debit += row['amount']
         else:
             credit += row['amount']
-    return {'credit': -1 * credit, 'debit': debit, 'net': debit + credit,
-            'statement': statement}
+    return {
+        'credit': -1 * credit,
+        'debit': debit,
+        'net': debit + credit,
+        'statement': statement
+    }
 
 
 @core_method
@@ -1464,7 +1603,11 @@ def purge():
 
 
 @core_method
-def account_list(asset=None, tp=None, passive=None, code=None, date=None,
+def account_list(asset=None,
+                 tp=None,
+                 passive=None,
+                 code=None,
+                 date=None,
                  order_by=['tp', 'asset', 'account', 'balance'],
                  hide_empty=False):
     """
@@ -1496,15 +1639,14 @@ def account_list(asset=None, tp=None, passive=None, code=None, date=None,
                     tp_id = p
                 else:
                     tp_id = ACCOUNT_TYPE_IDS[p]
-                cor = cor + (' or ' if cor else '') + 'account.tp = {}'.format(
-                    tp_id)
+                cor = cor + (' or '
+                             if cor else '') + 'account.tp = {}'.format(tp_id)
             cond += cor + ')'
     if asset:
         first = True
         cond += (' and ' if cond else '') + '('
-        for a in asset if isinstance(asset, list) or isinstance(asset,
-                                                                tuple) else [
-            asset]:
+        for a in asset if isinstance(asset, list) or isinstance(
+                asset, tuple) else [asset]:
             if first:
                 first = False
             else:
@@ -1515,9 +1657,8 @@ def account_list(asset=None, tp=None, passive=None, code=None, date=None,
         cond += (' and ' if cond else '') + 'account.tp <= 1000'
     if date:
         dts = parse_date(date)
-        cond += (
-                    ' and ' if cond else '') + 'transact.d_created <= "{}"'.format(
-            dts)
+        cond += (' and '
+                 if cond else '') + 'transact.d_created <= "{}"'.format(dts)
     if code:
         cond += (' and ' if cond else '') + 'account.code like "{}"'.format(
             _safe_format(code))
@@ -1533,7 +1674,8 @@ def account_list(asset=None, tp=None, passive=None, code=None, date=None,
             oby = ','.join(order_by)
         else:
             oby = order_by
-    r = get_db().execute(sql("""
+    r = get_db().execute(
+        sql("""
             select sum(balance) as balance, account, note, passive,
                 asset, tp from 
                 (
@@ -1563,15 +1705,15 @@ def account_list(asset=None, tp=None, passive=None, code=None, date=None,
                 ) as templist
                     group by account, note, passive, templist.asset, templist.tp
             {oby}
-            """.format(cond=cond, cond_d=cond.replace('_created', ''),
+            """.format(cond=cond,
+                       cond_d=cond.replace('_created', ''),
                        oby=('order by ' + oby) if oby else '')))
     while True:
         d = r.fetchone()
         if not d: break
         if hide_empty is False or d.balance:
             row = OrderedDict()
-            for i in (
-                    'account', 'type', 'passive', 'note', 'asset', 'balance'):
+            for i in ('account', 'type', 'passive', 'note', 'asset', 'balance'):
                 if i == 'type':
                     row['type'] = ACCOUNT_TYPE_NAMES[d.tp]
                 elif i == 'passive':
@@ -1584,10 +1726,15 @@ def account_list(asset=None, tp=None, passive=None, code=None, date=None,
 
 
 @core_method
-def account_list_summary(asset=None, tp=None, passive=None, code=None,
+def account_list_summary(asset=None,
+                         tp=None,
+                         passive=None,
+                         code=None,
                          date=None,
                          order_by=['tp', 'asset', 'account', 'balance'],
-                         group_by=None, hide_empty=False, base=None):
+                         group_by=None,
+                         hide_empty=False,
+                         base=None):
     """
     List accounts and their balances plus return a total sum
 
@@ -1612,47 +1759,72 @@ def account_list_summary(asset=None, tp=None, passive=None, code=None,
     if base is None:
         base = config.base_asset
     accounts = list(
-        account_list(asset=asset, tp=tp, passive=passive, code=code, date=date,
-                     order_by=order_by, hide_empty=hide_empty))
+        account_list(asset=asset,
+                     tp=tp,
+                     passive=passive,
+                     code=code,
+                     date=date,
+                     order_by=order_by,
+                     hide_empty=hide_empty))
     for a in accounts:
-        a['balance_bc'] = a['balance'] * asset_rate(a['asset'], base,
-                                                    date=date)
+        a['balance_bc'] = a['balance'] * asset_rate(a['asset'], base, date=date)
     if group_by:
         res = []
         if group_by not in ('asset', 'tp', 'type'):
             raise ValueError('Invalid group_by value')
         else:
             filt = 'asset' if group_by == 'asset' else 'type'
-            dk = (
-                'asset', 'balance_bc', 'balance') if group_by == 'asset' else (
-                'type', 'balance_bc')
+            dk = ('asset', 'balance_bc',
+                  'balance') if group_by == 'asset' else ('type', 'balance_bc')
             f = lambda x: x[filt]
             accounts.sort(key=f)
             for k, v in groupby(accounts, f):
                 val = list(v).copy()
-                r = dict(zip(dk, (k, sum([z['balance_bc'] for z in val]),
-                                  sum([w['balance'] for w in val]))))
+                r = dict(
+                    zip(dk, (k, sum([z['balance_bc'] for z in val
+                                    ]), sum([w['balance'] for w in val]))))
                 res.append(r)
         if group_by == 'asset':
-            return {'assets': res, 'total': sum(
-                format_amount(d['balance'], d['asset'], d['passive']) if d[
-                                                                             'asset'] == base else format_amount(
-                    d['balance'] * asset_rate(d['asset'], base, date=date),
-                    d['asset'], d['passive']) for d in accounts)}
+            return {
+                'assets':
+                    res,
+                'total':
+                    sum(
+                        format_amount(d['balance'], d['asset'], d['passive'])
+                        if d['asset'] == base else format_amount(
+                            d['balance'] *
+                            asset_rate(d['asset'], base, date=date), d['asset'],
+                            d['passive']) for d in accounts)
+            }
         else:
-            return {'account_types': res, 'total': sum(
-                format_amount(d['balance_bc'], base, d['passive']) for d in
-                accounts)}
-    return {'accounts': accounts, 'total': sum(
-        format_amount(d['balance'], d['asset'], d['passive']) if d[
-                                                                     'asset'] == base else format_amount(
-            d['balance'] * asset_rate(d['asset'], base, date=date), d['asset'],
-            d['passive']) for d in accounts)}
+            return {
+                'account_types':
+                    res,
+                'total':
+                    sum(
+                        format_amount(d['balance_bc'], base, d['passive'])
+                        for d in accounts)
+            }
+    return {
+        'accounts':
+            accounts,
+        'total':
+            sum(
+                format_amount(d['balance'], d['asset'], d['passive']
+                             ) if d['asset'] == base else format_amount(
+                                 d['balance'] *
+                                 asset_rate(d['asset'], base, date=date),
+                                 d['asset'], d['passive']) for d in accounts)
+    }
 
 
 @core_method
-def account_credit(account=None, asset=None, date=None, tp=None,
-                   order_by=['tp', 'account', 'asset'], hide_empty=False):
+def account_credit(account=None,
+                   asset=None,
+                   date=None,
+                   tp=None,
+                   order_by=['tp', 'account', 'asset'],
+                   hide_empty=False):
     """
     Get credit operations for the account
 
@@ -1667,13 +1839,22 @@ def account_credit(account=None, asset=None, date=None, tp=None,
     Returns:
         generator object
     """
-    return _account_summary('credit', account=account, asset=asset, date=date,
-                            tp=tp, order_by=order_by, hide_empty=hide_empty)
+    return _account_summary('credit',
+                            account=account,
+                            asset=asset,
+                            date=date,
+                            tp=tp,
+                            order_by=order_by,
+                            hide_empty=hide_empty)
 
 
 @core_method
-def account_debit(account=None, asset=None, date=None, tp=None,
-                  order_by=['tp', 'account', 'asset'], hide_empty=False):
+def account_debit(account=None,
+                  asset=None,
+                  date=None,
+                  tp=None,
+                  order_by=['tp', 'account', 'asset'],
+                  hide_empty=False):
     """
     Get debit operations for the account
 
@@ -1688,17 +1869,26 @@ def account_debit(account=None, asset=None, date=None, tp=None,
     Returns:
         generator object
     """
-    return _account_summary('debit', account=account, asset=asset, date=date,
-                            tp=tp, order_by=order_by, hide_empty=hide_empty)
+    return _account_summary('debit',
+                            account=account,
+                            asset=asset,
+                            date=date,
+                            tp=tp,
+                            order_by=order_by,
+                            hide_empty=hide_empty)
 
 
 @core_method
-def _account_summary(balance_type, account=None, asset=None, date=None,
-                     tp=None, order_by=['tp', 'account', 'asset'],
+def _account_summary(balance_type,
+                     account=None,
+                     asset=None,
+                     date=None,
+                     tp=None,
+                     order_by=['tp', 'account', 'asset'],
                      hide_empty=False):
     cond = 'where {} transact.deleted is null'.format(
-        'transact.d is not null and ' if _safe_format(
-            balance_type) == 'debit' else '')
+        'transact.d is not null and ' if _safe_format(balance_type) ==
+        'debit' else '')
     if account:
         cond += (' and ' if cond else '') + 'account.code = "{}"'.format(
             _safe_format(account))
@@ -1721,15 +1911,17 @@ def _account_summary(balance_type, account=None, asset=None, date=None,
             oby = ','.join(order_by)
         else:
             oby = order_by
-    r = get_db().execute(sql("""select sum(amount) as {btype}_balance, account.id as id,
+    r = get_db().execute(
+        sql("""select sum(amount) as {btype}_balance, account.id as id,
     account.tp as tp,
     account.code as account, asset.code as asset
     from transact 
     join account on transact.account_{btype}_id = account.id
     join asset on account.asset_id = asset.id {cond}
-    group by account.code, asset.code {oby}""".format(btype=balance_type,
-                                                      cond=cond, oby=(
-                'order by ' + oby) if oby else '')))
+    group by account.code, asset.code {oby}""".format(
+            btype=balance_type,
+            cond=cond,
+            oby=('order by ' + oby) if oby else '')))
     while True:
         d = r.fetchone()
         if not d: break
@@ -1762,9 +1954,8 @@ def account_balance(account=None, tp=None, base=None, date=None,
     cond = "transact.deleted is null"
     if date:
         dts = parse_date(_safe_format(date))
-        cond += (
-                    ' and ' if cond else '') + 'transact.d_created <= "{}"'.format(
-            dts)
+        cond += (' and '
+                 if cond else '') + 'transact.d_created <= "{}"'.format(dts)
     balance = None
     if account:
         acc_info = account_info(account)
@@ -1784,8 +1975,7 @@ def account_balance(account=None, tp=None, base=None, date=None,
         if not d or d.balance is None:
             raise ResourceNotFound
         if base and acc_info['asset'] != base:
-            balance = d.balance * asset_rate(acc_info['asset'], base,
-                                             date=date)
+            balance = d.balance * asset_rate(acc_info['asset'], base, date=date)
         else:
             balance = format_amount(d.balance, acc_info['asset'])
         if not _natural and acc_info['passive'] and balance:
@@ -1793,15 +1983,23 @@ def account_balance(account=None, tp=None, base=None, date=None,
     elif tp:
         if not base:
             base = config.base_asset
-        accounts = account_list_summary(tp=tp, group_by='tp', date=date,
-                                        base=base, hide_empty=True)
+        accounts = account_list_summary(tp=tp,
+                                        group_by='tp',
+                                        date=date,
+                                        base=base,
+                                        hide_empty=True)
         balance = accounts['total']
     return balance
 
 
 @core_method
-def account_balance_range(start, account=None, tp=None, end=None, step=1,
-                          return_timestamp=True, base=None):
+def account_balance_range(start,
+                          account=None,
+                          tp=None,
+                          end=None,
+                          step=1,
+                          return_timestamp=True,
+                          base=None):
     """
     Get list of account balances for the specified range
 
@@ -1825,9 +2023,9 @@ def account_balance_range(start, account=None, tp=None, end=None, step=1,
     data = []
     acc_info = {'account': account} if account else {'tp': tp}
     dt = parse_date(start, return_timestamp=False)
-    end_date = parse_date(end,
-                          return_timestamp=False) if end else datetime.datetime.now() + datetime.timedelta(
-        days=1)
+    end_date = parse_date(
+        end, return_timestamp=False
+    ) if end else datetime.datetime.now() + datetime.timedelta(days=1)
     delta = datetime.timedelta(days=step)
     last_record = False
     while dt < end_date or not last_record:
@@ -1846,8 +2044,11 @@ def _safe_format(val):
     n_allow = '\'";'
     for al in n_allow:
         if isinstance(val, (list, tuple)):
-            val = [v.replace(al, '') if not isinstance(v, (
-                int, float)) and al in v else v for v in val]
+            val = [
+                v.replace(al, '')
+                if not isinstance(v, (int, float)) and al in v else v
+                for v in val
+            ]
         elif isinstance(val, str):
             val = val.replace(al, '') if al in val else val
     return val
