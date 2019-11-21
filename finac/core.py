@@ -577,6 +577,10 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
 
     Function can be also called as e.g. asset_set_rate('EUR/USD', value=1.1)
     """
+    if (isinstance(asset_to, float) or
+            isinstance(asset_to, int)) and value is None:
+        value = asset_to
+        asset_to = None
     if value is None:
         raise ValueError('Currency rate value is not specified')
     if date is None:
