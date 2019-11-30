@@ -1955,10 +1955,8 @@ def account_balance(account=None, tp=None, base=None, date=None,
     elif not account and not tp:
         tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
     cond = "transact.deleted is null"
-    if date:
-        dts = parse_date(_safe_format(date))
-        cond += (' and '
-                 if cond else '') + 'transact.d_created <= "{}"'.format(dts)
+    dts = parse_date(_safe_format(date)) if date else parse_date()
+    cond += (' and ' if cond else '') + 'transact.d_created <= "{}"'.format(dts)
     balance = None
     if account:
         acc_info = account_info(account)
