@@ -1658,10 +1658,8 @@ def account_list(asset=None,
         cond += ')'
     else:
         cond += (' and ' if cond else '') + 'account.tp <= 1000'
-    if date:
-        dts = parse_date(date)
-        cond += (' and '
-                 if cond else '') + 'transact.d_created <= "{}"'.format(dts)
+    dts = parse_date(date) if date else parse_date()
+    cond += (' and ' if cond else '') + 'transact.d_created <= "{}"'.format(dts)
     if code:
         cond += (' and ' if cond else '') + 'account.code like "{}"'.format(
             _safe_format(code))
