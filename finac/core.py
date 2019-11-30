@@ -182,7 +182,9 @@ def format_date(d):
                 datetime.datetime.fromtimestamp(d), config.date_format)
 
 
-def parse_date(d, return_timestamp=True):
+def parse_date(d=None, return_timestamp=True):
+    if d is None:
+        return time.time() if return_timestamp else datetime.datetime.now()
     if isinstance(d, datetime.datetime):
         dt = d
     else:
@@ -492,9 +494,8 @@ def asset_list_rates(asset=None, start=None, end=None):
         if start:
             dts = parse_date(_safe_format(start))
             cond += (' and ' if cond else '') + 'd >= {}'.format(dts)
-        if end:
-            dte = parse_date(_safe_format(end))
-            cond += (' and ' if cond else '') + 'd <= {}'.format(dte)
+        dte = parse_date(_safe_format(end)) if end else parse_date()
+        cond += (' and ' if cond else '') + 'd <= {}'.format(dte)
         if asset.find('/') != -1:
             asset_from, asset_to = _safe_format(asset.split('/'))
             cond += (' and ' if cond else
@@ -1513,10 +1514,8 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         dts = parse_date(_safe_format(start))
         cond += (' and ' if cond else '') + 'transact.{} >= {}'.format(
             d_field, dts)
-    if end:
-        dte = parse_date(_safe_format(end))
-        cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(
-            d_field, dte)
+    dte = parse_date(_safe_format(end)) if end else parse_date()
+    cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(d_field, dte)
     if tag is not None:
         tag = _safe_format(tag) if isinstance(tag,
                                               (list,
