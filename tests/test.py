@@ -607,4 +607,6 @@ if __name__ == '__main__':
         finac.core.rate_cache = None
     test_suite = unittest.TestLoader().loadTestsFromTestCase(Test)
     test_result = unittest.TextTestRunner().run(test_suite)
+    if not a.remote:
+        os.unlink(TEST_DB)
     sys.exit(not test_result.wasSuccessful())
