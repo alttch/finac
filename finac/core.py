@@ -78,7 +78,6 @@ ACCOUNT_TYPE_IDS = {v: k for k, v in ACCOUNT_TYPE_NAMES.items()}
 LOCK_DELAY = 0.1
 
 import sqlalchemy as sa
-import dateutil.parser
 import datetime
 import time
 import string
@@ -94,6 +93,9 @@ g = threading.local()
 from types import SimpleNamespace
 from collections import OrderedDict
 from functools import wraps
+
+from pyaltt2.crypto import gen_random_str
+from pyaltt2.parsers import val_to_boolean, parse_date, parse_number
 
 import threading
 
@@ -159,20 +161,6 @@ def core_method(f):
     return do
 
 
-def gen_random_str(length=64):
-    symbols = string.ascii_letters + '0123456789'
-    return ''.join(random.choice(symbols) for i in range(length))
-
-
-def val_to_boolean(s):
-    if isinstance(s, bool): return s
-    if s is None: return None
-    val = str(s)
-    if val.lower() in ['1', 'true', 'yes', 'on', 'y']: return True
-    if val.lower() in ['0', 'false', 'no', 'off', 'n']: return False
-    return None
-
-
 def format_date(d):
     if d is not None:
         if config.date_format is None:
@@ -180,50 +168,6 @@ def format_date(d):
         else:
             return datetime.datetime.strftime(
                 datetime.datetime.fromtimestamp(d), config.date_format)
-
-
-def parse_date(d=None, return_timestamp=True):
-    if d is None:
-        return time.time() if return_timestamp else datetime.datetime.now()
-    if isinstance(d, datetime.datetime):
-        dt = d
-    else:
-        try:
-            d = float(d)
-            if d > 3000:
-                return d if \
-                        return_timestamp else datetime.datetime.fromtimestamp(d)
-            else:
-                d = int(d)
-        except:
-            pass
-        dt = dateutil.parser.parse(str(d))
-    return dt.timestamp() if return_timestamp else dt
-
-
-def parse_number(d):
-    if isinstance(d, int) or isinstance(d, float) or d is None:
-        return d
-    if not isinstance(d, str):
-        raise ValueError(d)
-    try:
-        return float(d)
-    except:
-        pass
-    spaces = d.count(' ')
-    commas = d.count(',')
-    dots = d.count('.')
-    if spaces > 0:
-        return float(d.replace(' ', '').replace(',', '.'))
-    elif commas > 1:
-        return float(d.replace(',', ''))
-    elif commas == 1 and commas <= dots:
-        if d.find(',') < d.find('.'):
-            return float(d.replace(',', ''))
-        else:
-            return float(d.replace('.', '').replace(',', '.'))
-    else:
-        return float(d.replace(',', '.'))
 
 
 def preload():
