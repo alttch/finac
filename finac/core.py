@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.2.20'
+__version__ = '0.2.21'
 
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
@@ -95,7 +95,7 @@ from collections import OrderedDict
 from functools import wraps
 
 from pyaltt2.crypto import gen_random_str
-from pyaltt2.parsers import val_to_boolean, parse_date, parse_number
+from pyaltt2.converters import val_to_boolean, parse_date, parse_number
 
 import threading
 
