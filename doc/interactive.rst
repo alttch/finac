@@ -15,11 +15,11 @@ The following functions are aliases for :doc:`core`:
    f.rm(...) # alias for finac.core.transaction_delete
    f.complete(...) # alias for finac.core.transaction_complete
    f.apply(...) # alias for finac.core.transaction_apply
-   stmt(...) # alias for finac.core.account_statement_summary
-   balance(...) # alias for finac.core.account_balance
-   balance_range(...) # alias for finac.core.account_balance_range, in opposite
-                      # to the original function, returns dates as datetime
-                      # object by default
+   f.stmt(...) # alias for finac.core.account_statement_summary
+   f.balance(...) # alias for finac.core.account_balance
+   f.balance_range(...) # alias for finac.core.account_balance_range, in
+                        # opposite to the original function, returns dates as
+                        # datetime object by default
 
 Special interactive functions
 =============================
