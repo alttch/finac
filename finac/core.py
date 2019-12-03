@@ -86,7 +86,7 @@ from functools import wraps
 
 import threading
 
-from .db_set import init_db
+from .db_set import init_db, drop_all_tables
 
 logger = logging.getLogger('finac')
 
@@ -369,6 +369,11 @@ def get_db():
         raise RuntimeError('finac not initialized')
     g.db = _db.engine.connect()
     return g.db
+
+
+def drop_db(db):
+    _db.engine = get_db_engine(db)
+    drop_all_tables(_db.engine)
 
 
 def init(db=None, **kwargs):

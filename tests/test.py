@@ -600,7 +600,10 @@ if __name__ == '__main__':
         finac.init(api_uri='http://localhost:5000/jrpc', api_key='secret')
     else:
         try:
-            os.unlink(TEST_DB)
+            if TEST_DB.__contains__('mysql'):
+                finac.core.drop_db(TEST_DB)
+            else:
+                os.unlink(TEST_DB)
         except:
             pass
         finac.init(db=TEST_DB, keep_integrity=True)

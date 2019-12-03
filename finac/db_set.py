@@ -77,3 +77,7 @@ def init_db(engine):
                            code=cur)
         except IntegrityError as e:
             pass
+
+
+def drop_all_tables(engine):
+    meta.drop_all(engine)
