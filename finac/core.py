@@ -1656,7 +1656,8 @@ def account_list(asset=None,
     while True:
         d = r.fetchone()
         if not d: break
-        if hide_empty is False or d.balance:
+        # if zero is not a "real zero" - consider x < 0.000001 is zero
+        if hide_empty is False or (abs(d.balance) > 0.000001):
             row = OrderedDict()
             for i in ('account', 'type', 'passive', 'note', 'asset', 'balance'):
                 if i == 'type':
