@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.2.22'
+__version__ = '0.2.23'
 
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
@@ -12,6 +12,8 @@ from .currencies import currencies
 rate_cache = TTLCache(maxsize=100, ttl=2)
 
 asset_precision_cache = {}
+
+restrict_assets_to_currencies = False
 
 # financial assets
 ACCOUNT_CREDIT = 0
@@ -392,9 +394,10 @@ def asset_create(asset, precision=2):
             operations. Default is 2 digits
     """
     asset = asset.upper()
-    if asset not in [c['cc'] for c in currencies]:
-        logger.error('Currency {} not found'.format(asset))
-        raise ResourceNotFound
+    if restrict_assets_to_currencies:
+        if asset not in [c['cc'] for c in currencies]:
+            logger.error('Currency {} not found'.format(asset))
+            raise ResourceNotFound
     logger.info('Creating asset {}'.format(asset))
     try:
         get_db().execute(sql("""
@@ -427,7 +430,7 @@ def asset_list_rates(asset=None, start=None, end=None):
     """
     List asset rates
 
-    Currency can be specified either as code, or as pair "code/code"
+    Asset can be specified either as code, or as pair "code/code"
 
     If asset is not specified, "end" is used as date to get rates for all
     assets
@@ -505,7 +508,7 @@ def asset_delete(asset):
     if not get_db().execute(sql("""
     delete from asset where code=:code"""),
                             code=asset.upper()).rowcount:
-        logger.error('Currency {} not found'.format(asset.upper()))
+        logger.error('Asset {} not found'.format(asset.upper()))
         raise ResourceNotFound
 
 
@@ -527,7 +530,7 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
         value = asset_to
         asset_to = None
     if value is None:
-        raise ValueError('Currency rate value is not specified')
+        raise ValueError('Asset rate value is not specified')
     if date is None:
         date = int(time.time())
     else:
@@ -574,7 +577,7 @@ def asset_delete_rate(asset_from, asset_to=None, date=None):
                             f=asset_from.upper(),
                             t=asset_to.upper(),
                             d=date).rowcount:
-        logger.error('Currency rate {}/{} for {} not found'.format(
+        logger.error('Asset rate {}/{} for {} not found'.format(
             asset_from.upper(), asset_to.upper(), format_date(date)))
         raise ResourceNotFound
 
@@ -1237,7 +1240,7 @@ def transaction_move(dt=None,
                                       date=date)
 
             else:
-                raise ValueError('Currency mismatch')
+                raise ValueError('Asset mismatch')
             tid1 = _transaction_move(
                 ct=ct,
                 amount=format_amount(amount /
