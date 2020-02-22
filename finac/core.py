@@ -712,9 +712,13 @@ def account_create(account,
     else:
         passive = val_to_boolean(passive)
     db = get_db()
+    if not db.execute(sql("""select id from asset where code=:code"""),
+                      code=asset).fetchone():
+        raise ResourceNotFound('asset {}'.format(asset))
     dbt = db.begin()
-    logger.info('Creating account {}, asset: {}'.format(account.upper(),
-                                                        asset.upper()))
+    account = account.upper()
+    asset = asset.upper()
+    logger.info('Creating account {}, asset: {}'.format(account, asset))
     try:
         r = db.execute(sql("""
         insert into account(code, note, tp, passive, asset_id, max_overdraft,
@@ -722,11 +726,11 @@ def account_create(account,
         (:code, :note, :tp, :passive,
             (select id from asset where code=:asset),
             :max_overdraft, :max_balance)"""),
-                       code=account.upper(),
+                       code=account,
                        note=note,
                        tp=tp_id,
                        passive=passive,
-                       asset=asset.upper(),
+                       asset=asset,
                        max_overdraft=max_overdraft,
                        max_balance=max_balance)
         db.execute(sql("""
@@ -742,9 +746,9 @@ def account_create(account,
         dbt.commit()
     except IntegrityError:
         dbt.rollback()
-        raise ResourceAlreadyExists(account.upper())
+        raise ResourceAlreadyExists(account)
     except:
-        logger.error('Unable to create account {}'.format(account.upper()))
+        logger.error('Unable to create account {}'.format(account))
         dbt.rollback()
         raise
 
