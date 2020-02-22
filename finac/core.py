@@ -712,12 +712,12 @@ def account_create(account,
     else:
         passive = val_to_boolean(passive)
     db = get_db()
+    account = account.upper()
+    asset = asset.upper()
     if not db.execute(sql("""select id from asset where code=:code"""),
                       code=asset).fetchone():
         raise ResourceNotFound('asset {}'.format(asset))
     dbt = db.begin()
-    account = account.upper()
-    asset = asset.upper()
     logger.info('Creating account {}, asset: {}'.format(account, asset))
     try:
         r = db.execute(sql("""
