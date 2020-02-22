@@ -171,9 +171,9 @@ class Test(unittest.TestCase):
 
     def test060_asset_rate_set(self):
         finac.asset_create('AUD')
-        finac.asset_set_rate('EUR', 'USD', 1.5, date='2019-01-01')
+        finac.asset_set_rate('EUR', 'USD', '1,5', date='2019-01-01')
         finac.asset_set_rate('EUR/USD', value=2)
-        finac.asset_set_rate('AUD/USD', value=0.69)
+        finac.asset_set_rate('AUD/USD', value='0,69')
         try:
             finac.asset_rate('EUR', 'USD', date='2018-01-01')
             raise RuntimeError('Rate not found not raised')

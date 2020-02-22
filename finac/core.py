@@ -531,6 +531,8 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
         asset_to = None
     if value is None:
         raise ValueError('Asset rate value is not specified')
+    else:
+        value = parse_number(value)
     if date is None:
         date = int(time.time())
     else:
@@ -538,7 +540,8 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
     if asset_from.find('/') != -1 and asset_to is None:
         asset_from, asset_to = asset_from.split('/')
     logging.info('Setting rate for {}/{} to {} for {}'.format(
-        asset_from.upper(), asset_to.upper(), value, format_date(date)))
+        asset_from.upper(), asset_to.upper(), value,
+        format_date(date)))
     get_db().execute(sql("""
     insert into asset_rate (asset_from_id, asset_to_id, d, value)
     values
