@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.2.24'
+__version__ = '0.2.25'
 
 import rapidtables
 import neotermcolor
