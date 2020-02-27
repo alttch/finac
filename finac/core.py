@@ -376,10 +376,9 @@ def init(db=None, **kwargs):
         db_uri = db
         if db_uri.find('.db') != -1:
             db_uri = 'sqlite:///' + os.path.expanduser(db_uri)
-        elif not db_uri.__contains__('mysql+pymysql'):
-            raise RuntimeError(
-                'DB URI configuration: mysql+pymysql://user:pass@host/db_name')
         _db.engine = get_db_engine(db_uri)
+        _db.use_lastrowid = db_uri.startswith('sqlite') or db_uri.startswith(
+            'mysql')
         init_db(_db.engine)
 
 
@@ -446,7 +445,7 @@ def asset_list_rates(asset=None, start=None, end=None):
         if asset.find('/') != -1:
             asset_from, asset_to = _safe_format(asset.split('/'))
             cond += (' and ' if cond else
-                     '') + 'cf.code = "{}" and ct.code = "{}"'.format(
+                     '') + 'cf.code = \'{}\' and ct.code = \'{}\''.format(
                          asset_from, asset_to)
         else:
             cond += (' and ' if cond else
@@ -540,8 +539,7 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
     if asset_from.find('/') != -1 and asset_to is None:
         asset_from, asset_to = asset_from.split('/')
     logging.info('Setting rate for {}/{} to {} for {}'.format(
-        asset_from.upper(), asset_to.upper(), value,
-        format_date(date)))
+        asset_from.upper(), asset_to.upper(), value, format_date(date)))
     get_db().execute(sql("""
     insert into asset_rate (asset_from_id, asset_to_id, d, value)
     values
@@ -728,7 +726,8 @@ def account_create(account,
         max_balance) values
         (:code, :note, :tp, :passive,
             (select id from asset where code=:asset),
-            :max_overdraft, :max_balance)"""),
+            :max_overdraft, :max_balance) {}""".format(
+            '' if _db.use_lastrowid else 'returning id')),
                        code=account,
                        note=note,
                        tp=tp_id,
@@ -736,16 +735,17 @@ def account_create(account,
                        asset=asset,
                        max_overdraft=max_overdraft,
                        max_balance=max_balance)
+        acc_id = r.lastrowid if _db.use_lastrowid else r.fetchone().id
         db.execute(sql("""
             insert into transact(account_debit_id, amount, d_created, d) values
             (:account_id, 0, 0, 0)
             """),
-                   account_id=r.lastrowid)
+                   account_id=acc_id)
         db.execute(sql("""
             insert into transact(account_credit_id, amount, d_created, d) values
             (:account_id, 0, 0, 0)
             """),
-                   account_id=r.lastrowid)
+                   account_id=acc_id)
         dbt.commit()
     except IntegrityError:
         dbt.rollback()
@@ -1151,22 +1151,24 @@ def _transaction_move(dt=None,
             completion_date = date
     else:
         completion_date = parse_date(completion_date)
-    return db.execute(sql("""
+    r = db.execute(sql("""
     insert into transact(account_credit_id, account_debit_id, amount, tag,
     note, d_created, d, chain_transact_id) values
     (
     (select id from account where code=:ct),
     (select id from account where code=:dt),
     :amount, :tag, :note, :d_created, :d, :chain_id)
-    """),
-                      ct=ct,
-                      dt=dt,
-                      amount=amount,
-                      tag=tag,
-                      note=note,
-                      d_created=date,
-                      d=completion_date,
-                      chain_id=chain_transact_id).lastrowid
+    {}
+    """.format('' if _db.use_lastrowid else 'returning id')),
+                   ct=ct,
+                   dt=dt,
+                   amount=amount,
+                   tag=tag,
+                   note=note,
+                   d_created=date,
+                   d=completion_date,
+                   chain_id=chain_transact_id)
+    return r.lastrowid if _db.use_lastrowid else r.fetchone().id
 
 
 @core_method
@@ -1474,7 +1476,7 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         tag = _safe_format(tag) if isinstance(tag,
                                               (list,
                                                tuple)) else [_safe_format(tag)]
-        tf = ['tag = "{}"'.format(t) for t in tag]
+        tf = ['tag = \'{}\''.format(t) for t in tag]
         tags = ' or '.join(tf)
         cond += (' and ' if cond else '') + '({tags})'.format(tags=tags)
     r = get_db().execute(sql("""
@@ -1608,14 +1610,14 @@ def account_list(asset=None,
                 first = False
             else:
                 cond += ' or '
-            cond += 'asset.code = "{}"'.format(_safe_format(a.upper()))
+            cond += 'asset.code = \'{}\''.format(_safe_format(a.upper()))
         cond += ')'
     else:
         cond += (' and ' if cond else '') + 'account.tp <= 1000'
     dts = parse_date(date) if date else parse_date()
-    cond += (' and ' if cond else '') + 'transact.d_created <= "{}"'.format(dts)
+    cond += (' and ' if cond else '') + 'transact.d_created <= {}'.format(dts)
     if code:
-        cond += (' and ' if cond else '') + 'account.code like "{}"'.format(
+        cond += (' and ' if cond else '') + 'account.code like \'{}\''.format(
             _safe_format(code))
     passive = val_to_boolean(passive)
     if passive is True:
@@ -1644,7 +1646,8 @@ def account_list(asset=None,
                     left join account on account.id=transact.account_debit_id
                     join asset on asset.id=account.asset_id
                     where d is not null and {cond_d}
-                        group by account.code
+                        group by account.code, account.note,
+                            account.passive, asset.code, account.tp
                 union
                 select -1*sum(amount) as balance,
                     account.code as account,
@@ -1656,7 +1659,8 @@ def account_list(asset=None,
                     left join account on account.id=transact.account_credit_id
                     join asset on asset.id=account.asset_id
                     where {cond}
-                            group by account.code
+                            group by account.code, account.note,
+                            account.passive, asset.code, account.tp
                 ) as templist
                     group by account, note, passive, templist.asset, templist.tp
             {oby}
@@ -1846,14 +1850,14 @@ def _account_summary(balance_type,
         'transact.d is not null and ' if _safe_format(balance_type) ==
         'debit' else '')
     if account:
-        cond += (' and ' if cond else '') + 'account.code = "{}"'.format(
+        cond += (' and ' if cond else '') + 'account.code = \'{}\''.format(
             _safe_format(account))
     if asset:
-        cond += (' and ' if cond else '') + 'asset.code = "{}"'.format(
+        cond += (' and ' if cond else '') + 'asset.code = \'{}\''.format(
             _safe_format(asset))
     if date:
         dts = parse_date(_safe_format(date))
-        cond += (' and ' if cond else '') + 'transact.d <= "{}"'.format(dts)
+        cond += (' and ' if cond else '') + 'transact.d <= {}'.format(dts)
     if tp:
         if isinstance(tp, int):
             tp_id = tp
@@ -1909,7 +1913,7 @@ def account_balance(account=None, tp=None, base=None, date=None,
         tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
     cond = "transact.deleted is null"
     dts = parse_date(_safe_format(date)) if date else parse_date()
-    cond += (' and ' if cond else '') + 'transact.d_created <= "{}"'.format(dts)
+    cond += (' and ' if cond else '') + 'transact.d_created <= {}'.format(dts)
     balance = None
     if account:
         acc_info = account_info(account)
