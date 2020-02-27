@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 import os
 
-sys.path.insert(0, Path().absolute().parent.as_posix())
+sys.path.insert(0, Path(__file__).absolute().parent.parent.as_posix())
 import finac
 
 import unittest
@@ -16,6 +16,8 @@ import time
 from types import SimpleNamespace
 
 TEST_DB = '/tmp/finac-test.db'
+
+dir_me = Path(__file__).absolute().parent.as_posix()
 
 result = SimpleNamespace()
 config = SimpleNamespace(remote=False)
@@ -304,7 +306,7 @@ class Test(unittest.TestCase):
     def test085_apply(self):
         finac.account_create('xtest1', 'eur')
         finac.account_create('xtest2', 'eur')
-        finac.transaction_apply('transactions.yml')
+        finac.transaction_apply('{}/transactions.yml'.format(dir_me))
         self.assertEqual(finac.account_balance('xtest1'), 300)
         self.assertEqual(finac.account_balance('xtest2'), 200)
 
