@@ -448,9 +448,9 @@ def asset_list_rates(asset=None, start=None, end=None):
                      '') + 'cf.code = \'{}\' and ct.code = \'{}\''.format(
                          asset_from, asset_to)
         else:
-            cond += (' and ' if cond else
-                     '') + '(cf.code = "{code}" or ct.code = "{code}")'.format(
-                         code=asset)
+            cond += (' and ' if cond else ''
+                    ) + '(cf.code = \'{code}\' or ct.code = \'{code}\')'.format(
+                        code=asset)
         r = get_db().execute(
             sql("""
             select cf.code as asset_from,
