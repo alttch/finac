@@ -270,8 +270,3 @@ details.
 
 See [Finac documentation](https://finac.readthedocs.io/) for server mode and
 HTTP API details.
-
-## TODO
-
-Finac is in alpha stage. We are continuously working on the features, speed and
-stability improvements as well as waiting your commits.
