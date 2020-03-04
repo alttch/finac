@@ -474,8 +474,6 @@ def asset_list_rates(asset=None, start=None, end=None):
                     as1.asset_to_id as t,
                     max(as1.d) as m
                 from asset_rate as as1
-                    inner join asset_rate as as2
-                    on as1.asset_from_id=as2.asset_from_id
                 where as1.d<=:d group by fr, t)
             as s1
                 join asset as a1 on a1.id=fr
