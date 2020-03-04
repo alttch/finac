@@ -1616,7 +1616,7 @@ def account_list(asset=None,
     cond += (' and ' if cond else '') + 'transact.d_created <= {}'.format(dts)
     if code:
         cond += (' and ' if cond else '') + 'account.code like \'{}\''.format(
-            _safe_format(code))
+            _safe_format(code.upper()))
     passive = val_to_boolean(passive)
     if passive is True:
         cond += (' and ' if cond else '') + 'account.passive is True'
@@ -2007,4 +2007,7 @@ def _safe_format(val):
             ]
         elif isinstance(val, str):
             val = val.replace(al, '') if al in val else val
+        # forbid bytes
+        elif isinstance(val, bytes) or isinstance(val, bytearray):
+            val = ''
     return val
