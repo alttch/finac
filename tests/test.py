@@ -664,6 +664,6 @@ if __name__ == '__main__':
             """delete from asset where code != 'EUR' and code != 'USD'""")
     test_suite = unittest.TestLoader().loadTestsFromTestCase(Test)
     test_result = unittest.TextTestRunner().run(test_suite)
-    # if not a.remote and a.dbconn == TEST_DB:
-        # os.unlink(TEST_DB)
+    if not a.remote and a.dbconn == TEST_DB:
+        os.unlink(TEST_DB)
     sys.exit(not test_result.wasSuccessful())
