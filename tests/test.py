@@ -354,12 +354,14 @@ class Test(unittest.TestCase):
 
     def test099_transact_update(self):
         finac.transaction_update(result.id4test099,
+                                 amount=555,
                                  tag='loans2',
                                  note='somenote')
         for t in finac.account_statement('TT1'):
             if t['id'] == result.id4test099:
                 self.assertEqual(t['tag'], 'loans2')
                 self.assertEqual(t['note'], 'somenote')
+                self.assertEqual(t['amount'], 555)
 
     def test100_delete_asset(self):
         finac.asset_delete('kpw')
@@ -627,6 +629,11 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--debug', help='Debug mode', action='store_true')
     ap.add_argument('--remote', help='Test remote API', action='store_true')
+    ap.add_argument('--multiplier',
+                    help='Use data multiplier',
+                    default=1,
+                    type=int,
+                    metavar='NUMBER')
     ap.add_argument('--dbconn',
                     help='DB connection string',
                     metavar='DBCONN',
@@ -640,14 +647,16 @@ if __name__ == '__main__':
         pass
     config.remote = a.remote
     if a.remote:
-        finac.init(api_uri='http://localhost:5000/jrpc', api_key='secret')
+        finac.init(api_uri='http://localhost:5000/jrpc',
+                   api_key='secret',
+                   multiplier=a.multiplier)
     else:
         if a.dbconn == TEST_DB:
             try:
                 os.unlink(TEST_DB)
             except:
                 pass
-        finac.init(db=a.dbconn, keep_integrity=True)
+        finac.init(db=a.dbconn, keep_integrity=True, multiplier=a.multiplier)
         finac.core.rate_cache = None
         for tbl in ['account', 'transact', 'asset_rate']:
             finac.core.get_db().execute('delete from {}'.format(tbl))
@@ -655,6 +664,6 @@ if __name__ == '__main__':
             """delete from asset where code != 'EUR' and code != 'USD'""")
     test_suite = unittest.TestLoader().loadTestsFromTestCase(Test)
     test_result = unittest.TextTestRunner().run(test_suite)
-    if not a.remote and a.dbconn == TEST_DB:
-        os.unlink(TEST_DB)
+    # if not a.remote and a.dbconn == TEST_DB:
+        # os.unlink(TEST_DB)
     sys.exit(not test_result.wasSuccessful())

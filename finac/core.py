@@ -117,12 +117,27 @@ config = SimpleNamespace(db=None,
                          api_uri=None,
                          api_key=None,
                          api_timeout=5,
+                         multiplier=1,
                          date_format='%Y-%m-%d %H:%M:%S')
 
 lock_purge = threading.Lock()
 lock_account_token = threading.Lock()
 
 account_lockers = {}
+
+multiply_fields = {
+    'asset_rate': ['value'],
+    'account': ['max_overdraft', 'max_balance'],
+    'transact': ['amount']
+}
+
+
+def _multiply(i):
+    return i * config.multiplier if i else i
+
+
+def _demultiply(i):
+    return i / config.multiplier if i else i
 
 
 def core_method(f):
@@ -363,6 +378,7 @@ def init(db=None, **kwargs):
         full_transaction_update: allow updating transaction date and amount
         base_asset: default base asset. Default is "USD"
         date_format: default date format in statements
+        multiplier: use data multiplier
     """
     for k, v in kwargs.items():
         if k == 'rate_ttl':
@@ -490,7 +506,7 @@ def asset_list_rates(asset=None, start=None, end=None):
         row['asset_from'] = d.asset_from
         row['asset_to'] = d.asset_to
         row['date'] = format_date(d.d)
-        row['value'] = d.value
+        row['value'] = _demultiply(d.value)
         yield row
 
 
@@ -551,7 +567,7 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
                      f=asset_from.upper(),
                      t=asset_to.upper(),
                      d=date,
-                     value=value)
+                     value=_multiply(value))
 
 
 @core_method
@@ -618,11 +634,12 @@ def asset_rate(asset_from, asset_to=None, date=None):
                            t=ct)
             d = r.fetchone()
             if d:
+                value = _demultiply(d.value)
                 try:
-                    rate_cache[(cf, ct)] = d.value
+                    rate_cache[(cf, ct)] = value
                 except TypeError:
                     pass
-                return d.value
+                return value
 
     def _get_crossrate(asset_from, asset_to, d):
 
@@ -731,8 +748,8 @@ def account_create(account,
                        tp=tp_id,
                        passive=passive,
                        asset=asset,
-                       max_overdraft=max_overdraft,
-                       max_balance=max_balance)
+                       max_overdraft=_multiply(max_overdraft),
+                       max_balance=_multiply(max_balance))
         acc_id = r.lastrowid if _db.use_lastrowid else r.fetchone().id
         db.execute(sql("""
             insert into transact(account_debit_id, amount, d_created, d) values
@@ -775,8 +792,8 @@ def account_info(account):
         'tp': d.tp,
         'passive': d.passive,
         'asset': d.asset,
-        'max_overdraft': d.max_overdraft,
-        'max_balance': d.max_balance
+        'max_overdraft': _demultiply(d.max_overdraft),
+        'max_balance': _demultiply(d.max_balance)
     }
 
 
@@ -805,7 +822,7 @@ def transaction_info(transaction_id):
     if not d: raise ResourceNotFound
     return {
         'id': transaction_id,
-        'amount': d.amount,
+        'amount': _demultiply(d.amount),
         'tag': d.tag,
         'note': d.note,
         'created': d.d_created,
@@ -933,11 +950,12 @@ def _update(objid, tbl, objidf, kw):
     for k, v in kw.items():
         if k == 'code':
             v = v.upper()
-        if not get_db().execute(sql("""
+        if not get_db().execute(
+                sql("""
         update {tbl} set {f} = :val where {objidf} = :id
         """.format(tbl=tbl, f=k, objidf=objidf)),
-                                val=v,
-                                id=c).rowcount:
+                val=_multiply(v) if k in multiply_fields.get(tbl, []) else v,
+                id=c).rowcount:
             raise ResourceNotFound('{} {}'.format(tbl, objid))
         if k == 'code':
             c = v
@@ -1160,7 +1178,7 @@ def _transaction_move(dt=None,
     """.format('' if _db.use_lastrowid else 'returning id')),
                    ct=ct,
                    dt=dt,
-                   amount=amount,
+                   amount=_multiply(amount),
                    tag=tag,
                    note=note,
                    d_created=date,
@@ -1501,6 +1519,7 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         row['created'] = format_date(d.d_created)
         row['completed'] = format_date(d.d)
         row['is_completed'] = d.d is not None
+        row['amount'] = _demultiply(row['amount'])
         if acc_info['passive'] and row['amount']:
             row['amount'] *= -1
         yield row
@@ -1680,6 +1699,7 @@ def account_list(asset=None,
                     row[i] = getattr(d, i)
             if row['passive'] and row['balance']:
                 row['balance'] *= -1
+            row['balance'] = _demultiply(row['balance'])
             yield row
 
 
@@ -1890,6 +1910,8 @@ def _account_summary(balance_type,
                     row['type'] = ACCOUNT_TYPE_NAMES[d.tp]
                 else:
                     row[i] = getattr(d, i)
+            row[balance_type + '_balance'] = _demultiply(row[balance_type +
+                                                             '_balance'])
             yield row
 
 
@@ -1930,10 +1952,11 @@ def account_balance(account=None, tp=None, base=None, date=None,
         d = r.fetchone()
         if not d or d.balance is None:
             raise ResourceNotFound
+        balance = _demultiply(d.balance)
         if base and acc_info['asset'] != base:
-            balance = d.balance * asset_rate(acc_info['asset'], base, date=date)
+            balance = balance * asset_rate(acc_info['asset'], base, date=date)
         else:
-            balance = format_amount(d.balance, acc_info['asset'])
+            balance = format_amount(balance, acc_info['asset'])
         if not _natural and acc_info['passive'] and balance:
             balance *= -1
     elif tp:

@@ -261,6 +261,20 @@ f.account_create('passive1', 'usd', passive=True)
 
 Accounts of types "tax", "supplier" and "finagent" are passive by default.
 
+### Data multiplier
+
+Depending on data, it may be useful to store numeric values in database as
+integers instead of floats. Finac library has built-in data multiplier feature,
+to enable it, set *multiplier=N* in *finac.init()* method, e.g.
+*multiplier=1000* if you want to store integers in tables and have data with
+max precision 3 digits after comma.
+
+Note: you must manually convert table fields to numeric/integer types, and
+multiply them if performing data multiplier implementation on living database.
+
+Full list of tables and fields is available in dict
+*finac.core.multiply_fields*.
+
 ## How to embed Finac library into own project
 
 See [Finac documentation](https://finac.readthedocs.io/) for core function API
