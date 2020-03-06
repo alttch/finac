@@ -117,7 +117,7 @@ config = SimpleNamespace(db=None,
                          api_uri=None,
                          api_key=None,
                          api_timeout=5,
-                         multiplier=1,
+                         multiplier=None,
                          date_format='%Y-%m-%d %H:%M:%S')
 
 lock_purge = threading.Lock()
@@ -133,11 +133,11 @@ multiply_fields = {
 
 
 def _multiply(i):
-    return i * config.multiplier if i else i
+    return round(i * config.multiplier) if config.multiplier and i else i
 
 
 def _demultiply(i):
-    return i / config.multiplier if i else i
+    return i / config.multiplier if config.multiplier and i else i
 
 
 def core_method(f):
@@ -387,6 +387,8 @@ def init(db=None, **kwargs):
             if not hasattr(config, k):
                 raise RuntimeError('Parameter {} is invalid'.format(k))
         setattr(config, k, v)
+    if config.multiplier:
+        config.multiplier = float(config.multiplier)
     if db is not None:
         config.db = db
         db_uri = db

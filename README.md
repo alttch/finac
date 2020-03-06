@@ -275,6 +275,9 @@ multiply them if performing data multiplier implementation on living database.
 Full list of tables and fields is available in dict
 *finac.core.multiply_fields*.
 
+Note: multiplier can be used only with integer and numeric(X) field types, as
+core conversion functions always return rounded value.
+
 ## How to embed Finac library into own project
 
 See [Finac documentation](https://finac.readthedocs.io/) for core function API

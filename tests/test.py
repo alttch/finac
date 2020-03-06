@@ -631,7 +631,6 @@ if __name__ == '__main__':
     ap.add_argument('--remote', help='Test remote API', action='store_true')
     ap.add_argument('--multiplier',
                     help='Use data multiplier',
-                    default=1,
                     type=int,
                     metavar='NUMBER')
     ap.add_argument('--dbconn',
