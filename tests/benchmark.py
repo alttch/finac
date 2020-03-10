@@ -73,7 +73,7 @@ if __name__ == '__main__':
         'multiplier': 100  # most commonly used
     }
     if a.finac_server:
-        finac.init(api_url=a.finac_server, api_key=a.api_key, **xkw)
+        finac.init(api_uri=a.finac_server, api_key=a.finac_server_key, **xkw)
     else:
         finac.init(db=a.dbconn, **xkw)
     finac.core.rate_cache = None
@@ -92,8 +92,8 @@ if __name__ == '__main__':
         else:
             db = finac.core.get_db()
         for tbl in ['transact', 'account', 'asset_rate']:
-            finac.core.get_db().execute('delete from {}'.format(tbl))
-        finac.core.get_db().execute(
+            db.execute('delete from {}'.format(tbl))
+        db.execute(
             """delete from asset where code != 'EUR' and code != 'USD'""")
         print('Creating accounts...')
         # create accounts
