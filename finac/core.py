@@ -1226,9 +1226,9 @@ def transaction_move(dt=None,
     Returns:
         transaction id, if lazy exchange performed: tuple of two transactions
     """
+    if ct and dt and ct == dt:
+        raise ValueError('Credit and debit account can not be equal')
     try:
-        if ct and dt and ct == dt:
-            raise ValueError('Credit and debit account can not be equal')
         ctoken = account_lock(ct, credit_lock_token) if ct else None
         dtoken = account_lock(dt, debit_lock_token) if dt else None
         ct_info = account_info(ct) if ct else None
