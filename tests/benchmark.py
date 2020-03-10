@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
+import sqlalchemy as sa
 import sys
 import os
 from tqdm import tqdm
@@ -45,16 +46,36 @@ if __name__ == '__main__':
                     help='DB connection string (WARNING! ALL DATA WILL BE LOST',
                     metavar='DBCONN',
                     default=TEST_DB)
-    ap.add_argument('-w', '--workers', help='Max finac workers', type=int)
+    ap.add_argument('-S',
+                    '--finac-server',
+                    metavar='HOST:PORT',
+                    help='Use finac server')
+    ap.add_argument('-K',
+                    '--finac-server-key',
+                    metavar='KEY',
+                    help='Finac server key')
+    ap.add_argument('-w',
+                    '--workers',
+                    help='Max client workers (may '
+                    'don\'t work with some DB drivers, use remote API)',
+                    type=int,
+                    default=1)
     a = ap.parse_args()
     pool = ProcessPoolExecutor(max_workers=a.workers)
-    if not a.benchmark_only:
+    if not a.benchmark_only and not a.finac_server:
         if a.dbconn == TEST_DB:
             try:
                 os.unlink(TEST_DB)
             except:
                 pass
-    finac.init(db=a.dbconn, keep_integrity=not a.no_keeper, multiplier=100)
+    xkw = {
+        'keep_integrity': not a.no_keeper,
+        'multiplier': 100  # most commonly used
+    }
+    if a.finac_server:
+        finac.init(api_url=a.finac_server, api_key=a.api_key, **xkw)
+    else:
+        finac.init(db=a.dbconn, **xkw)
     finac.core.rate_cache = None
     futures = []
 
@@ -66,7 +87,11 @@ if __name__ == '__main__':
     if not a.benchmark_only:
         print('Cleaning up...')
         # cleanup
-        for tbl in ['account', 'transact', 'asset_rate']:
+        if a.finac_server:
+            db = sa.create_engine(a.dbconn)
+        else:
+            db = finac.core.get_db()
+        for tbl in ['transact', 'account', 'asset_rate']:
             finac.core.get_db().execute('delete from {}'.format(tbl))
         finac.core.get_db().execute(
             """delete from asset where code != 'EUR' and code != 'USD'""")
@@ -91,6 +116,8 @@ if __name__ == '__main__':
                                 tag=f'trans {x}'))
             wait_futures()
     print('Testing...')
+    if a.finac_server:
+        finac.preload()
     t = time.time()
     for x in tqdm(range(1, a.account_number + 1), leave=True):
         dt_id = x
@@ -107,13 +134,14 @@ if __name__ == '__main__':
         (time.time() - t) / a.account_number * 1000))
     t = time.time()
     for x in tqdm(range(1, a.account_number + 1), leave=True):
-        futures.append(pool.submit(finac.account_statement_summary,
-                       f'account-{x}',
-                       start='2019-01-01'))
+        futures.append(
+            pool.submit(finac.account_statement_summary,
+                        f'account-{x}',
+                        start='2019-01-01'))
     wait_futures()
     print('Average statement time: {:.3f}ms'.format(
         (time.time() - t) / a.account_number * 1000))
-    if not a.benchmark_only:
+    if not a.benchmark_only and not a.finac_server:
         if a.dbconn == TEST_DB:
             os.unlink(TEST_DB)
     sys.exit()
