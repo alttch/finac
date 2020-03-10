@@ -108,6 +108,7 @@ logger = logging.getLogger('finac')
 _db = SimpleNamespace(engine=None)
 
 config = SimpleNamespace(db=None,
+                         db_pool_size=10,
                          keep_integrity=True,
                          lazy_exchange=True,
                          full_transaction_update=True,
@@ -137,7 +138,10 @@ def _multiply(i):
 
 
 def _demultiply(i):
-    return i / config.multiplier if config.multiplier and i else i
+    if i is not None:
+        return (int(i) / config.multiplier) if config.multiplier else float(i)
+    else:
+        return None
 
 
 def core_method(f):
@@ -340,7 +344,12 @@ class ForeignKeysListener(sa.interfaces.PoolListener):
 
 
 def get_db_engine(db_uri):
-    return sa.create_engine(db_uri, listeners=[ForeignKeysListener()])
+    if db_uri.startswith('sqlite:///'):
+        return sa.create_engine(db_uri, listeners=[ForeignKeysListener()])
+    else:
+        return sa.create_engine(db_uri,
+                                pool_size=config.db_pool_size,
+                                max_overflow=config.db_pool_size * 2)
 
 
 def get_db():
@@ -366,6 +375,7 @@ def init(db=None, **kwargs):
 
     Args:
         db: SQLAlchemy DB URI or sqlite file name
+        db_pool_size: DB pool size (default: 10)
         keep_integrity: finac should keep database integrity (lock accounts,
             watch overdrafts, overlimits etc. Default is True
         lazy_exchange: allow direct exchange operations betwen accounts.
