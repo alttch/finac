@@ -3,6 +3,7 @@
 from pathlib import Path
 import sys
 import os
+from tqdm import tqdm
 
 sys.path.insert(0, Path(__file__).absolute().parent.parent.as_posix())
 import finac
@@ -61,11 +62,11 @@ if __name__ == '__main__':
             """delete from asset where code != 'EUR' and code != 'USD'""")
         print('Creating accounts...')
         # create accounts
-        for x in range(1, a.account_number + 1):
+        for x in tqdm(range(1, a.account_number + 1), leave=True):
             finac.account_create(f'account-{x}', 'USD')
         # generate transactions
         print('Generating transactions...')
-        for i in range(a.transaction_number):
+        for i in tqdm(range(a.transaction_number), leave=True):
             for x in range(1, a.account_number + 1):
                 dt_id = x
                 while dt_id == x:
@@ -76,7 +77,7 @@ if __name__ == '__main__':
                          tag=f'trans {x}')
     print('Testing...')
     t = time.time()
-    for x in range(1, a.account_number + 1):
+    for x in tqdm(range(1, a.account_number + 1), leave=True):
         dt_id = x
         while dt_id == x:
             dt_id = random.randint(1, a.account_number)
@@ -87,7 +88,7 @@ if __name__ == '__main__':
     print('Average transaction time: {:.3f}ms'.format(
         (time.time() - t) / a.account_number * 1000))
     t = time.time()
-    for x in range(1, a.account_number + 1):
+    for x in tqdm(range(1, a.account_number + 1), leave=True):
         finac.account_statement_summary(f'account-{x}', start='2019-01-01')
     print('Average statement time: {:.3f}ms'.format(
         (time.time() - t) / a.account_number * 1000))
