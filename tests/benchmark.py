@@ -51,11 +51,11 @@ if __name__ == '__main__':
                     help='transactions per account',
                     type=int,
                     default=100)
-    ap.add_argument('--no-keeper',
+    ap.add_argument('--disable-keeper',
                     help='disable built-in integrity keeper',
                     action='store_true')
     ap.add_argument('-C',
-                    '--clean',
+                    '--clear',
                     help='clean database before start',
                     action='store_true')
     ap.add_argument('--skip-accounts',
@@ -96,7 +96,7 @@ if __name__ == '__main__':
             except:
                 pass
     xkw = {
-        'keep_integrity': not a.no_keeper,
+        'keep_integrity': not a.disable_keeper,
         'multiplier': 100  # most commonly used
     }
     if a.finac_server:
@@ -112,7 +112,7 @@ if __name__ == '__main__':
         futures.clear()
 
     if not a.benchmark_only:
-        if a.clean:
+        if a.clear:
             print('Cleaning up...')
             # cleanup
             if a.finac_server:
@@ -146,7 +146,7 @@ if __name__ == '__main__':
                 if c > a.commit_every:
                     c = 0
                     if not a.finac_server:
-                        dbt.commit()
+                        if a.commit_every > 1: dbt.commit()
             if len(futures) > a.workers: wait_futures()
         wait_futures()
     print('Testing...')
@@ -157,15 +157,22 @@ if __name__ == '__main__':
         dt_id = x
         while dt_id == x:
             dt_id = random.randint(1, a.account_amount)
-        finac.mv(dt=f'account-{dt_id}',
-                 ct=f'account-{x}',
-                 amount=random.randint(1000, 10000) / 1000.0,
-                 tag=f'trans {x}')
+        futures.append(
+            pool.submit(finac.mv,
+                        dt=f'account-{dt_id}',
+                        ct=f'account-{x}',
+                        amount=random.randint(1000, 10000) / 1000.0,
+                        tag=f'trans {x}'))
+    wait_futures()
     print('Average transaction time: {:.3f}ms'.format(
         (time.time() - t) / a.account_amount * 1000))
     t = time.time()
     for x in tqdm(range(1, a.account_amount + 1), leave=True):
-        finac.account_statement_summary(f'account-{x}', start='2019-01-01')
+        futures.append(
+            pool.submit(finac.account_statement_summary,
+                        f'account-{x}',
+                        start='2019-01-01'))
+    wait_futures()
     print('Average statement time: {:.3f}ms'.format(
         (time.time() - t) / a.account_amount * 1000))
     if not a.benchmark_only and not a.finac_server:
