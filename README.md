@@ -38,7 +38,8 @@ Starting from 0.4, Finac uses DateTime columns for:
 * transact.deleted
 
 Depending to your database type, it's REQUIRED to convert these columns to
-either DATETIME (SQLite, MySQL) or TIMESTAMP (PostgreSQL, without time zone).
+either DATETIME (SQLite, for MySQL DATETIME(6) recommended) or TIMESTAMP
+(PostgreSQL, without time zone).
 
 ## How to use in interactive mode
 
