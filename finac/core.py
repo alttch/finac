@@ -124,6 +124,7 @@ config = SimpleNamespace(db=None,
                          redis_db=0,
                          redis_timeout=5,
                          redis_blocking_timeout=5,
+                         restrict_deletion=None,
                          date_format='%Y-%m-%d %H:%M:%S')
 
 lock_purge = threading.Lock()
@@ -181,6 +182,18 @@ def core_method(f):
                 raise _exceptions.get(result['error']['code'], RuntimeError)(
                     result['error'].get('message'))
             return result['result']
+        else:
+            return f(*args, **kwargs)
+
+    return do
+
+
+def deletion_method(f):
+
+    @wraps(f)
+    def do(*args, **kwargs):
+        if config.restrict_deletion == 2:
+            raise RuntimeError('deletion methods forbidden by server config')
         else:
             return f(*args, **kwargs)
 
@@ -407,6 +420,7 @@ def init(db=None, **kwargs):
         base_asset: default base asset. Default is "USD"
         date_format: default date format in statements
         multiplier: use data multiplier
+        restrict_deletion: 1 - forbid purge, 2 - forbid delete functions
         redis_host: Redis host
         redis_port: Redis port (default: 6379)
         redis_db: Redis database (default: 0)
@@ -555,6 +569,7 @@ def asset_list_rates(asset=None, start=None, end=None):
 
 
 @core_method
+@deletion_method
 def asset_delete(asset):
     """
     Delete asset
@@ -615,6 +630,7 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
 
 
 @core_method
+@deletion_method
 def asset_delete_rate(asset_from, asset_to=None, date=None):
     """
     Delete currrency rate
@@ -915,6 +931,7 @@ def transaction_apply(fname):
 
 
 @core_method
+@deletion_method
 def account_delete(account, lock_token=None):
     """
     Delete account
@@ -1393,6 +1410,7 @@ def transaction_complete(transaction_ids, completion_date=None,
 
 
 @core_method
+@deletion_method
 def transaction_delete(transaction_ids):
     """
     Delete (mark deleted) transaction
@@ -1419,6 +1437,8 @@ def transaction_purge(_lock=True):
     """
     Purge deleted transactions
     """
+    if config.restrict_deletion:
+        raise RuntimeError('transaction purge forbidden by server config')
     if _lock:
         lock_purge.acquire()
     try:
