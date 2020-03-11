@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
 
+"""
+ BENCHMARK TIPS
+
+ * drop index i_tag to speed up transaction generation
+
+ * set synchronous_commit = off in postgresql.conf
+
+ * disable transaction auto-vacuum:
+     ALTER TABLE transact
+       SET ( autovacuum_enabled = false, toast.autovacuum_enabled = false);
+
+ * to execute benchmark again on a large (1000k+ transactions db), it's
+   recommended to drop transact and account tables manually (then restart finac
+   server if you do a server benchmark)
+"""
+
 from pathlib import Path
 import sqlalchemy as sa
 import sys
@@ -27,12 +43,12 @@ if __name__ == '__main__':
 
     ap = argparse.ArgumentParser()
     ap.add_argument('-a',
-                    '--account-number',
+                    '--account-amount',
                     help='accounts to create',
                     type=int,
                     default=100)
     ap.add_argument('-n',
-                    '--transaction-number',
+                    '--transaction-amount',
                     help='transactions per account',
                     type=int,
                     default=100)
@@ -97,50 +113,37 @@ if __name__ == '__main__':
             """delete from asset where code != 'EUR' and code != 'USD'""")
         print('Creating accounts...')
         # create accounts
-        for x in tqdm(range(1, a.account_number + 1), leave=True):
+        for x in tqdm(range(1, a.account_amount + 1), leave=True):
             futures.append(
                 pool.submit(finac.account_create, f'account-{x}', 'USD'))
         wait_futures()
         # generate transactions
         print('Generating transactions...')
-        for i in tqdm(range(a.transaction_number), leave=True):
-            for x in range(1, a.account_number + 1):
-                dt_id = x
-                while dt_id == x:
-                    dt_id = random.randint(1, a.account_number)
-                futures.append(
-                    pool.submit(finac.mv,
-                                dt=f'account-{dt_id}',
-                                ct=f'account-{x}',
-                                amount=random.randint(1000, 10000) / 1000.0,
-                                tag=f'trans {x}'))
-            wait_futures()
+        from benchmark_tools import generate_transactions
+        for x in tqdm(range(1, a.account_amount + 1), leave=True):
+            futures.append(
+                generate_transactions(x, a.transaction_amount,
+                                      a.account_amount))
+        wait_futures()
     print('Testing...')
     if a.finac_server:
         finac.preload()
     t = time.time()
-    for x in tqdm(range(1, a.account_number + 1), leave=True):
+    for x in tqdm(range(1, a.account_amount + 1), leave=True):
         dt_id = x
         while dt_id == x:
-            dt_id = random.randint(1, a.account_number)
-        futures.append(
-            pool.submit(finac.mv,
-                        dt=f'account-{dt_id}',
-                        ct=f'account-{x}',
-                        amount=random.randint(1000, 10000) / 1000.0,
-                        tag=f'trans {x}'))
-    wait_futures()
+            dt_id = random.randint(1, a.account_amount)
+        finac.mv(dt=f'account-{dt_id}',
+                 ct=f'account-{x}',
+                 amount=random.randint(1000, 10000) / 1000.0,
+                 tag=f'trans {x}')
     print('Average transaction time: {:.3f}ms'.format(
-        (time.time() - t) / a.account_number * 1000))
+        (time.time() - t) / a.account_amount * 1000))
     t = time.time()
-    for x in tqdm(range(1, a.account_number + 1), leave=True):
-        futures.append(
-            pool.submit(finac.account_statement_summary,
-                        f'account-{x}',
-                        start='2019-01-01'))
-    wait_futures()
+    for x in tqdm(range(1, a.account_amount + 1), leave=True):
+        finac.account_statement_summary(f'account-{x}', start='2019-01-01')
     print('Average statement time: {:.3f}ms'.format(
-        (time.time() - t) / a.account_number * 1000))
+        (time.time() - t) / a.account_amount * 1000))
     if not a.benchmark_only and not a.finac_server:
         if a.dbconn == TEST_DB:
             os.unlink(TEST_DB)
