@@ -637,6 +637,9 @@ if __name__ == '__main__':
                     help='DB connection string',
                     metavar='DBCONN',
                     default=TEST_DB)
+    ap.add_argument('--redis',
+                    help='test Redis locking (local only)',
+                    action='store_true')
     a = ap.parse_args()
     try:
         if a.debug:
@@ -655,7 +658,14 @@ if __name__ == '__main__':
                 os.unlink(TEST_DB)
             except:
                 pass
-        finac.init(db=a.dbconn, keep_integrity=True, multiplier=a.multiplier)
+        if a.redis:
+            import redis
+            redis.Redis(host='localhost', db=9).flushdb()
+        finac.init(db=a.dbconn,
+                   keep_integrity=True,
+                   multiplier=a.multiplier,
+                   redis_host='localhost' if a.redis else None,
+                   redis_db=9)
         finac.core.rate_cache = None
         for tbl in ['account', 'transact', 'asset_rate']:
             finac.core.get_db().execute('delete from {}'.format(tbl))

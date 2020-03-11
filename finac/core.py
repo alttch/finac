@@ -105,7 +105,7 @@ from .db_set import init_db
 
 logger = logging.getLogger('finac')
 
-_db = SimpleNamespace(engine=None)
+_db = SimpleNamespace(engine=None, redis_conn=None)
 
 config = SimpleNamespace(db=None,
                          db_pool_size=10,
@@ -119,6 +119,11 @@ config = SimpleNamespace(db=None,
                          api_key=None,
                          api_timeout=5,
                          multiplier=None,
+                         redis_host=None,
+                         redis_port=6379,
+                         redis_db=0,
+                         redis_timeout=5,
+                         redis_blocking_timeout=5,
                          date_format='%Y-%m-%d %H:%M:%S')
 
 lock_purge = threading.Lock()
@@ -311,19 +316,30 @@ class AccountLocker:
         self.counter = 0
         self._lock = threading.Lock()
 
-    def acquire(self, token=None):
+    def acquire(self, token=None, account=None):
         if token:
             with self._lock:
                 if token == self.token:
                     self.counter += 1
                     return token
-        while True:
+        if _db.redis_conn:
             with self._lock:
-                if not self.counter:
-                    self.token = gen_random_str() if not token else token
-                    self.counter = 1
-                    return self.token
-            time.sleep(LOCK_DELAY)
+                self.token = _db.redis_conn.lock(
+                    account,
+                    blocking_timeout=config.redis_blocking_timeout,
+                    thread_local=False)
+                if not self.token.acquire():
+                    raise RuntimeError('Unable to acquire account lock')
+                self.counter = 1
+                return self.token
+        else:
+            while True:
+                with self._lock:
+                    if not self.counter:
+                        self.token = gen_random_str() if not token else token
+                        self.counter = 1
+                        return self.token
+                time.sleep(LOCK_DELAY)
 
     def release(self, token):
         with self._lock:
@@ -331,6 +347,8 @@ class AccountLocker:
             if self.counter < 1: raise RuntimeError('Resource not locked')
             self.counter -= 1
             if not self.counter:
+                if _db.redis_conn:
+                    self.token.release()
                 self.token = None
 
 
@@ -389,6 +407,14 @@ def init(db=None, **kwargs):
         base_asset: default base asset. Default is "USD"
         date_format: default date format in statements
         multiplier: use data multiplier
+        redis_host: Redis host
+        redis_port: Redis port (default: 6379)
+        redis_db: Redis database (default: 0)
+        redis_timeout: Redis server timeout
+        redis_blocking_timeout: Redis lock acquisition timeout
+
+    Note: if Redis server is specified, Finac will use it for integrity locking
+          (if enabled). In this case, lock tokens become Redis lock objects.
     """
     for k, v in kwargs.items():
         if k == 'rate_ttl':
@@ -408,6 +434,12 @@ def init(db=None, **kwargs):
         _db.use_lastrowid = db_uri.startswith('sqlite') or db_uri.startswith(
             'mysql')
         init_db(_db.engine)
+    if config.redis_host is not None:
+        import redis
+        _db.redis_conn = redis.Redis(host=config.redis_host,
+                                     port=config.redis_port,
+                                     db=config.redis_db,
+                                     socket_timeout=config.redis_timeout)
 
 
 @core_method
@@ -923,7 +955,7 @@ def account_lock(account, token):
     Returns:
         specified lock token or new lock token if no token provided
     """
-    account = account.upper() if account else account
+    account = account.upper()
     if config.keep_integrity:
         with lock_account_token:
             if account in account_lockers:
@@ -931,7 +963,7 @@ def account_lock(account, token):
             else:
                 l = AccountLocker()
                 account_lockers[account] = l
-        return l.acquire(token)
+        return l.acquire(token, account)
 
 
 @core_method
@@ -1340,7 +1372,8 @@ def transaction_complete(transaction_ids, completion_date=None,
                 if dt:
                     amount = tinfo['amount']
                     acc_info = account_info(dt)
-            token = account_lock(dt, lock_token)
+            if dt:
+                token = account_lock(dt, lock_token)
             try:
                 if config.keep_integrity and dt:
                     if amount > 0 and acc_info[
