@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 
 from finac import core, ResourceNotFound, RateNotFound, ResourceAlreadyExists
 from finac import OverdraftError, OverlimitError
+from finac.core import get_db
 
 from types import GeneratorType
 
@@ -14,6 +15,12 @@ key = None
 
 class AccessDenied(Exception):
     pass
+
+
+@app.route('/ping')
+def ping():
+    get_db()
+    return jsonify({'ok': True})
 
 
 @app.route('/jrpc', methods=['POST'])
