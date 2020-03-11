@@ -54,6 +54,13 @@ if __name__ == '__main__':
     ap.add_argument('--no-keeper',
                     help='disable built-in integrity keeper',
                     action='store_true')
+    ap.add_argument('-C',
+                    '--clean',
+                    help='clean database before start',
+                    action='store_true')
+    ap.add_argument('--skip-accounts',
+                    help='skip accounts creation',
+                    action='store_true')
     ap.add_argument('--benchmark-only',
                     help='benchmark on pre-generated database',
                     action='store_true')
@@ -69,6 +76,11 @@ if __name__ == '__main__':
                     '--finac-server-key',
                     metavar='KEY',
                     help='Finac server key')
+    ap.add_argument(
+        '--commit-every',
+        type=int,
+        help='When using local database - commit every N transactions',
+        default=1)
     ap.add_argument('-w',
                     '--workers',
                     help='Max client workers (may '
@@ -100,27 +112,41 @@ if __name__ == '__main__':
         futures.clear()
 
     if not a.benchmark_only:
-        print('Cleaning up...')
-        # cleanup
-        if a.finac_server:
-            db = sa.create_engine(a.dbconn)
-        else:
-            db = finac.core.get_db()
-        for tbl in ['transact', 'account', 'asset_rate']:
-            db.execute('delete from {}'.format(tbl))
-        db.execute(
-            """delete from asset where code != 'EUR' and code != 'USD'""")
-        print('Creating accounts...')
-        # create accounts
-        for x in tqdm(range(1, a.account_amount + 1), leave=True):
-            finac.account_create(f'account-{x}', 'USD')
+        if a.clean:
+            print('Cleaning up...')
+            # cleanup
+            if a.finac_server:
+                db = sa.create_engine(a.dbconn)
+            else:
+                db = finac.core.get_db()
+            for tbl in ['transact', 'account', 'asset_rate']:
+                db.execute('delete from {}'.format(tbl))
+            db.execute(
+                """delete from asset where code != 'EUR' and code != 'USD'""")
+        if not a.skip_accounts:
+            print('Creating accounts...')
+            # create accounts
+            for x in tqdm(range(1, a.account_amount + 1), leave=True):
+                finac.account_create(f'account-{x}', 'USD')
         # generate transactions
         print('Generating transactions...')
         from benchmark_tools import generate_transactions
+        c = 0
         for x in tqdm(range(1, a.account_amount + 1), leave=True):
-            futures.append(
-                pool.submit(generate_transactions, x, a.transaction_amount,
-                            a.account_amount))
+            if a.workers > 1:
+                futures.append(
+                    pool.submit(generate_transactions, x, a.transaction_amount,
+                                a.account_amount))
+            else:
+                if not a.finac_server and a.commit_every > 1 and c == 0:
+                    db = finac.core.get_db()
+                    dbt = db.begin()
+                generate_transactions(x, a.transaction_amount, a.account_amount)
+                c += a.transaction_amount
+                if c > a.commit_every:
+                    c = 0
+                    if not a.finac_server:
+                        dbt.commit()
             if len(futures) > a.workers: wait_futures()
         wait_futures()
     print('Testing...')
