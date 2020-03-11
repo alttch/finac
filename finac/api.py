@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 
 from finac import core, ResourceNotFound, RateNotFound, ResourceAlreadyExists
 from finac import OverdraftError, OverlimitError
-from finac.core import get_db
+from finac.core import get_db, logger
 
 from types import GeneratorType
 
@@ -38,34 +38,47 @@ def jrpc():
             if i is not None:
                 resp['error'] = {'code': code, 'message': message}
 
+        log_from = f'FINAC API request from {request.remote_addr}'
+
         try:
             params = req.get('params', {})
             if key is not None and key != params.get('_k'):
                 raise AccessDenied
             if '_k' in params:
                 del params['_k']
+            logger.info(f'{log_from} {req["method"]}')
+            logger.debug(req.get('params'))
             result = getattr(core, req['method'])(**req.get('params', {}))
             if isinstance(result, GeneratorType):
                 result = list(result)
             if i is not None:
                 resp['result'] = result
         except AccessDenied:
+            logger.error(f'{log_from} access denied')
             append_error(-32000, 'Access denied')
         except ResourceNotFound as e:
+            logger.info(f'{log_from} resource not found')
             append_error(-32001, str(e))
         except RateNotFound as e:
+            logger.info(f'{log_from} rate not found')
             append_error(-32002, str(e))
         except OverdraftError as e:
+            logger.info(f'{log_from} overdraft error')
             append_error(-32003, str(e))
         except OverlimitError as e:
+            logger.info(f'{log_from} overlimit error')
             append_error(-32004, str(e))
         except ResourceAlreadyExists as e:
+            logger.info(f'{log_from} resource already exists')
             append_error(-32005, str(e))
         except AttributeError:
+            logger.warning(f'{log_from} method not found')
             append_error(-32601, 'Method not found')
         except TypeError:
+            logger.warning(f'{log_from} invalid params')
             append_error(-32602, 'Invalid params')
         except Exception as e:
+            logger.warning(f'{log_from} unknown error')
             append_error(-32603, str(e))
         if i is not None:
             response.append(resp)
