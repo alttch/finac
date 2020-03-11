@@ -163,6 +163,7 @@ if __name__ == '__main__':
                         ct=f'account-{x}',
                         amount=random.randint(1000, 10000) / 1000.0,
                         tag=f'trans {x}'))
+        if len(futures) > a.workers: wait_futures()
     wait_futures()
     print('Average transaction time: {:.3f}ms'.format(
         (time.time() - t) / a.account_amount * 1000))
@@ -172,6 +173,7 @@ if __name__ == '__main__':
             pool.submit(finac.account_statement_summary,
                         f'account-{x}',
                         start='2019-01-01'))
+        if len(futures) > a.workers: wait_futures()
     wait_futures()
     print('Average statement time: {:.3f}ms'.format(
         (time.time() - t) / a.account_amount * 1000))
