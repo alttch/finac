@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 
 from finac import core, ResourceNotFound, RateNotFound, ResourceAlreadyExists
 from finac import OverdraftError, OverlimitError
@@ -11,6 +11,10 @@ app = Flask('finac')
 app.config["JSON_SORT_KEYS"] = False
 
 key = None
+
+
+def get_real_ip():
+    return request.remote_addr
 
 
 class AccessDenied(Exception):
@@ -28,8 +32,11 @@ def jrpc():
     payload = request.json
     response = []
     for req in payload if isinstance(payload, list) else [payload]:
-        if req['jsonrpc'] != '2.0':
-            raise RuntimeError('Unsupported protocol')
+        log_from = 'FINAC API request from ' + get_real_ip()
+
+        if not req or req.get('jsonrpc') != '2.0':
+            logger.warning(f'{log_from} unsupported protocol')
+            return Response('Unsupported protocol', status=405)
         i = req.get('id')
         if i is not None:
             resp = {'jsonrpc': '2.0', 'id': i}
@@ -37,8 +44,6 @@ def jrpc():
         def append_error(code, message=''):
             if i is not None:
                 resp['error'] = {'code': code, 'message': message}
-
-        log_from = f'FINAC API request from {request.remote_addr}'
 
         try:
             params = req.get('params', {})
