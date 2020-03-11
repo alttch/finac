@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 """
  BENCHMARK TIPS
 
@@ -114,9 +113,7 @@ if __name__ == '__main__':
         print('Creating accounts...')
         # create accounts
         for x in tqdm(range(1, a.account_amount + 1), leave=True):
-            futures.append(
-                pool.submit(finac.account_create, f'account-{x}', 'USD'))
-        wait_futures()
+            finac.account_create(f'account-{x}', 'USD')
         # generate transactions
         print('Generating transactions...')
         from benchmark_tools import generate_transactions
