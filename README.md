@@ -28,6 +28,18 @@ Sources: https://github.com/alttch/finac
 
 Documentation: https://finac.readthedocs.io/
 
+## Updating from 0.3.x
+
+Starting from 0.4, Finac uses DateTime columns for:
+
+* asset_rate.d
+* transact.d
+* transact.d_created
+* transact.deleted
+
+Depending to your database type, it's REQUIRED to convert these columns to
+either DATETIME (SQLite, MySQL) or TIMESTAMP (PostgreSQL, without time zone).
+
 ## How to use in interactive mode
 
 Finac database contain 3 entity types:

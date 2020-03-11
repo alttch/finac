@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import (Table, Column, Integer, String, MetaData, TEXT, Float,
-                        ForeignKey, text, Index, Boolean)
+                        ForeignKey, text, Index, Boolean, DateTime)
 from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger('finac')
@@ -27,7 +27,7 @@ asset_rate = Table('asset_rate',
                           ForeignKey('asset.id', ondelete='CASCADE'),
                           nullable=False,
                           primary_key=True),
-                   Column('d', Integer, nullable=False, primary_key=True),
+                   Column('d', DateTime, nullable=False, primary_key=True),
                    Column('value', Float(precision=32), nullable=False),
                    mysql_engine='InnoDB',
                    mysql_charset='utf8mb4')
@@ -59,11 +59,10 @@ transact = Table('transact',
                  Column('tag', String(20)),
                  Column('note', String(20)),
                  Column('note', String(1024), default=''),
-                 Column('d_created', Integer, nullable=False),
-                 Column('d', Integer),
+                 Column('d_created', DateTime, nullable=False),
+                 Column('d', DateTime),
                  Column('chain_transact_id', Integer),
-                 Column('deleted', Integer, default=None),
-                 Index('i_tag', 'tag'),
+                 Column('deleted', DateTime, default=None),
                  mysql_engine='InnoDB',
                  mysql_charset='utf8mb4')
 

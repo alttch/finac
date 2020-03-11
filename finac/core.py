@@ -204,9 +204,14 @@ def format_date(d):
     if d is not None:
         if config.date_format is None:
             return d
-        else:
+        elif isinstance(d, int):
             return datetime.datetime.strftime(
                 datetime.datetime.fromtimestamp(d), config.date_format)
+        elif isinstance(d, datetime.datetime):
+            return d
+        else:
+            return datetime.datetime.strftime(
+                parse_date(d, return_timestamp=False), config.date_format)
 
 
 def preload():
@@ -512,10 +517,11 @@ def asset_list_rates(asset=None, start=None, end=None):
         cond = ''
         asset = _safe_format(asset.upper())
         if start:
-            dts = parse_date(_safe_format(start))
-            cond += (' and ' if cond else '') + 'd >= {}'.format(dts)
-        dte = parse_date(_safe_format(end)) if end else parse_date()
-        cond += (' and ' if cond else '') + 'd <= {}'.format(dte)
+            dts = parse_date(start, return_timestamp=False)
+            cond += (' and ' if cond else '') + 'd >= \'{}\''.format(dts)
+        dte = parse_date(end, return_timestamp=False) if end else parse_date(
+            return_timestamp=False)
+        cond += (' and ' if cond else '') + 'd <= \'{}\''.format(dte)
         if asset.find('/') != -1:
             asset_from, asset_to = _safe_format(asset.split('/'))
             cond += (' and ' if cond else
@@ -536,7 +542,8 @@ def asset_list_rates(asset=None, start=None, end=None):
                     where {cond}
         """.format(cond=cond)))
     else:
-        d = parse_date(end) if end else int(time.time())
+        d = parse_date(end, return_timestamp=False) if end else parse_date(
+            return_timestamp=False)
         r = get_db().execute(sql("""
             select
                 a1.code as asset_from,
@@ -606,9 +613,9 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
     else:
         value = parse_number(value)
     if date is None:
-        date = int(time.time())
+        date = parse_date(return_timestamp=False)
     else:
-        date = parse_date(date)
+        date = parse_date(date, return_timestamp=False)
     if asset_from.find('/') != -1 and asset_to is None:
         asset_from, asset_to = asset_from.split('/')
     logging.info('Setting rate for {}/{} to {} for {}'.format(
@@ -639,7 +646,7 @@ def asset_delete_rate(asset_from, asset_to=None, date=None):
         raise ValueError('asset rate date not specified')
     if asset_from.find('/') != -1 and asset_to is None:
         asset_from, asset_to = asset_from.split('/')
-    date = parse_date(date)
+    date = parse_date(date, return_timestamp=False)
     logging.info('Deleting rate for {}/{} for {}'.format(
         asset_from.upper(), asset_to.upper(), format_date(date)))
     if not get_db().execute(sql("""
@@ -667,9 +674,9 @@ def asset_rate(asset_from, asset_to=None, date=None):
     Function can be also called as e.g. asset_rate('EUR/USD')
     """
     if date is None:
-        date = int(time.time())
+        date = parse_date(return_timestamp=False)
     else:
-        date = parse_date(date)
+        date = parse_date(date, return_timestamp=False)
     if asset_from.find('/') != -1 and asset_to is None:
         asset_from, asset_to = asset_from.split('/')
     asset_from = asset_from.upper()
@@ -813,14 +820,16 @@ def account_create(account,
         acc_id = r.lastrowid if _db.use_lastrowid else r.fetchone().id
         db.execute(sql("""
             insert into transact(account_debit_id, amount, d_created, d) values
-            (:account_id, 0, 0, 0)
+            (:account_id, 0, :d, :d)
             """),
-                   account_id=acc_id)
+                   account_id=acc_id,
+                   d=datetime.datetime.fromtimestamp(0))
         db.execute(sql("""
             insert into transact(account_credit_id, amount, d_created, d) values
-            (:account_id, 0, 0, 0)
+            (:account_id, 0, :d, :d)
             """),
-                   account_id=acc_id)
+                   account_id=acc_id,
+                   d=datetime.datetime.fromtimestamp(0))
         dbt.commit()
     except IntegrityError:
         dbt.rollback()
@@ -943,8 +952,10 @@ def account_delete(account, lock_token=None):
         if not get_db().execute(sql("""
         delete from transact where
         account_debit_id=(select id from account where code=:code) or
-        account_credit_id=(select id from account where code=:code) and d=0"""),
-                                code=account).rowcount:
+        account_credit_id=(select id from account where code=:code) and d=:d"""
+                                   ),
+                                code=account,
+                                d=datetime.datetime.fromtimestamp(0)).rowcount:
             raise ResourceNotFound
         if not get_db().execute(sql("""
         delete from account where code=:code"""),
@@ -1070,10 +1081,10 @@ def transaction_update(transaction_id, **kwargs):
     _ckw(kwargs, a)
     kw = kwargs.copy()
     if 'created' in kw:
-        kw['d_created'] = parse_date(kw['created'])
+        kw['d_created'] = parse_date(kw['created'], return_timestamp=False)
         del kw['created']
     if 'completed' in kw:
-        kw['d'] = parse_date(kw['completed'])
+        kw['d'] = parse_date(kw['completed'], return_timestamp=False)
         del kw['completed']
     if 'amount' in kw:
         kw['amount'] = parse_number(kw['amount'])
@@ -1220,14 +1231,14 @@ def _transaction_move(dt=None,
             if m is not None and account_balance(dt) + amount > m:
                 raise OverlimitError
     if date is None:
-        date = int(time.time())
+        date = parse_date(return_timestamp=False)
     else:
-        date = parse_date(date)
+        date = parse_date(date, return_timestamp=False)
     if completion_date is None:
         if mark_completed:
             completion_date = date
     else:
-        completion_date = parse_date(completion_date)
+        completion_date = parse_date(completion_date, return_timestamp=False)
     r = db.execute(sql("""
     insert into transact(account_credit_id, account_debit_id, amount, tag,
     note, d_created, d, chain_transact_id) values
@@ -1376,7 +1387,8 @@ def transaction_complete(transaction_ids, completion_date=None,
         completion_date: completion date (default: now)
     """
     logging.info('Completing transaction {}'.format(transaction_ids))
-    if completion_date is None: completion_date = int(time.time())
+    if completion_date is None:
+        completion_date = parse_date(return_timestamp=False)
     if config.keep_integrity:
         ids = transaction_ids if isinstance(transaction_ids,
                                             (list,
@@ -1423,7 +1435,7 @@ def transaction_delete(transaction_ids):
         if not get_db().execute(sql("""
         update transact set
         deleted=:ts where id=:id or chain_transact_id=:id"""),
-                                ts=int(time.time()),
+                                ts=parse_date(return_timestamp=False),
                                 id=transaction_id).rowcount:
             logging.error('Transaction {} not found'.format(transaction_id))
             raise ResourceNotFound
@@ -1545,14 +1557,16 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         generator object
     """
     acc_info = account_info(account)
-    cond = 'transact.deleted is null and d_created != 0'
+    cond = 'transact.deleted is null and d_created > \'1970-01-02\''
     d_field = 'd_created' if pending else 'd'
     if start:
-        dts = parse_date(_safe_format(start))
-        cond += (' and ' if cond else '') + 'transact.{} >= {}'.format(
+        dts = parse_date(start, return_timestamp=False)
+        cond += (' and ' if cond else '') + 'transact.{} >= \'{}\''.format(
             d_field, dts)
-    dte = parse_date(_safe_format(end)) if end else parse_date()
-    cond += (' and ' if cond else '') + 'transact.{} <= {}'.format(d_field, dte)
+    dte = parse_date(end, return_timestamp=False) if end else parse_date(
+        return_timestamp=False)
+    cond += (' and ' if cond else '') + 'transact.{} <= \'{}\''.format(
+        d_field, dte)
     if tag is not None:
         tag = _safe_format(tag) if isinstance(tag,
                                               (list,
@@ -1696,8 +1710,10 @@ def account_list(asset=None,
         cond += ')'
     else:
         cond += (' and ' if cond else '') + 'account.tp <= 1000'
-    dts = parse_date(date) if date else parse_date()
-    cond += (' and ' if cond else '') + 'transact.d_created <= {}'.format(dts)
+    dts = parse_date(date, return_timestamp=False) if date else parse_date(
+        return_timestamp=False)
+    cond += (' and '
+             if cond else '') + 'transact.d_created <= \'{}\''.format(dts)
     if code:
         cond += (' and ' if cond else '') + 'account.code like \'{}\''.format(
             _safe_format(code.upper()))
@@ -1939,8 +1955,8 @@ def _account_summary(balance_type,
         cond += (' and ' if cond else '') + 'asset.code = \'{}\''.format(
             _safe_format(asset))
     if date:
-        dts = parse_date(_safe_format(date))
-        cond += (' and ' if cond else '') + 'transact.d <= {}'.format(dts)
+        dts = parse_date(date, return_timestamp=False)
+        cond += (' and ' if cond else '') + 'transact.d <= \'{}\''.format(dts)
     if tp:
         if isinstance(tp, int):
             tp_id = tp
@@ -1997,8 +2013,10 @@ def account_balance(account=None, tp=None, base=None, date=None,
     elif not account and not tp:
         tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
     cond = "transact.deleted is null"
-    dts = parse_date(_safe_format(date)) if date else parse_date()
-    cond += (' and ' if cond else '') + 'transact.d_created <= {}'.format(dts)
+    dts = parse_date(date, return_timestamp=False) if date else parse_date(
+        return_timestamp=False)
+    cond += (' and '
+             if cond else '') + 'transact.d_created <= \'{}\''.format(dts)
     balance = None
     if account:
         acc_info = account_info(account)

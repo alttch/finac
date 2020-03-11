@@ -41,10 +41,10 @@ class Test(unittest.TestCase):
                                                           mark_completed=False)
         self.assertEqual(finac.account_balance('TEST.TEST'), 0)
         statement = list(
-            finac.account_statement('TEST.TEST', '20"19-01-0;1', pending=False))
+            finac.account_statement('TEST.TEST', '2019-01-01', pending=False))
         self.assertEqual(len(statement), 0)
         statement = list(
-            finac.account_statement('test.test', '201\'9-0"1-01', pending=True))
+            finac.account_statement('test.test', '2019-01-01', pending=True))
         self.assertEqual(len(statement), 1)
 
     def test004_transaction_complete(self):
@@ -71,7 +71,7 @@ class Test(unittest.TestCase):
             finac.account_statement('TEST.TEST', '2019-01-01', '2119-05-22'))
         self.assertEqual(len(statement), 2)
         statement = list(finac.account_statement('TEST.TEST',
-                                                 end='2119-0"5-22'))
+                                                 end='2119-05-22'))
         self.assertEqual(len(statement), 2)
         ss = finac.account_statement_summary('TEST.TEST', end='2119-05-22')
         self.assertEqual(ss['credit'], 25)
