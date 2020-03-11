@@ -119,8 +119,9 @@ if __name__ == '__main__':
         from benchmark_tools import generate_transactions
         for x in tqdm(range(1, a.account_amount + 1), leave=True):
             futures.append(
-                generate_transactions(x, a.transaction_amount,
-                                      a.account_amount))
+                pool.submit(generate_transactions, x, a.transaction_amount,
+                            a.account_amount))
+            if len(futures) > a.workers: wait_futures()
         wait_futures()
     print('Testing...')
     if a.finac_server:
