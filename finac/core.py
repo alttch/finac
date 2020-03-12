@@ -246,7 +246,7 @@ def _asset_precision(asset=None):
                              code=asset.upper()).fetchone()
         if not d:
             raise ResourceNotFound
-        precs = d.precs
+        precs = int(d.precs)
         asset_precision_cache[asset] = precs
         return precs
     else:
@@ -259,7 +259,7 @@ def _asset_precision(asset=None):
                 if not r: break
                 row = OrderedDict()
                 row['asset'] = r.code
-                row['precision'] = r.precs
+                row['precision'] = int(r.precs)
                 yield row
 
         return all_precs()

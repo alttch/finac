@@ -348,9 +348,9 @@ class Test(unittest.TestCase):
         self.assertEqual(dt1[-1], 5580)
 
     def test098_asset_update(self):
-        finac.asset_update('eur', code='euRo')
-        self.assertEqual(finac.asset_rate('EURo/USD'), 1.1)
-        finac.asset_update('euro', code='eur')
+        finac.asset_update('eur', code='ouR')
+        self.assertEqual(finac.asset_rate('OUR/USD'), 1.1)
+        finac.asset_update('our', code='eur')
 
     def test099_transact_update(self):
         finac.transaction_update(result.id4test099,
