@@ -89,22 +89,3 @@ def init_db(engine):
                          code=cur)
         except IntegrityError:
             pass
-    try:
-        conn.execute(
-            sql("""
-            ALTER TABLE transact ADD FOREIGN KEY(chain_transact_id)
-                REFERENCES transact(id) ON DELETE SET null
-            """))
-    except:
-        pass
-    try:
-        conn.execute(
-            sql("""
-                    ALTER TABLE transact ADD service bool;
-                """))
-        conn.execute(
-            sql("""
-            UPDATE transact SET service=True WHERE d_created<'1970-01-03';
-            """))
-    except:
-        pass

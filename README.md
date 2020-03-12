@@ -28,7 +28,18 @@ Sources: https://github.com/alttch/finac
 
 Documentation: https://finac.readthedocs.io/
 
-## Updating from 0.3.x
+## Updating
+
+# from 0.4.10
+
+```sql
+ALTER TABLE transact ADD service bool;
+UPDATE transact SET service=True WHERE d_created<'1970-01-03';
+ALTER TABLE transact ADD FOREIGN KEY(chain_transact_id)
+  REFERENCES transact(id) ON DELETE SET null;
+```
+
+# from 0.3.x
 
 Starting from 0.4, Finac uses DateTime columns for:
 
