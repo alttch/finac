@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy import (Table, Column, Integer, String, MetaData, TEXT, Float,
-                        ForeignKey, text, Index, Boolean, DateTime)
-from sqlalchemy.exc import IntegrityError
+                        ForeignKey, text as sql, Index, Boolean, DateTime)
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 
 logger = logging.getLogger('finac')
 
@@ -67,19 +67,44 @@ transact = Table('transact',
                  Column('d', DateTime),
                  Index('transact_account_credit_id', 'account_credit_id'),
                  Index('transact_account_debit_id', 'account_debit_id'),
-                 Column('chain_transact_id', Integer),
-                 Index('transact_chain_tranasct_id', 'chain_transact_id'),
+                 Column(
+                     'chain_transact_id',
+                     Integer,
+                     ForeignKey('transact.id', ondelete='SET NULL'),
+                 ),
+                 Index('transact_chain_transact_id', 'chain_transact_id'),
                  Column('deleted', DateTime, default=None),
+                 Column('service', Boolean, default=False),
                  mysql_engine='InnoDB',
                  mysql_charset='utf8mb4')
 
 
 def init_db(engine):
     meta.create_all(engine)
+    conn = engine.connect()
     for cur in ('EUR', 'USD'):
         try:
-            engine.execute(text("""
-    insert into asset(code, precs) values(:code, 2)"""),
-                           code=cur)
-        except IntegrityError as e:
+            conn.execute(sql("""
+                INSERT INTO asset(code, precs) VALUES(:code, 2)"""),
+                         code=cur)
+        except IntegrityError:
             pass
+    try:
+        conn.execute(
+            sql("""
+            ALTER TABLE transact ADD FOREIGN KEY(chain_transact_id)
+                REFERENCES transact(id) ON DELETE SET null
+            """))
+    except:
+        pass
+    try:
+        conn.execute(
+            sql("""
+                    ALTER TABLE transact ADD service bool;
+                """))
+        conn.execute(
+            sql("""
+            UPDATE transact SET service=True WHERE d_created<'1970-01-03';
+            """))
+    except:
+        pass

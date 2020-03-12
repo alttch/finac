@@ -819,17 +819,23 @@ def account_create(account,
                        max_balance=_multiply(max_balance))
         acc_id = r.lastrowid if _db.use_lastrowid else r.fetchone().id
         db.execute(sql("""
-            insert into transact(account_debit_id, amount, d_created, d) values
-            (:account_id, 0, :d, :d)
+            INSERT INTO transact
+                (account_debit_id, amount, d_created, d, service)
+            VALUES
+                (:account_id, 0, :d, :d, :s)
             """),
                    account_id=acc_id,
-                   d=datetime.datetime.fromtimestamp(0))
+                   d=datetime.datetime.fromtimestamp(0),
+                   s=True)
         db.execute(sql("""
-            insert into transact(account_credit_id, amount, d_created, d) values
-            (:account_id, 0, :d, :d)
+            INSERT INTO transact
+                (account_credit_id, amount, d_created, d, service)
+            VALUES
+                (:account_id, 0, :d, :d, :s)
             """),
                    account_id=acc_id,
-                   d=datetime.datetime.fromtimestamp(0))
+                   d=datetime.datetime.fromtimestamp(0),
+                   s=True)
         dbt.commit()
     except IntegrityError:
         dbt.rollback()
@@ -876,6 +882,7 @@ def transaction_info(transaction_id):
             transact.note as note,
             transact.d_created as d_created,
             transact.d as d,
+            transact.service as service,
             chain_transact_id,
             dt.code as debit,
             ct.code as credit
@@ -897,6 +904,7 @@ def transaction_info(transaction_id):
         'created': d.d_created,
         'completed': d.d,
         'chain_transact_id': d.chain_transact_id,
+        'service': d.service,
         'dt': d.debit if hasattr(d, 'debit') else None,
         'ct': d.credit if hasattr(d, 'credit') else None,
     }
@@ -1433,8 +1441,9 @@ def transaction_delete(transaction_ids):
     for transaction_id in ids:
         tinfo = transaction_info(transaction_id)
         if not get_db().execute(sql("""
-        update transact set
-        deleted=:ts where id=:id or chain_transact_id=:id"""),
+        UPDATE transact SET
+            deleted=:ts WHERE (id=:id or chain_transact_id=:id) AND
+            service IS null"""),
                                 ts=parse_date(return_timestamp=False),
                                 id=transaction_id).rowcount:
             logging.error('Transaction {} not found'.format(transaction_id))
@@ -1557,7 +1566,7 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         generator object
     """
     acc_info = account_info(account)
-    cond = 'transact.deleted is null and d_created > \'1970-01-03\''
+    cond = 'transact.deleted is null and transact.service is null'
     d_field = 'd_created' if pending else 'd'
     if start:
         dts = parse_date(start, return_timestamp=False)

@@ -669,7 +669,7 @@ if __name__ == '__main__':
                    redis_host='localhost' if a.redis else None,
                    redis_db=9)
         finac.core.rate_cache = None
-        for tbl in ['account', 'transact', 'asset_rate']:
+        for tbl in ['transact', 'account', 'asset_rate']:
             finac.core.get_db().execute('delete from {}'.format(tbl))
         finac.core.get_db().execute(
             """delete from asset where code != 'EUR' and code != 'USD'""")
