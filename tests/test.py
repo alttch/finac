@@ -398,9 +398,11 @@ class Test(unittest.TestCase):
         print()
 
     def test104_check_currency_exist(self):
+        finac.asset_create('bur')
         try:
-            finac.asset_create('burg')
-        except finac.core.ResourceNotFound:
+            finac.asset_create('bur')
+            raise RuntimeError('Exception not raised')
+        except finac.core.ResourceAlreadyExists:
             pass
 
     def test200_account_balance(self):
