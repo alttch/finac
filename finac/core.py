@@ -539,7 +539,7 @@ def asset_list_rates(asset=None, start=None, end=None):
             from asset_rate
                 join asset as cf on asset_from_id = cf.id
                 join asset as ct on asset_to_id = ct.id
-                    where {cond}
+                    where {cond} order by d
         """.format(cond=cond)))
     else:
         d = parse_date(end, return_timestamp=False) if end else parse_date(
