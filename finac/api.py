@@ -12,9 +12,12 @@ app.config["JSON_SORT_KEYS"] = False
 
 key = None
 
+real_ip_header = None
+
 
 def get_real_ip():
-    return request.remote_addr
+    return request.headers.get(real_ip_header, request.remote_addr) if \
+        real_ip_header else request.remote_addr
 
 
 class AccessDenied(Exception):
