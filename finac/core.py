@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.4.9'
+__version__ = '0.4.10'
 
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
@@ -823,13 +823,13 @@ def account_create(account,
             (:account_id, 0, :d, :d)
             """),
                    account_id=acc_id,
-                   d=datetime.datetime(1970, 1, 1))
+                   d=datetime.datetime.fromtimestamp(0))
         db.execute(sql("""
             insert into transact(account_credit_id, amount, d_created, d) values
             (:account_id, 0, :d, :d)
             """),
                    account_id=acc_id,
-                   d=datetime.datetime(1970, 1, 1))
+                   d=datetime.datetime.fromtimestamp(0))
         dbt.commit()
     except IntegrityError:
         dbt.rollback()
