@@ -823,13 +823,13 @@ def account_create(account,
             (:account_id, 0, :d, :d)
             """),
                    account_id=acc_id,
-                   d=datetime.datetime.fromtimestamp(0))
+                   d=datetime.datetime(1970, 1, 1))
         db.execute(sql("""
             insert into transact(account_credit_id, amount, d_created, d) values
             (:account_id, 0, :d, :d)
             """),
                    account_id=acc_id,
-                   d=datetime.datetime.fromtimestamp(0))
+                   d=datetime.datetime(1970, 1, 1))
         dbt.commit()
     except IntegrityError:
         dbt.rollback()
@@ -1557,7 +1557,7 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         generator object
     """
     acc_info = account_info(account)
-    cond = 'transact.deleted is null and d_created > \'1970-01-02\''
+    cond = 'transact.deleted is null and d_created > \'1970-01-03\''
     d_field = 'd_created' if pending else 'd'
     if start:
         dts = parse_date(start, return_timestamp=False)
