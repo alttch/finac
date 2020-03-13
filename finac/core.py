@@ -125,7 +125,7 @@ config = SimpleNamespace(db=None,
                          redis_timeout=5,
                          redis_blocking_timeout=5,
                          restrict_deletion=None,
-                         date_format='%Y-%m-%d %H:%M:%S')
+                         date_format='%Y-%m-%d %H:%M:%S %Z')
 
 lock_purge = threading.Lock()
 lock_account_token = threading.Lock()
@@ -200,14 +200,14 @@ def deletion_method(f):
     return do
 
 
-def format_date(d):
+def format_date(d, force=False):
     if d is not None:
         if config.date_format is None:
             return d
         elif isinstance(d, int):
             return datetime.datetime.strftime(
                 datetime.datetime.fromtimestamp(d), config.date_format)
-        elif isinstance(d, datetime.datetime):
+        elif isinstance(d, datetime.datetime) and not force:
             return d
         else:
             return datetime.datetime.strftime(
@@ -504,7 +504,7 @@ def asset_list():
 
 
 @core_method
-def asset_list_rates(asset=None, start=None, end=None):
+def asset_list_rates(asset=None, start=None, end=None, datefmt=False):
     """
     List asset rates
 
@@ -570,13 +570,13 @@ def asset_list_rates(asset=None, start=None, end=None):
         row = OrderedDict()
         row['asset_from'] = d.asset_from
         row['asset_to'] = d.asset_to
-        row['date'] = format_date(d.d)
+        row['date'] = format_date(d.d, force=datefmt)
         row['value'] = _demultiply(d.value)
         yield row
 
 
-@core_method
 @deletion_method
+@core_method
 def asset_delete(asset):
     """
     Delete asset
@@ -636,8 +636,8 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
                      value=_multiply(value))
 
 
-@core_method
 @deletion_method
+@core_method
 def asset_delete_rate(asset_from, asset_to=None, date=None):
     """
     Delete currrency rate
@@ -947,8 +947,8 @@ def transaction_apply(fname):
     return result
 
 
-@core_method
 @deletion_method
+@core_method
 def account_delete(account, lock_token=None):
     """
     Delete account
@@ -1429,8 +1429,8 @@ def transaction_complete(transaction_ids, completion_date=None,
                     account_unlock(dt, token)
 
 
-@core_method
 @deletion_method
+@core_method
 def transaction_delete(transaction_ids):
     """
     Delete (mark deleted) transaction
@@ -1554,7 +1554,12 @@ def transaction_copy(transaction_ids,
 
 
 @core_method
-def account_statement(account, start=None, end=None, tag=None, pending=True):
+def account_statement(account,
+                      start=None,
+                      end=None,
+                      tag=None,
+                      pending=True,
+                      datefmt=False):
     """
     Args:
         account: account code
@@ -1562,6 +1567,7 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         end: statement end date/time
         tag: filter transactions by tag
         pending: include pending transactions
+        datefmt: format date according to configuration
     Returns:
         generator object
     """
@@ -1604,8 +1610,8 @@ def account_statement(account, start=None, end=None, tag=None, pending=True):
         row = OrderedDict()
         for i in ('id', 'amount', 'cparty', 'tag', 'note'):
             row[i] = getattr(d, i)
-        row['created'] = format_date(d.d_created)
-        row['completed'] = format_date(d.d)
+        row['created'] = format_date(d.d_created, force=datefmt)
+        row['completed'] = format_date(d.d, force=datefmt)
         row['is_completed'] = d.d is not None
         row['amount'] = _demultiply(row['amount'])
         if acc_info['passive'] and row['amount']:
@@ -1618,7 +1624,8 @@ def account_statement_summary(account,
                               start=None,
                               end=None,
                               tag=None,
-                              pending=True):
+                              pending=True,
+                              datefmt=False):
     """
     Args:
         account: account code
@@ -1626,6 +1633,7 @@ def account_statement_summary(account,
         end: statement end date/time
         tag: filter transactions by tag
         pending: include pending transactions
+        datefmt: format date according to configuration
     Returns:
         dict with fields:
             debit: debit turnover
@@ -1638,7 +1646,8 @@ def account_statement_summary(account,
                           start=start,
                           end=end,
                           tag=tag,
-                          pending=pending))
+                          pending=pending,
+                          datefmt=datefmt))
     credit = 0
     debit = 0
     for row in statement:
