@@ -4,7 +4,8 @@ from pathlib import Path
 import sys
 import os
 
-sys.path.insert(0, Path(__file__).absolute().parent.parent.as_posix())
+dir_finac = Path(__file__).absolute().parents[1].as_posix()
+sys.path.insert(0, dir_finac)
 import finac
 
 import unittest
@@ -12,10 +13,16 @@ import logging
 import rapidtables
 import random
 import time
+import threading
+import subprocess
+import requests
+import sqlalchemy
+import datetime
 
 from types import SimpleNamespace
+from textwrap import dedent
 
-TEST_DB = '/tmp/finac-test.db'
+TEST_DB = '/tmp/finac-test-{}.db'.format(random.randint(1, 100))
 
 dir_me = Path(__file__).absolute().parent.as_posix()
 
@@ -70,8 +77,7 @@ class Test(unittest.TestCase):
         statement = list(
             finac.account_statement('TEST.TEST', '2019-01-01', '2119-05-22'))
         self.assertEqual(len(statement), 2)
-        statement = list(finac.account_statement('TEST.TEST',
-                                                 end='2119-05-22'))
+        statement = list(finac.account_statement('TEST.TEST', end='2119-05-22'))
         self.assertEqual(len(statement), 2)
         ss = finac.account_statement_summary('TEST.TEST', end='2119-05-22')
         self.assertEqual(ss['credit'], 25)
@@ -79,7 +85,8 @@ class Test(unittest.TestCase):
         self.assertEqual(ss['net'], 75)
 
     def test007_list_summary_and_passive(self):
-        finac.config.base_asset = 'eur'
+        finac.core.config_set('base_asset', 'eur')
+        finac.asset_set_rate('eur/usd', 1.11)
         self.assertEqual(finac.account_list_summary()['total'], 100)
         finac.account_create('supplier1', 'eur', tp='supplier')
         finac.account_create('taxes1', 'eur', tp='tax')
@@ -186,7 +193,7 @@ class Test(unittest.TestCase):
         finac.asset_set_rate('EUR/USD', value=2)
         finac.asset_set_rate('AUD/USD', value='0,69')
         try:
-            finac.asset_rate('EUR', 'USD', date='2018-01-01')
+            print(finac.asset_rate('EUR', 'USD', date='2018-01-01'))
             raise RuntimeError('Rate not found not raised')
         except finac.RateNotFound:
             pass
@@ -194,13 +201,13 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.asset_rate('EUR', 'USD'), 2)
 
     def test061_asset_rate_easyget(self):
-        finac.config.rate_allow_reverse = False
+        finac.core.config_set('rate_allow_reverse', False)
         try:
             finac.asset_rate('USD', 'EUR', date='2019-01-05')
             raise RuntimeError('Rate not found not raised')
         except:
             pass
-        finac.config.rate_allow_reverse = True
+        finac.core.config_set('rate_allow_reverse', True)
         self.assertEqual(finac.asset_rate('USD', 'EUR', date='2019-01-05'),
                          1 / 1.5)
         self.assertEqual(finac.asset_rate('USD', 'EUR'), 1 / 2)
@@ -208,6 +215,7 @@ class Test(unittest.TestCase):
     def test062_asset_rate_delete(self):
         finac.asset_set_rate('EUR', 'USD', value=1.8, date='2018-12-01')
         self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'), 1.5)
+        time.sleep(0.6)
         finac.asset_delete_rate('EUR', 'USD', date='2019-01-01')
         self.assertEqual(finac.asset_rate('EUR', 'USD', date='2019-01-05'), 1.8)
 
@@ -254,15 +262,15 @@ class Test(unittest.TestCase):
         finac.account_create('eur1', 'eur')
         finac.account_create('usd1', 'usd')
         if not config.remote:
-            finac.config.lazy_exchange = False
+            finac.core.config_set('lazy_exchange', False)
             try:
                 finac.transaction_move('usd1', 'eur1', 20)
                 raise RuntimeError(
                     'Lazy exchange is off but asset mismatch not detected')
             except ValueError:
                 pass
-            finac.config.lazy_exchange = True
-        time.sleep(1)
+            finac.core.config_set('lazy_exchange', True)
+        time.sleep(0.6)
         finac.asset_set_rate('EUR/USD', value=1.1)
 
         finac.transaction_move('usd1', 'eur1', 20, xdt=False)
@@ -624,6 +632,95 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_balance('pass.sup'), -1)
         self.assertEqual(finac.account_balance('active.sup'), -51.10)
 
+    def test900_cache_key(self):
+        d = datetime.datetime(2019, 1, 1, 1, 1, 1)
+        d2 = datetime.datetime(2019, 1, 1, 1, 1, 2)
+        assert finac.core._format_ttlcache_key(
+            d, 5) != finac.core._format_ttlcache_key(d2, 5)
+        d = datetime.datetime.now()
+        d2 = d - datetime.timedelta(seconds=2)
+        assert finac.core._format_ttlcache_key(
+            d, 5) == finac.core._format_ttlcache_key(d2, 5)
+        assert finac.core._format_ttlcache_key(
+            d, 1) != finac.core._format_ttlcache_key(d2, 1)
+
+    def test901_rate_cache(self):
+        from cachetools import TTLCache
+        finac.core._cache.rate = TTLCache(maxsize=1024, ttl=10)
+        finac.core.config.rate_cache_ttl = 10
+        finac.core._CacheRateKeyError = RuntimeError
+        finac.asset_set_rate('EUR/USD', 1.99, date='2019-05-05 11:00:00')
+        try:
+            self.assertEqual(
+                finac.asset_rate('EUR/USD', date='2019-05-05 11:00:00'), 1.99)
+            raise RuntimeError('Cache key error not raised')
+        except KeyError:
+            pass
+        finac.core._CacheRateKeyError = KeyError
+        self.assertEqual(
+            finac.asset_rate('EUR/USD', date='2019-05-05 11:00:00'), 1.99)
+        finac.core._CacheRateKeyError = RuntimeError
+        self.assertEqual(
+            finac.asset_rate('EUR/USD', date='2019-05-05 11:00:00'), 1.99)
+        try:
+            self.assertEqual(
+                finac.asset_rate('EUR/USD', date='2019-05-05 11:00:01'), 1.99)
+            raise RuntimeError('Cache key error not raised')
+        except KeyError:
+            pass
+        finac.asset_create('CAT')
+        finac.asset_set_rate('EUR/CAT', 1.11)
+        try:
+            self.assertEqual(finac.asset_rate('EUR/CAT'), 1.11)
+            raise RuntimeError('Cache key error not raised')
+        except KeyError:
+            pass
+        finac.core._CacheRateKeyError = KeyError
+        self.assertEqual(finac.asset_rate('EUR/CAT'), 1.11)
+        finac.core._CacheRateKeyError = RuntimeError
+        time.sleep(0.1)
+        self.assertEqual(finac.asset_rate('EUR/CAT'), 1.11)
+        finac.core._CacheRateKeyError = KeyError
+
+    def test901_rate_list_cache(self):
+        finac.asset_create('CA1')
+        finac.asset_create('CA2')
+        finac.asset_create('CA3')
+        finac.asset_set_rate('CA1/CA2', 2, date='2019-05-05 11:00:00')
+        finac.asset_set_rate('CA2/CA3', 4, date='2019-05-05 11:00:00')
+        finac.core._CacheRateListKeyError = RuntimeError
+        try:
+            self.assertEqual(
+                finac.asset_rate('CA1/CA3', date='2019-05-05 11:00:00'), 8)
+            raise RuntimeError('Cache key error not raised')
+        except KeyError:
+            pass
+        finac.core._CacheRateListKeyError = KeyError
+        self.assertEqual(
+            finac.asset_rate('CA1/CA3', date='2019-05-05 11:00:00'), 8)
+        finac.core._CacheRateListKeyError = RuntimeError
+        self.assertEqual(
+            finac.asset_rate('CA1/CA3', date='2019-05-05 11:00:00'), 8)
+        try:
+            self.assertEqual(
+                finac.asset_rate('CA1/CA3', date='2019-05-05 11:00:01'), 8)
+            raise RuntimeError('Cache key error not raised')
+        except KeyError:
+            pass
+        finac.asset_set_rate('CA1/CA2', 2)
+        finac.asset_set_rate('CA2/CA3', 3)
+        try:
+            self.assertEqual(finac.asset_rate('CA1/CA3'), 6)
+            raise RuntimeError('Cache key error not raised')
+        except KeyError:
+            pass
+        finac.core._CacheRateListKeyError = KeyError
+        self.assertEqual(finac.asset_rate('CA1/CA3'), 6)
+        finac.core._CacheRateListKeyError = RuntimeError
+        time.sleep(0.1)
+        self.assertEqual(finac.asset_rate('CA1/CA3'), 6)
+        finac.core._CacheRateListKeyError = KeyError
+
 
 if __name__ == '__main__':
     import argparse
@@ -650,31 +747,76 @@ if __name__ == '__main__':
     except:
         pass
     config.remote = a.remote
+    if a.dbconn == TEST_DB:
+        try:
+            os.unlink(TEST_DB)
+        except:
+            pass
+    if a.redis:
+        import redis
+        redis.Redis(host='localhost', db=9).flushdb()
+
+    db_uri = a.dbconn
+    if db_uri.find('://') == -1:
+        db_uri = 'sqlite:///' + os.path.expanduser(db_uri)
+    dbconn = sqlalchemy.create_engine(db_uri).connect()
+    for tbl in ['transact', 'account', 'asset_rate']:
+        try:
+            dbconn.execute('delete from {}'.format(tbl))
+        except:
+            pass
+    try:
+        dbconn.execute(
+            """delete from asset where code != 'EUR' and code != 'USD'""")
+    except:
+        pass
     if a.remote:
-        finac.init(api_uri='http://localhost:5000/jrpc',
+        service_port = random.randint(9000, 9999)
+        server_file = f'/tmp/finac-test-server-{service_port}.py'
+        rh = """redis_host='localhost'""" if a.redis else 'redis_host=None'
+        open(server_file, 'w').write(
+            dedent(f"""
+        import sys
+        sys.path.insert(0, '{dir_finac}')
+        import finac as f
+        import finac.api as api
+        import logging
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.ERROR)
+        f.init(db='{a.dbconn}',keep_integrity=True,multiplier={a.multiplier},
+            {rh},redis_db=9,insecure=True, rate_cache_ttl=0.1)
+        api.key = 'secret'
+        app = api.app
+        app.run(host='127.0.0.1', port={service_port})
+        """))
+        server = subprocess.Popen(['python3', server_file],
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
+        for c in range(52):
+            time.sleep(0.1)
+            try:
+                if not requests.get(f'http://localhost:{service_port}/ping').ok:
+                    raise RuntimeError('Unable to run test server')
+                break
+            except:
+                if c > 50: raise
+        finac.init(api_uri=f'http://localhost:{service_port}/jrpc',
                    api_key='secret',
                    multiplier=a.multiplier)
     else:
-        if a.dbconn == TEST_DB:
-            try:
-                os.unlink(TEST_DB)
-            except:
-                pass
-        if a.redis:
-            import redis
-            redis.Redis(host='localhost', db=9).flushdb()
         finac.init(db=a.dbconn,
                    keep_integrity=True,
                    multiplier=a.multiplier,
                    redis_host='localhost' if a.redis else None,
-                   redis_db=9)
+                   redis_db=9,
+                   insecure=True,
+                   rate_cache_ttl=0.5)
         finac.core.rate_cache = None
-        for tbl in ['transact', 'account', 'asset_rate']:
-            finac.core.get_db().execute('delete from {}'.format(tbl))
-        finac.core.get_db().execute(
-            """delete from asset where code != 'EUR' and code != 'USD'""")
     test_suite = unittest.TestLoader().loadTestsFromTestCase(Test)
     test_result = unittest.TextTestRunner().run(test_suite)
-    if not a.remote and a.dbconn == TEST_DB:
+    if a.remote:
+        server.kill()
+        os.unlink(server_file)
+    if a.dbconn == TEST_DB:
         os.unlink(TEST_DB)
     sys.exit(not test_result.wasSuccessful())

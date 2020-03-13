@@ -8,10 +8,14 @@ from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
 from itertools import groupby
 from .currencies import currencies
+from types import SimpleNamespace
 
-rate_cache = TTLCache(maxsize=100, ttl=5)
+_cache = SimpleNamespace(rate=None, rate_list=None)
 
-asset_precision_cache = {}
+_CacheRateKeyError = KeyError
+_CacheRateListKeyError = KeyError
+
+_asset_precision_cache = {}
 
 restrict_assets_to_currencies = False
 
@@ -125,7 +129,9 @@ config = SimpleNamespace(db=None,
                          redis_timeout=5,
                          redis_blocking_timeout=5,
                          restrict_deletion=None,
-                         date_format='%Y-%m-%d %H:%M:%S %Z')
+                         date_format='%Y-%m-%d %H:%M:%S %Z',
+                         rate_cache_ttl=None,
+                         insecure=False)
 
 lock_purge = threading.Lock()
 lock_account_token = threading.Lock()
@@ -137,6 +143,11 @@ multiply_fields = {
     'account': ['max_overdraft', 'max_balance'],
     'transact': ['amount']
 }
+
+
+def _format_ttlcache_key(d, ttl):
+    t = d.timestamp()
+    return t if t < time.time() - ttl else None
 
 
 def _multiply(i):
@@ -156,20 +167,26 @@ def core_method(f):
 
     @wraps(f)
     def do(*args, **kwargs):
-        if config.api_uri is not None:
+        if config.api_uri is None:
+            return f(*args, **kwargs)
+        else:
             import requests
             import uuid
             import json
+            req_id = str(uuid.uuid4())
             payload = {
                 'jsonrpc': '2.0',
                 'method': f.__name__,
                 'params': kwargs,
-                'id': str(uuid.uuid4())
+                'id': req_id
             }
             if config.api_key is not None:
                 payload['params']['_k'] = config.api_key
             for i, a in enumerate(args):
                 payload['params'][argspec.args[i]] = a
+            logger.debug('API request {} {} {}'.format(req_id,
+                                                       payload['method'],
+                                                       payload['params']))
             r = requests.post(config.api_uri,
                               json=payload,
                               timeout=config.api_timeout)
@@ -181,9 +198,9 @@ def core_method(f):
             if 'error' in result:
                 raise _exceptions.get(result['error']['code'], RuntimeError)(
                     result['error'].get('message'))
+            logging.debug('API response {} {}'.format(result['id'],
+                                                      result['result']))
             return result['result']
-        else:
-            return f(*args, **kwargs)
 
     return do
 
@@ -219,7 +236,7 @@ def preload():
     Preload static data
     """
     for a in _asset_precision():
-        asset_precision_cache[a['asset']] = a['precision']
+        _asset_precision_cache[a['asset']] = a['precision']
 
 
 def asset_precision(asset):
@@ -227,8 +244,8 @@ def asset_precision(asset):
     Get precision (digits after comma) for the asset
     Note: asset precision is cached, so process restart required if changed
     """
-    return asset_precision_cache[
-        asset] if asset in asset_precision_cache else _asset_precision(
+    return _asset_precision_cache[
+        asset] if asset in _asset_precision_cache else _asset_precision(
             asset=asset)
 
 
@@ -240,14 +257,14 @@ def get_version():
 @core_method
 def _asset_precision(asset=None):
     if asset:
-        if asset in asset_precision_cache:
-            return asset_precision_cache[asset]
+        if asset in _asset_precision_cache:
+            return _asset_precision_cache[asset]
         d = get_db().execute(sql('select precs from asset where code=:code'),
                              code=asset.upper()).fetchone()
         if not d:
             raise ResourceNotFound
         precs = int(d.precs)
-        asset_precision_cache[asset] = precs
+        _asset_precision_cache[asset] = precs
         return precs
     else:
 
@@ -420,7 +437,8 @@ def init(db=None, **kwargs):
             "EUR/USD" pair exists but no USD/EUR, use 1 / "EUR/USD"
         rate_allow_cross: if exchange rate is not found, allow finac to look
             for the nearest cross-asset rate
-        rate_ttl: set rate cache ttl (default: 5 sec)
+        rate_cache_size: set rate cache size (default: 1024)
+        rate_cache_ttl: set rate cache ttl (default: 5 sec)
         full_transaction_update: allow updating transaction date and amount
         base_asset: default base asset. Default is "USD"
         date_format: default date format in statements
@@ -435,19 +453,25 @@ def init(db=None, **kwargs):
     Note: if Redis server is specified, Finac will use it for integrity locking
           (if enabled). In this case, lock tokens become Redis lock objects.
     """
+    rate_cache_ttl = 5
+    rate_cache_size = 1024
     for k, v in kwargs.items():
-        if k == 'rate_ttl':
-            rate_cache.__setstate__({'_TTLCache__ttl': v})
-        else:
-            if not hasattr(config, k):
-                raise RuntimeError('Parameter {} is invalid'.format(k))
+        if k == 'rate_cache_ttl':
+            rate_cache_ttl = v
+        elif k == 'rate_cache_size':
+            rate_cache_size = v
+        elif not hasattr(config, k):
+            raise RuntimeError('Parameter {} is invalid'.format(k))
         setattr(config, k, v)
+    _cache.rate = TTLCache(maxsize=rate_cache_size, ttl=rate_cache_ttl)
+    _cache.rate_list = TTLCache(maxsize=rate_cache_size, ttl=rate_cache_ttl)
+    config.rate_cache_ttl = rate_cache_ttl
     if config.multiplier:
         config.multiplier = float(config.multiplier)
     if db is not None:
         config.db = db
         db_uri = db
-        if db_uri.find('.db') != -1:
+        if db_uri.find('://') == -1:
             db_uri = 'sqlite:///' + os.path.expanduser(db_uri)
         _db.engine = get_db_engine(db_uri)
         _db.use_lastrowid = db_uri.startswith('sqlite') or db_uri.startswith(
@@ -459,6 +483,24 @@ def init(db=None, **kwargs):
                                      port=config.redis_port,
                                      db=config.redis_db,
                                      socket_timeout=config.redis_timeout)
+
+
+@core_method
+def config_set(prop, value):
+    """
+    Set configuration property on-the-fly (config.insecure = True required)
+
+    Recommended to use for testing only
+        
+    Args:
+        prop: property name
+        value: property value
+    """
+    if not config.insecure:
+        raise RuntimeError('access denied')
+    if not hasattr(config, prop):
+        raise RuntimeError('property {} is invalid'.format(prop))
+    setattr(config, prop, value)
 
 
 @core_method
@@ -685,10 +727,11 @@ def asset_rate(asset_from, asset_to=None, date=None):
         return 1
     db = get_db()
 
-    def _get_rate(cf, ct):
+    def _get_rate(cf, ct, d):
+        key = _format_ttlcache_key(d, config.rate_cache_ttl)
         try:
-            return rate_cache[(cf, ct)]
-        except (KeyError, TypeError) as e:
+            return _cache.rate[(cf, ct, key)]
+        except _CacheRateKeyError:
             r = db.execute(sql("""
                 select value from asset_rate
                     join asset as cfrom on asset_from_id=cfrom.id
@@ -702,11 +745,10 @@ def asset_rate(asset_from, asset_to=None, date=None):
             d = r.fetchone()
             if d:
                 value = _demultiply(d.value)
-                try:
-                    rate_cache[(cf, ct)] = value
-                except TypeError:
-                    pass
+                _cache.rate[(cf, ct, key)] = value
                 return value
+            else:
+                return None
 
     def _get_crossrate(asset_from, asset_to, d):
 
@@ -722,14 +764,12 @@ def asset_rate(asset_from, asset_to=None, date=None):
 
         graph = {}
         rates = {}
+        key = _format_ttlcache_key(d, config.rate_cache_ttl)
         try:
-            ratelist = rate_cache[d]
-        except (KeyError, TypeError) as e:
+            ratelist = _cache.rate_list[key]
+        except _CacheRateListKeyError:
             ratelist = list(asset_list_rates(end=d))
-            try:
-                rate_cache[d] = ratelist
-            except TypeError:
-                pass
+            _cache.rate_list[key] = ratelist
         for r in ratelist:
             rates[(r['asset_from'], r['asset_to'])] = r['value']
             graph.setdefault(r['asset_from'], []).append(r['asset_to'])
@@ -737,27 +777,27 @@ def asset_rate(asset_from, asset_to=None, date=None):
             if (k[1], k[0]) not in rates:
                 rates[(k[1], k[0])] = 1 / v
                 graph.setdefault(k[1], []).append(k[0])
-        path = min(_find_path(graph, asset_from, asset_to), key=len)
+        try:
+            path = min(_find_path(graph, asset_from, asset_to), key=len)
+        except KeyError:
+            return None
         if not path:
-            return
+            return None
         rate = 1
         for i in range(0, len(path) - 1):
             rate *= rates[path[i], path[i + 1]]
         return rate
 
-    value = _get_rate(asset_from, asset_to)
+    value = _get_rate(asset_from, asset_to, date)
     if not value:
         if config.rate_allow_reverse is True:
-            value = _get_rate(asset_to, asset_from)
+            value = _get_rate(asset_to, asset_from, date)
             if not value:
                 if config.rate_allow_cross:
-                    try:
-                        value = _get_crossrate(asset_from, asset_to, date)
-                    except:
-                        pass
+                    value = _get_crossrate(asset_from, asset_to, date)
                     if value: return value
-                raise RateNotFound('{}/{} for {}'.format(
-                    asset_from, asset_to, format_date(date)))
+                raise RateNotFound('{}/{} for {} (base asset: {})'.format(
+                    asset_from, asset_to, format_date(date), config.base_asset))
             value = 1 / value
         else:
             raise RateNotFound
