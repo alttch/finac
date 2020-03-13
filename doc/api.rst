@@ -62,9 +62,11 @@ You may call any :doc:`core function <core>`, single or batch.
 
 Error codes:
 
-* **-32603** Internal error
-* **-32602** Invalid method param
+* **-32699** Internal error
 * **-32601** Method not found
+* **-32602** Invalid method param
+* **-32603** Invalid value provided
+
 * **-32000** Access denied (if API key is set)
 * **-32001** ResourceNotFound exception
 * **-32002** RateNotFound exception

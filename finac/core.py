@@ -340,7 +340,10 @@ _exceptions = {
     -32002: RateNotFound,
     -32003: OverdraftError,
     -32004: OverlimitError,
-    -32005: ResourceAlreadyExists
+    -32005: ResourceAlreadyExists,
+    -32601: AttributeError,
+    -32602: TypeError,
+    -32603: ValueError
 }
 
 

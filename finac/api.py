@@ -85,9 +85,12 @@ def jrpc():
         except TypeError:
             logger.warning(f'{log_from} invalid params')
             append_error(-32602, 'Invalid params')
+        except ValueError:
+            logger.warning(f'{log_from} invalid value')
+            append_error(-32603, 'Invalid value')
         except Exception as e:
             logger.warning(f'{log_from} unknown error')
-            append_error(-32603, str(e))
+            append_error(-32699, str(e))
         if i is not None:
             response.append(resp)
     if response:
