@@ -645,6 +645,7 @@ class Test(unittest.TestCase):
             d, 1) != finac.core._format_ttlcache_key(d2, 1)
 
     def test901_rate_cache(self):
+        if config.remote: return
         from cachetools import TTLCache
         finac.core._cache.rate = TTLCache(maxsize=1024, ttl=10)
         finac.core.config.rate_cache_ttl = 10
@@ -683,6 +684,7 @@ class Test(unittest.TestCase):
         finac.core._CacheRateKeyError = KeyError
 
     def test901_rate_list_cache(self):
+        if config.remote: return
         finac.asset_create('CA1')
         finac.asset_create('CA2')
         finac.asset_create('CA3')
