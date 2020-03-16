@@ -762,16 +762,12 @@ if __name__ == '__main__':
     if db_uri.find('://') == -1:
         db_uri = 'sqlite:///' + os.path.expanduser(db_uri)
     dbconn = sqlalchemy.create_engine(db_uri).connect()
-    for tbl in ['transact', 'account', 'asset_rate']:
+    for tbl in ['transact', 'account', 'asset_rate', 'asset']:
         try:
-            dbconn.execute('delete from {}'.format(tbl))
-        except:
+            dbconn.execute('drop table {}'.format(tbl))
+        except (sqlalchemy.exc.ProgrammingError,
+                sqlalchemy.exc.OperationalError):
             pass
-    try:
-        dbconn.execute(
-            """delete from asset where code != 'EUR' and code != 'USD'""")
-    except:
-        pass
     if a.remote:
         service_port = random.randint(9000, 9999)
         server_file = f'/tmp/finac-test-server-{service_port}.py'
