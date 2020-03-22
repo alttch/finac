@@ -184,7 +184,7 @@ def ls(account=None,
                    rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
                    rapidtables.ALIGN_LEFT, rapidtables.ALIGN_LEFT,
                    rapidtables.ALIGN_LEFT))
-        rcur = acc_info['asset']
+        rcur = base.upper() if base else acc_info['asset']
         if ft:
             h, tbl = ft
             neotermcolor.cprint(h, '@finac:title')
@@ -209,7 +209,6 @@ def ls(account=None,
             pl = result['debit'] - result['credit']
             if base:
                 pl = pl * asset_rate(acc_info['asset'], base, date=end)
-                rcur = base.upper()
             neotermcolor.cprint('{} {}'.format(format_money(pl, precision),
                                                rcur),
                                 attrs='bold',
