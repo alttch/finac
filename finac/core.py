@@ -1724,6 +1724,7 @@ def account_list(asset=None,
                  passive=None,
                  code=None,
                  date=None,
+                 base=None,
                  order_by=['tp', 'asset', 'account', 'balance'],
                  hide_empty=False):
     """
@@ -1735,6 +1736,7 @@ def account_list(asset=None,
         passive: list passive, active or all (if None) accounts
         code: filter by acocunt code (may contain '%' as a wildcards)
         date: get balances for the specified date
+        base: convert account balances to base currency
         order_by: list ordering
         hide_empty: hide accounts with zero balance, default is False
     """
@@ -1842,6 +1844,8 @@ def account_list(asset=None,
             if row['passive'] and row['balance']:
                 row['balance'] *= -1
             row['balance'] = _demultiply(row['balance'])
+            if base:
+                row['balance'] *= asset_rate(row['asset'], base, date=date)
             yield row
 
 
