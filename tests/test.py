@@ -95,6 +95,17 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.account_list_summary()['total'], 80)
         finac.ls(group_by='asset')
 
+    def test008_df(self):
+        print(finac.df('rate'))
+        print(finac.df('asset'))
+        print(finac.df('account'))
+        print(finac.df('statement', account='TEST.TEST'))
+        print(
+            finac.df('balance',
+                     start=(datetime.datetime.now() -
+                            datetime.timedelta(days=3)).strftime('%D'),
+                     account='TEST.TEST'))
+
     def test020_transaction_delete(self):
         finac.transaction_delete(result.transaction2_id)
         self.assertEqual(finac.account_balance('TEST.TEST'), 100)

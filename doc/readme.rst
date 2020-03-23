@@ -29,6 +29,33 @@ Sources: https://github.com/alttch/finac
 
 Documentation: https://finac.readthedocs.io/
 
+Updating
+--------
+
+from 0.4.10
+===========
+
+.. code:: sql
+
+   ALTER TABLE transact ADD service bool;
+   UPDATE transact SET service=True WHERE d_created<'1970-01-03';
+   ALTER TABLE transact ADD FOREIGN KEY(chain_transact_id)
+     REFERENCES transact(id) ON DELETE SET null;
+
+from 0.3.x
+==========
+
+Starting from 0.4, Finac uses DateTime columns for:
+
+-  asset_rate.d
+-  transact.d
+-  transact.d_created
+-  transact.deleted
+
+Depending to your database type, it’s REQUIRED to convert these columns
+to either DATETIME (SQLite, for MySQL DATETIME(6) recommended) or
+TIMESTAMP (PostgreSQL, with timezone).
+
 How to use in interactive mode
 ------------------------------
 
@@ -278,6 +305,25 @@ passive account, use *passive* argument:
 Accounts of types “tax”, “supplier” and “finagent” are passive by
 default.
 
+Data multiplier
+~~~~~~~~~~~~~~~
+
+Depending on data, it may be useful to store numeric values in database
+as integers instead of floats. Finac library has built-in data
+multiplier feature, to enable it, set *multiplier=N* in *finac.init()*
+method, e.g. *multiplier=1000* if you want to store integers in tables
+and have data with max precision 3 digits after comma.
+
+Note: you must manually convert table fields to numeric/integer types,
+and multiply them if performing data multiplier implementation on living
+database.
+
+Full list of tables and fields is available in dict
+*finac.core.multiply_fields*.
+
+Note: multiplier can be used only with integer and numeric(X) field
+types, as core conversion functions always return rounded value.
+
 How to embed Finac library into own project
 -------------------------------------------
 
@@ -289,9 +335,3 @@ Client-server mode and HTTP API
 
 See `Finac documentation <https://finac.readthedocs.io/>`__ for server
 mode and HTTP API details.
-
-TODO
-----
-
-Finac is in alpha stage. We are continuously working on the features,
-speed and stability improvements as well as waiting your commits.

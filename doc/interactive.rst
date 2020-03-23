@@ -20,6 +20,7 @@ The following functions are aliases for :doc:`core`:
    f.balance_range(...) # alias for finac.core.account_balance_range, in
                         # opposite to the original function, returns dates as
                         # datetime object by default
+   f.df(...) # alias for finac.df.df
 
 Special interactive functions
 =============================
