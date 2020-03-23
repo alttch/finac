@@ -13,11 +13,11 @@ def df(fn, *args, **kwargs):
 
     Converts Finac data to Pandas DataFrame. Requires pandas Python module.
 
-    rate - asset_rate
-    asset - asset_list
-    account - account_list
-    statement - account_statement
-    balance - account_balance_range
+    * rate - asset_rate
+    * asset - asset_list
+    * account - account_list
+    * statement - account_statement
+    * balance - account_balance_range
 
     Args:
         fn: rate, asset, account, statement or balance
