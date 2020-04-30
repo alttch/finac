@@ -429,8 +429,9 @@ class Test(unittest.TestCase):
                           finac.account_balance,
                           account='USD1',
                           tp='current')
-        finac.account_balance(tp='current', base='usd')
-        finac.account_balance(account=None, base='usd')
+        self.assertEqual(finac.account_balance(tp='current', base='usd'), 2278)
+        self.assertEqual(finac.account_balance(account=None, base='usd'),
+                         7926.5)
 
     def test300_parse_number(self):
         parse = finac.core.parse_number
@@ -656,7 +657,8 @@ class Test(unittest.TestCase):
             d, 1) != finac.core._format_ttlcache_key(d2, 1)
 
     def test901_rate_cache(self):
-        if config.remote: return
+        if config.remote:
+            return
         from cachetools import TTLCache
         finac.core._cache.rate = TTLCache(maxsize=1024, ttl=10)
         finac.core.config.rate_cache_ttl = 10
@@ -695,7 +697,8 @@ class Test(unittest.TestCase):
         finac.core._CacheRateKeyError = KeyError
 
     def test901_rate_list_cache(self):
-        if config.remote: return
+        if config.remote:
+            return
         finac.asset_create('CA1')
         finac.asset_create('CA2')
         finac.asset_create('CA3')
@@ -808,7 +811,8 @@ if __name__ == '__main__':
                     raise RuntimeError('Unable to run test server')
                 break
             except:
-                if c > 50: raise
+                if c > 50:
+                    raise
         finac.init(api_uri=f'http://localhost:{service_port}/jrpc',
                    api_key='secret',
                    multiplier=a.multiplier)
