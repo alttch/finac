@@ -273,7 +273,8 @@ def _asset_precision(asset=None):
                 sql('select code, precs from asset order by code'))
             while True:
                 r = d.fetchone()
-                if not r: break
+                if not r:
+                    break
                 row = OrderedDict()
                 row['asset'] = r.code
                 row['precision'] = int(r.precs)
@@ -381,8 +382,10 @@ class AccountLocker:
 
     def release(self, token):
         with self._lock:
-            if token != self.token: raise RuntimeError('Invalid token')
-            if self.counter < 1: raise RuntimeError('Resource not locked')
+            if token != self.token:
+                raise RuntimeError('Invalid token')
+            if self.counter < 1:
+                raise RuntimeError('Resource not locked')
             self.counter -= 1
             if not self.counter:
                 if _db.redis_conn:
@@ -541,7 +544,8 @@ def asset_list():
         select code, precs from asset order by code"""))
     while True:
         d = r.fetchone()
-        if not d: break
+        if not d:
+            break
         row = OrderedDict()
         row['asset'] = d.code
         row['precision'] = d.precs
@@ -611,7 +615,8 @@ def asset_list_rates(asset=None, start=None, end=None, datefmt=False):
                              d=d)
     while True:
         d = r.fetchone()
-        if not d: break
+        if not d:
+            break
         row = OrderedDict()
         row['asset_from'] = d.asset_from
         row['asset_to'] = d.asset_to
@@ -798,7 +803,8 @@ def asset_rate(asset_from, asset_to=None, date=None):
             if not value:
                 if config.rate_allow_cross:
                     value = _get_crossrate(asset_from, asset_to, date)
-                    if value: return value
+                    if value:
+                        return value
                 raise RateNotFound('{}/{} for {} (base asset: {})'.format(
                     asset_from, asset_to, format_date(date), config.base_asset))
             value = 1 / value
@@ -902,7 +908,8 @@ def account_info(account):
             where account.code = :account"""),
                          account=account.upper())
     d = r.fetchone()
-    if not d: raise ResourceNotFound
+    if not d:
+        raise ResourceNotFound
     return {
         'code': d.account_code,
         'note': d.note,
@@ -938,7 +945,8 @@ def transaction_info(transaction_id):
             where transact.id = :transaction_id"""),
                          transaction_id=transaction_id)
     d = r.fetchone()
-    if not d: raise ResourceNotFound
+    if not d:
+        raise ResourceNotFound
     return {
         'id': transaction_id,
         'amount': _demultiply(d.amount),
@@ -1056,7 +1064,8 @@ def account_unlock(account, token):
     if config.keep_integrity:
         with lock_account_token:
             l = account_lockers.get(account.upper())
-        if not l: raise ResourceNotFound
+        if not l:
+            raise ResourceNotFound
         return l.release(token)
 
 
@@ -1263,7 +1272,8 @@ def _transaction_move(dt=None,
         if _ct_info is not None and _dt_info is not None and _ct_info[
                 'passive'] and _dt_info['passive']:
             ct, dt = dt, ct
-    if amount == 0: return
+    if amount == 0:
+        return
     if amount is not None and amount < 0:
         raise ValueError('Amount should be greater than zero')
     if config.keep_integrity:
@@ -1425,12 +1435,15 @@ def transaction_move(dt=None,
                                      _ct_info=ct_info,
                                      _dt_info=dt_info)
     finally:
-        if ctoken: account_unlock(ct, ctoken)
-        if dtoken: account_unlock(dt, dtoken)
+        if ctoken:
+            account_unlock(ct, ctoken)
+        if dtoken:
+            account_unlock(dt, dtoken)
 
 
 @core_method
-def transaction_complete(transaction_ids, completion_date=None,
+def transaction_complete(transaction_ids,
+                         completion_date=None,
                          lock_token=None):
     """
     Args:
@@ -1523,7 +1536,8 @@ def transaction_purge(_lock=True):
             dbt.rollback()
             raise
     finally:
-        if _lock: lock_purge.release()
+        if _lock:
+            lock_purge.release()
 
 
 @core_method
@@ -1649,7 +1663,8 @@ def account_statement(account,
                          account=account.upper())
     while True:
         d = r.fetchone()
-        if not d: break
+        if not d:
+            break
         row = OrderedDict()
         for i in ('id', 'amount', 'cparty', 'tag', 'note'):
             row[i] = getattr(d, i)
@@ -1830,7 +1845,8 @@ def account_list(asset=None,
                        oby=('order by ' + oby) if oby else '')))
     while True:
         d = r.fetchone()
-        if not d: break
+        if not d:
+            break
         # if zero is not a "real zero" - consider x < 0.000001 is zero
         if hide_empty is False or (abs(d.balance) > 0.000001):
             row = OrderedDict()
@@ -2048,7 +2064,8 @@ def _account_summary(balance_type,
             oby=('order by ' + oby) if oby else '')))
     while True:
         d = r.fetchone()
-        if not d: break
+        if not d:
+            break
         if hide_empty is False or d.balance:
             row = OrderedDict()
             for i in ('account', 'type', 'asset', balance_type + '_balance'):
@@ -2062,7 +2079,10 @@ def _account_summary(balance_type,
 
 
 @core_method
-def account_balance(account=None, tp=None, base=None, date=None,
+def account_balance(account=None,
+                    tp=None,
+                    base=None,
+                    date=None,
                     _natural=False):
     """
     Get account balance
