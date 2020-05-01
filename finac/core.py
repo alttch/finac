@@ -2242,7 +2242,7 @@ def account_balance_range(start,
                           tp=None,
                           end=None,
                           step=1,
-                          return_timestamp=True,
+                          return_timestamp=False,
                           base=None):
     """
     Get list of account balances for the specified range
