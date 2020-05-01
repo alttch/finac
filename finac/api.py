@@ -1,8 +1,11 @@
+import time
+import datetime
+
 from flask import Flask, jsonify, request, Response
 
 from finac import core, ResourceNotFound, RateNotFound, ResourceAlreadyExists
 from finac import OverdraftError, OverlimitError
-from finac.core import get_db, logger
+from finac.core import get_db, logger, exec_query
 
 from types import GeneratorType
 
@@ -28,6 +31,62 @@ class AccessDenied(Exception):
 def ping():
     get_db()
     return jsonify({'ok': True})
+
+
+@app.route('/query')
+def query():
+    log_from = 'FINAC QUERY API request from ' + get_real_ip()
+    k = request.headers.get('X-Auth-Key')
+    if key is not None:
+        if k is None:
+            logger.error(f'{log_from} access denied')
+            return Response('API Key not specified', status=401)
+        elif k != key:
+            logger.error(f'{log_from} access denied')
+            return Response('Invalid API key', status=401)
+    q = request.args.get('q')
+    logger.info(f'{log_from}, query: \'{q}\'')
+    if q is None:
+        return Response('q param is required', status=400)
+    try:
+        t_start = time.time()
+        result = list(exec_query(q))
+        t_spent = time.time() - t_start
+        if request.args.get('grafana') == '1':
+            gres = {'columns': [], 'rows': [], 'type': 'table'}
+            if result:
+                cols = [c for c in result[0]]
+                timecols = []
+                for c in cols:
+                    col = {'text': c}
+                    if isinstance(result[0][c], datetime.datetime):
+                        col['type'] = 'time'
+                        if c in ('date', 'created'):
+                            col['sort'] = True
+                            col['desc'] = True
+                        timecols.append(c)
+                    gres['columns'].append(col)
+                for r in result:
+                    gres['rows'].append([
+                        r[c].timestamp() if c in timecols else r[c]
+                        for c in cols
+                    ])
+            return jsonify(gres)
+        else:
+            return jsonify({
+                'ok': True,
+                'result': result,
+                'rows': len(result),
+                'time': t_start
+            })
+    except (LookupError, ResourceNotFound, RateNotFound) as e:
+        return Response(str(e), status=404)
+    except (ResourceAlreadyExists, OverdraftError, OverlimitError) as e:
+        return Response(str(e), status=409)
+    except (TypeError, ValueError) as e:
+        return Response(str(e), status=400)
+    except Exception as e:
+        return Response(str(e), status=500)
 
 
 @app.route('/jrpc', methods=['POST'])
