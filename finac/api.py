@@ -95,6 +95,8 @@ def jrpc():
             response.append(resp)
     if response:
         return jsonify(response) if isinstance(payload, list) else response[0]
+    else:
+        return Response(status=204)
 
 
 if __name__ == '__main__':
