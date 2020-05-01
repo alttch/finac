@@ -101,7 +101,7 @@ class Test(unittest.TestCase):
         print(finac.df('account'))
         print(finac.df('statement', account='TEST.TEST'))
         print(
-            finac.df('balance',
+            finac.df('balance_range',
                      start=(datetime.datetime.now() -
                             datetime.timedelta(days=3)).strftime('%D'),
                      account='TEST.TEST'))
