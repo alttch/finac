@@ -6,7 +6,7 @@ __version__ = '0.4.19'
 
 import rapidtables
 import neotermcolor
-import datetime
+import datetime, time
 
 from functools import partial
 from collections import OrderedDict
@@ -52,7 +52,7 @@ from finac.core import account_list, account_list_summary
 from finac.core import purge, transaction_purge
 
 # caches
-from finac.core import preload
+from finac.core import preload, exec_query
 
 # plots
 from finac.plot import account_plot as plot
@@ -74,6 +74,22 @@ complete = transaction_complete
 rate = asset_rate
 
 stmt = account_statement_summary
+
+
+def query(q):
+    t_start = time.time()
+    result = list(exec_query(q))
+    t_spent = time.time() - t_start
+    ft = rapidtables.format_table(result, fmt=rapidtables.FORMAT_GENERATOR)
+    if ft:
+        h, tbl = ft
+        neotermcolor.cprint(h, '@finac:title')
+        neotermcolor.cprint('-' * len(h), '@finac:separator')
+        for t in tbl:
+            print(t)
+        neotermcolor.cprint('-' * len(h), '@finac:separator')
+    print(f'SELECT {len(result)}')
+    print(f'Time: {t_spent:.3f}s')
 
 
 def check_version(warn=False):

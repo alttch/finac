@@ -101,6 +101,7 @@ from collections import OrderedDict
 from functools import wraps
 
 from pyaltt2.crypto import gen_random_str
+from pyaltt2.lp import parse_func_str
 from pyaltt2.converters import val_to_boolean, parse_date, parse_number
 
 import threading
@@ -252,6 +253,78 @@ def asset_precision(asset):
 @core_method
 def get_version():
     return __version__
+
+
+@core_method
+def exec_query(q):
+    """
+    Execute statement
+
+    EXPERIMENTAL, DON'T USE IN PRODUCTION
+
+    Currenly only function call statements are supported:
+
+        SELECT <function>([args, kwargs])
+
+        e.g.
+
+        SELECT account_balance("current.usd")
+
+    Supported core functions:
+        get_version
+        asset_list
+        asset_list_rates
+        asset_rate
+        account_info
+        account_statement
+        account_list
+        account_balance
+        account_balance_range
+
+    Args:
+        q: query to execute
+
+    Returns:
+        List of dicts is always returned
+    Raises:
+        RuntimeError: unsupported statement / function called
+        other: passed from called function as-is
+    """
+    q = q.strip()
+    if q[:7].lower() != 'select ':
+        raise RuntimeError('Unsupported statement')
+    fn, args, kwargs = parse_func_str(q.split(maxsplit=1)[1])
+    if fn == 'get_version':
+        yield {'variable': 'version', 'value': get_version(*args, **kwargs)}
+    elif fn == 'asset_list':
+        for row in asset_list(*args, **kwargs):
+            yield row
+    elif fn == 'asset_list_rates':
+        for row in asset_list_rates(*args, **kwargs):
+            yield row
+    elif fn == 'asset_rate':
+        yield {'rate': asset_rate(*args, **kwargs)}
+    elif fn == 'account_info':
+        result = account_info(*args, **kwargs)
+        if isinstance(result, dict):
+            yield result
+        else:
+            for row in result:
+                yield row
+    elif fn == 'account_statement':
+        for row in account_statement(*args, **kwargs):
+            yield row
+    elif fn == 'account_list':
+        for row in account_list(*args, **kwargs):
+            yield row
+    elif fn == 'account_balance':
+        yield {'balance': account_balance(*args, **kwargs)}
+    elif fn == 'account_balance_range':
+        times, data = account_balance_range(*args, **kwargs)
+        for t, d in zip(times, data):
+            yield {'date': t, 'balance': d}
+    else:
+        raise RuntimeError('Unsupported query function')
 
 
 @core_method
@@ -896,30 +969,54 @@ def account_create(account,
 
 
 @core_method
-def account_info(account):
+def account_info(account=None):
     """
     Get dict with account info
+
+    If no account is specified, generator object with info for all accounts is
+    returned
     """
-    r = get_db().execute(sql("""
+
+    def _format_qdata(d):
+        return {
+            'code': d.account_code,
+            'note': d.note,
+            'type': ACCOUNT_TYPE_NAMES[d.tp],
+            'tp': d.tp,
+            'passive': d.passive,
+            'asset': d.asset,
+            'max_overdraft': _demultiply(d.max_overdraft),
+            'max_balance': _demultiply(d.max_balance)
+        }
+
+    xkw = {}
+    if account is not None:
+        xkw['account'] = account.upper()
+    r = get_db().execute(
+        sql("""
             select account.code as account_code, account.note, account.tp,
             account.passive, asset.code as asset, max_overdraft, max_balance
             from account join
             asset on account.asset_id = asset.id
-            where account.code = :account"""),
-                         account=account.upper())
-    d = r.fetchone()
-    if not d:
-        raise ResourceNotFound
-    return {
-        'code': d.account_code,
-        'note': d.note,
-        'type': ACCOUNT_TYPE_NAMES[d.tp],
-        'tp': d.tp,
-        'passive': d.passive,
-        'asset': d.asset,
-        'max_overdraft': _demultiply(d.max_overdraft),
-        'max_balance': _demultiply(d.max_balance)
-    }
+            {}""".format(
+            'where account.code = :account' if account is not None else '')),
+        **xkw)
+    if account is not None:
+        d = r.fetchone()
+        if not d:
+            raise ResourceNotFound
+        else:
+            return _format_qdata(d)
+    else:
+
+        def _listgen():
+            while True:
+                d = r.fetchone()
+                if not d:
+                    break
+                yield _format_qdata(d)
+
+        return _listgen()
 
 
 @core_method
@@ -2157,7 +2254,7 @@ def account_balance_range(start,
         end: end date/time, if not specified, current time is used
         step: list step in days
         return_timestamp: return dates as timestamps if True, otherwise as
-            datetime objects. Default is True
+            datetime objects. Default is False
 
     Returns:
         tuple with time series list and corresponding balance list
@@ -2171,8 +2268,7 @@ def account_balance_range(start,
     acc_info = {'account': account} if account else {'tp': tp}
     dt = parse_date(start, return_timestamp=False)
     end_date = parse_date(
-        end, return_timestamp=False
-    ) if end else datetime.datetime.now() + datetime.timedelta(days=1)
+        end, return_timestamp=False) if end else datetime.datetime.now()
     delta = datetime.timedelta(days=step)
     last_record = False
     while dt < end_date or not last_record:
