@@ -21,7 +21,7 @@ from finac.core import ResourceAlreadyExists
 # asset methods
 from finac.core import asset_create, asset_delete
 from finac.core import asset_set_rate, asset_rate
-from finac.core import asset_delete_rate
+from finac.core import asset_delete_rate, asset_rate_range
 
 from finac.core import asset_update
 from finac.core import asset_precision

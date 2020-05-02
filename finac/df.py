@@ -18,6 +18,7 @@ def df(fn, *args, **kwargs):
     * account - account_list
     * statement - account_statement
     * balance_range - account_balance_range
+    * rate_range - asset rate_range
 
     Args:
         fn: rate, asset, account, statement or balance
@@ -46,6 +47,12 @@ def df(fn, *args, **kwargs):
         return result
     elif fn == 'balance_range':
         r = core.account_balance_range(*args, return_timestamp=False, **kwargs)
+        result = pd.DataFrame(
+            [dict(date=r[0][i], balance=r[1][i]) for i in range(len(r[0]))])
+        result['date'] = pd.to_datetime(result['date'])
+        return result
+    elif fn == 'rate_range':
+        r = core.asset_rate_range(*args, return_timestamp=False, **kwargs)
         result = pd.DataFrame(
             [dict(date=r[0][i], balance=r[1][i]) for i in range(len(r[0]))])
         result['date'] = pd.to_datetime(result['date'])

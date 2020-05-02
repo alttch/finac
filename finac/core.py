@@ -279,6 +279,7 @@ def exec_query(q, _grafana=False):
         asset_list
         asset_list_rates
         asset_rate
+        asset_rate_range
         account_info
         account_statement
         account_list
@@ -334,6 +335,10 @@ def exec_query(q, _grafana=False):
         times, data = account_balance_range(*args, _grafana=_grafana, **kwargs)
         for t, d in zip(times, data):
             yield {'date': t, 'balance': d}
+    elif fn == 'asset_rate_range':
+        times, data = asset_rate_range(*args, _grafana=_grafana, **kwargs)
+        for t, d in zip(times, data):
+            yield {'date': t, 'rate': d}
     else:
         raise RuntimeError('Unsupported query function')
 
@@ -2298,6 +2303,46 @@ def account_balance(account=None,
 
 
 @core_method
+def asset_rate_range(start,
+                     asset_from,
+                     asset_to=None,
+                     end=None,
+                     step=1,
+                     return_timestamp=False,
+                     _grafana=False):
+    """
+    Get list of asset rates for the specified time range
+
+    Returns:
+        tuple with time series list and corresponding asset rate
+    """
+    if _grafana:
+        if isinstance(start, int):
+            start = start / 1000
+        if isinstance(end, int):
+            end = end / 1000
+    times = []
+    data = []
+    dt = parse_date(start, return_timestamp=False)
+    end_date = parse_date(
+        end, return_timestamp=False) if end else datetime.datetime.now()
+    delta = datetime.timedelta(days=step)
+    last_record = False
+    while dt < end_date or not last_record:
+        if dt == end_date:
+            break
+        elif dt > end_date:
+            last_record = True
+            if _grafana:
+                dt = datetime.datetime.now()
+        times.append(dt.timestamp() if return_timestamp else dt)
+        b = _asset_rate_lookup(asset_from, asset_to, date=dt)
+        data.append(b)
+        dt += delta
+    return times, data
+
+
+@core_method
 def account_balance_range(start,
                           account=None,
                           tp=None,
@@ -2307,7 +2352,7 @@ def account_balance_range(start,
                           base=None,
                           _grafana=False):
     """
-    Get list of account balances for the specified range
+    Get list of account balances for the specified time range
 
     Args:
         account: account code
@@ -2335,8 +2380,7 @@ def account_balance_range(start,
     acc_info = {'account': account} if account else {'tp': tp}
     dt = parse_date(start, return_timestamp=False)
     end_date = parse_date(
-        end, return_timestamp=False
-    ) if end else datetime.datetime.now()
+        end, return_timestamp=False) if end else datetime.datetime.now()
     delta = datetime.timedelta(days=step)
     last_record = False
     while dt < end_date or not last_record:
