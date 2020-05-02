@@ -9,6 +9,7 @@ from cachetools import TTLCache
 from itertools import groupby
 from .currencies import currencies
 from types import SimpleNamespace
+from concurrent.futures import ThreadPoolExecutor
 
 _cache = SimpleNamespace(rate=None, rate_list=None)
 
@@ -114,6 +115,7 @@ _db = SimpleNamespace(engine=None, redis_conn=None)
 
 config = SimpleNamespace(db=None,
                          db_pool_size=10,
+                         thread_pool_size=30,
                          keep_integrity=True,
                          lazy_exchange=True,
                          full_transaction_update=True,
@@ -133,6 +135,8 @@ config = SimpleNamespace(db=None,
                          date_format='%Y-%m-%d %H:%M:%S %Z',
                          rate_cache_ttl=None,
                          insecure=False)
+
+_d = SimpleNamespace()
 
 lock_purge = threading.Lock()
 lock_account_token = threading.Lock()
@@ -256,7 +260,7 @@ def get_version():
 
 
 @core_method
-def exec_query(q):
+def exec_query(q, _grafana=False):
     """
     Execute statement
 
@@ -293,7 +297,10 @@ def exec_query(q):
     q = q.strip()
     if q[:7].lower() != 'select ':
         raise RuntimeError('Unsupported statement')
-    fn, args, kwargs = parse_func_str(q.split(maxsplit=1)[1])
+    try:
+        fn, args, kwargs = parse_func_str(q.split(maxsplit=1)[1])
+    except Exception as e:
+        raise ValueError(f'Invalid function params: {e}')
     if fn == 'get_version':
         yield {'variable': 'version', 'value': get_version(*args, **kwargs)}
     elif fn == 'asset_list':
@@ -303,7 +310,8 @@ def exec_query(q):
         for row in asset_list_rates(*args, **kwargs):
             yield row
     elif fn == 'asset_rate':
-        yield {'rate': asset_rate(*args, **kwargs)}
+        result = _asset_rate_q(*args, **kwargs)
+        yield {'pair': result[0], 'rate': result[1]}
     elif fn == 'account_info':
         result = account_info(*args, **kwargs)
         if isinstance(result, dict):
@@ -320,7 +328,7 @@ def exec_query(q):
     elif fn == 'account_balance':
         yield {'balance': account_balance(*args, **kwargs)}
     elif fn == 'account_balance_range':
-        times, data = account_balance_range(*args, **kwargs)
+        times, data = account_balance_range(*args, _grafana=_grafana, **kwargs)
         for t, d in zip(times, data):
             yield {'date': t, 'balance': d}
     else:
@@ -501,6 +509,10 @@ def get_db():
     return g.db
 
 
+def spawn(*args, **kwargs):
+    return _d.pool.submit(*args, **kwargs)
+
+
 def init(db=None, **kwargs):
     """
     Initialize finac database and configuration
@@ -508,6 +520,7 @@ def init(db=None, **kwargs):
     Args:
         db: SQLAlchemy DB URI or sqlite file name
         db_pool_size: DB pool size (default: 10)
+        thread_pool_size: thread pool size for internal processes (default: 30)
         keep_integrity: finac should keep database integrity (lock accounts,
             watch overdrafts, overlimits etc. Default is True
         lazy_exchange: allow direct exchange operations betwen accounts.
@@ -545,6 +558,7 @@ def init(db=None, **kwargs):
     _cache.rate = TTLCache(maxsize=rate_cache_size, ttl=rate_cache_ttl)
     _cache.rate_list = TTLCache(maxsize=rate_cache_size, ttl=rate_cache_ttl)
     config.rate_cache_ttl = rate_cache_ttl
+    _d.pool = ThreadPoolExecutor(max_workers=config.thread_pool_size)
     if config.multiplier:
         config.multiplier = float(config.multiplier)
     if db is not None:
@@ -787,6 +801,19 @@ def asset_delete_rate(asset_from, asset_to=None, date=None):
         raise ResourceNotFound
 
 
+def _parse_asset_pair(asset_from, asset_to):
+    if asset_from.find('/') != -1 and asset_to is None:
+        asset_from, asset_to = asset_from.split('/')
+    asset_from = asset_from.upper()
+    asset_to = asset_to.upper()
+    return asset_from, asset_to
+
+
+def _asset_rate_q(asset_from, asset_to=None, date=None):
+    asset_from, asset_to = _parse_asset_pair(asset_from, asset_to)
+    return f'{asset_from}/{asset_to}', asset_rate(asset_from, asset_to, date)
+
+
 @core_method
 def asset_rate(asset_from, asset_to=None, date=None):
     """
@@ -800,10 +827,7 @@ def asset_rate(asset_from, asset_to=None, date=None):
         date = parse_date(return_timestamp=False)
     else:
         date = parse_date(date, return_timestamp=False)
-    if asset_from.find('/') != -1 and asset_to is None:
-        asset_from, asset_to = asset_from.split('/')
-    asset_from = asset_from.upper()
-    asset_to = asset_to.upper()
+    asset_from, asset_to = _parse_asset_pair(asset_from, asset_to)
     if asset_from == asset_to:
         return 1
     db = get_db()
@@ -860,7 +884,7 @@ def asset_rate(asset_from, asset_to=None, date=None):
                 graph.setdefault(k[1], []).append(k[0])
         try:
             path = min(_find_path(graph, asset_from, asset_to), key=len)
-        except KeyError:
+        except (KeyError, ValueError):
             return None
         if not path:
             return None
@@ -2243,7 +2267,8 @@ def account_balance_range(start,
                           end=None,
                           step=1,
                           return_timestamp=False,
-                          base=None):
+                          base=None,
+                          _grafana=False):
     """
     Get list of account balances for the specified range
 
@@ -2276,6 +2301,8 @@ def account_balance_range(start,
             break
         elif dt > end_date:
             last_record = True
+            if _grafana:
+                dt = datetime.datetime.now()
         times.append(dt.timestamp() if return_timestamp else dt)
         b = account_balance(**acc_info, base=base, date=dt)
         data.append(b)
