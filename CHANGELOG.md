@@ -1,6 +1,6 @@
 # FINAC CHANGE LOG
 
-## 0.4.19
+## 0.4.20
 
 * Added functions: *asset_rate_range*
 
