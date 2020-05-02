@@ -307,10 +307,13 @@ def exec_query(q, _grafana=False):
         for row in asset_list(*args, **kwargs):
             yield row
     elif fn == 'asset_list_rates':
-        for row in asset_list_rates(*args, **kwargs):
+        for row in asset_list_rates(*args, _grafana=_grafana, **kwargs):
             yield row
     elif fn == 'asset_rate':
-        result = _asset_rate_q(*args, **kwargs)
+        result = asset_rate(*args,
+                            _grafana=_grafana,
+                            return_pair=True,
+                            **kwargs)
         yield {'pair': result[0], 'rate': result[1]}
     elif fn == 'account_info':
         result = account_info(*args, **kwargs)
@@ -320,13 +323,13 @@ def exec_query(q, _grafana=False):
             for row in result:
                 yield row
     elif fn == 'account_statement':
-        for row in account_statement(*args, **kwargs):
+        for row in account_statement(*args, _grafana=_grafana, **kwargs):
             yield row
     elif fn == 'account_list':
-        for row in account_list(*args, **kwargs):
+        for row in account_list(*args, _grafana=_grafana, **kwargs):
             yield row
     elif fn == 'account_balance':
-        yield {'balance': account_balance(*args, **kwargs)}
+        yield {'balance': account_balance(*args, _grafana=_grafana, **kwargs)}
     elif fn == 'account_balance_range':
         times, data = account_balance_range(*args, _grafana=_grafana, **kwargs)
         for t, d in zip(times, data):
@@ -640,7 +643,11 @@ def asset_list():
 
 
 @core_method
-def asset_list_rates(asset=None, start=None, end=None, datefmt=False):
+def asset_list_rates(asset=None,
+                     start=None,
+                     end=None,
+                     datefmt=False,
+                     _grafana=False):
     """
     List asset rates
 
@@ -649,6 +656,11 @@ def asset_list_rates(asset=None, start=None, end=None, datefmt=False):
     If asset is not specified, "end" is used as date to get rates for all
     assets
     """
+    if _grafana:
+        if isinstance(start, int):
+            start = start / 1000
+        if isinstance(end, int):
+            end = end / 1000
     if asset:
         cond = ''
         asset = _safe_format(asset.upper())
@@ -809,13 +821,21 @@ def _parse_asset_pair(asset_from, asset_to):
     return asset_from, asset_to
 
 
-def _asset_rate_q(asset_from, asset_to=None, date=None):
-    asset_from, asset_to = _parse_asset_pair(asset_from, asset_to)
-    return f'{asset_from}/{asset_to}', asset_rate(asset_from, asset_to, date)
-
-
 @core_method
-def asset_rate(asset_from, asset_to=None, date=None):
+def asset_rate(asset_from,
+               asset_to=None,
+               date=None,
+               _grafana=False,
+               return_pair=False):
+    asset_from, asset_to = _parse_asset_pair(asset_from, asset_to)
+    result = _asset_rate_lookup(asset_from,
+                                asset_to,
+                                date=date,
+                                _grafana=_grafana)
+    return (f'{asset_from}/{asset_to}', result) if return_pair else result
+
+
+def _asset_rate_lookup(asset_from, asset_to=None, date=None, _grafana=False):
     """
     Get asset rate for the specified date
 
@@ -823,6 +843,9 @@ def asset_rate(asset_from, asset_to=None, date=None):
 
     Function can be also called as e.g. asset_rate('EUR/USD')
     """
+    if _grafana:
+        if isinstance(date, int):
+            date = date / 1000
     if date is None:
         date = parse_date(return_timestamp=False)
     else:
@@ -1737,7 +1760,8 @@ def account_statement(account,
                       end=None,
                       tag=None,
                       pending=True,
-                      datefmt=False):
+                      datefmt=False,
+                      _grafana=False):
     """
     Args:
         account: account code
@@ -1749,6 +1773,11 @@ def account_statement(account,
     Returns:
         generator object
     """
+    if _grafana:
+        if isinstance(start, int):
+            start = start / 1000
+        if isinstance(end, int):
+            end = end / 1000
     acc_info = account_info(account)
     cond = 'transact.deleted is null and transact.service is null'
     d_field = 'd_created' if pending else 'd'
@@ -1862,7 +1891,8 @@ def account_list(asset=None,
                  date=None,
                  base=None,
                  order_by=['tp', 'asset', 'account', 'balance'],
-                 hide_empty=False):
+                 hide_empty=False,
+                 _grafana=False):
     """
     List accounts and their balances
 
@@ -1877,6 +1907,9 @@ def account_list(asset=None,
         hide_empty: hide accounts with zero balance, default is False
     """
     cond = "transact.deleted is null"
+    if _grafana:
+        if isinstance(date, int):
+            date = date / 1000
     if tp:
         tp = _safe_format(tp)
         if not isinstance(tp, (list, tuple)):
@@ -2204,7 +2237,8 @@ def account_balance(account=None,
                     tp=None,
                     base=None,
                     date=None,
-                    _natural=False):
+                    _natural=False,
+                    _grafana=False):
     """
     Get account balance
 
@@ -2218,6 +2252,9 @@ def account_balance(account=None,
         raise ValueError('Account and type can not be specified together')
     elif not account and not tp:
         tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
+    if _grafana:
+        if isinstance(date, int):
+            date = date / 1000
     cond = "transact.deleted is null"
     dts = parse_date(date, return_timestamp=False) if date else parse_date(
         return_timestamp=False)
@@ -2288,12 +2325,18 @@ def account_balance_range(start,
         raise ValueError('Account and type can not be specified together')
     elif not account and not tp:
         tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
+    if _grafana:
+        if isinstance(start, int):
+            start = start / 1000
+        if isinstance(end, int):
+            end = end / 1000
     times = []
     data = []
     acc_info = {'account': account} if account else {'tp': tp}
     dt = parse_date(start, return_timestamp=False)
     end_date = parse_date(
-        end, return_timestamp=False) if end else datetime.datetime.now()
+        end, return_timestamp=False
+    ) if end else datetime.datetime.now()
     delta = datetime.timedelta(days=step)
     last_record = False
     while dt < end_date or not last_record:
