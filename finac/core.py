@@ -2326,6 +2326,7 @@ def asset_rate_range(start,
     dt = parse_date(start, return_timestamp=False)
     end_date = parse_date(
         end, return_timestamp=False) if end else datetime.datetime.now()
+    end_date += datetime.timedelta(days=1)
     delta = datetime.timedelta(days=step)
     last_record = False
     while dt < end_date or not last_record:
@@ -2382,6 +2383,7 @@ def account_balance_range(start,
     end_date = parse_date(
         end, return_timestamp=False) if end else datetime.datetime.now()
     delta = datetime.timedelta(days=step)
+    end_date += datetime.timedelta(days=1)
     last_record = False
     while dt < end_date or not last_record:
         if dt == end_date:
