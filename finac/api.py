@@ -99,6 +99,12 @@ def query(q=None,
             x = x.strip()
             if x.lower().startswith('as') and x[2] in (' ', '\t', '\n', '\r'):
                 override_dc_name = x.split(maxsplit=1)[-1]
+                if \
+                    (override_dc_name.startswith('\'') and \
+                        override_dc_name.endswith('\'')) or \
+                    (override_dc_name.startswith('\"') and \
+                        override_dc_name.endswith('\"')):
+                    override_dc_name = override_dc_name[1:-1]
             elif x:
                 return _response('Invalid query', status=400)
     else:
