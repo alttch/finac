@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.4.28'
+__version__ = '0.4.29'
 
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
@@ -817,15 +817,19 @@ def asset_delete_rate(asset_from, asset_to=None, date=None):
 
 
 def _parse_asset_pair(asset_from, asset_to):
+    if asset_from is None:
+        raise ValueError('source asset not specified')
     if asset_from.find('/') != -1 and asset_to is None:
         asset_from, asset_to = asset_from.split('/')
+    elif asset_to is None:
+        raise ValueError('target asset not specified')
     asset_from = asset_from.upper()
     asset_to = asset_to.upper()
     return asset_from, asset_to
 
 
 @core_method
-def asset_rate(asset_from,
+def asset_rate(asset_from=None,
                asset_to=None,
                date=None,
                _grafana=False,
@@ -2310,7 +2314,7 @@ def account_balance(account=None,
 
 @core_method
 def asset_rate_range(start,
-                     asset_from,
+                     asset_from=None,
                      asset_to=None,
                      end=None,
                      step=1,
