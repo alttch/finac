@@ -264,8 +264,6 @@ def exec_query(q, _grafana=False):
     """
     Execute statement
 
-    EXPERIMENTAL, DON'T USE IN PRODUCTION
-
     Currenly only function call statements are supported:
 
         SELECT <function>([args, kwargs])
