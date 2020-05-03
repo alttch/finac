@@ -365,13 +365,12 @@ class Test(unittest.TestCase):
                                               return_timestamp=False)
         self.assertEqual(dt1[-4], 4140)
         self.assertEqual(dt1[-2], 5580)
-        t1, dt1 = finac.account_balance_range(start='2019-01-05',
-                                              tp='cash,current',
-                                              end='2019-8-07',
-                                              base='usd',
-                                              return_timestamp=False)
-        self.assertEqual(dt1[-4], 4140)
-        self.assertEqual(dt1[-2], 5580)
+        res = list(finac.exec_query(
+            'SELECT account_balance_range('
+            'start="2019-01-05", '
+            'tp="current|cash", end="2019-8-07", base="usd")'))
+        self.assertEqual(res[-4]['balance'], 4140)
+        self.assertEqual(res[-2]['balance'], 5580)
 
     def test098_asset_update(self):
         finac.asset_update('eur', code='ouR')
