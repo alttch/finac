@@ -2257,6 +2257,8 @@ def account_balance(account=None,
         raise ValueError('Account and type can not be specified together')
     elif not account and not tp:
         tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
+    elif tp and '|' in tp:
+        tp = [x.strip() for x in tp.split('|')]
     if _grafana:
         if isinstance(date, int):
             date = date / 1000
