@@ -1,4 +1,8 @@
-# FINAC CHANGE LOG
+# FINAC CHANGELOG
+
+## 0.4.27
+
+* Fixed range steps, auto and hourly steps
 
 ## 0.4.20
 
