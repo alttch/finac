@@ -92,21 +92,6 @@ def query(q=None,
     if isinstance(q, list) and _grafana:
         need_ts = q[1]
         q = q[0]
-        override_dc_name = None
-        if ')' in q:
-            q, x = q.rsplit(')', 1)
-            q += ')'
-            x = x.strip()
-            if x.lower().startswith('as') and x[2] in (' ', '\t', '\n', '\r'):
-                override_dc_name = x.split(maxsplit=1)[-1]
-                if \
-                    (override_dc_name.startswith('\'') and \
-                        override_dc_name.endswith('\'')) or \
-                    (override_dc_name.startswith('\"') and \
-                        override_dc_name.endswith('\"')):
-                    override_dc_name = override_dc_name[1:-1]
-            elif x:
-                return _response('Invalid query', status=400)
     else:
         need_ts = False
     logger.info(f'{log_from}, query: \'{q}\'')
@@ -150,16 +135,13 @@ def query(q=None,
                             tc_name = timecols[0]
                             for r in result[0]:
                                 if r != tc_name:
-                                    gres[
-                                        'target'] = override_dc_name if \
-                                                override_dc_name else r
+                                    gres['target'] = r
                                     dc_name = r
                                     break
                         else:
                             tc_name = None
                             dc_name = list(result[0])[0]
-                            gres['target'] = override_dc_name if \
-                                    override_dc_name else dc_name
+                            gres['target'] = dc_name
                             t = datetime.datetime.now().timestamp() * 1000
                         dp = []
                         for r in result:

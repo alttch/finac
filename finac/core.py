@@ -262,7 +262,7 @@ def get_version():
 @core_method
 def exec_query(q, _grafana=False):
     """
-    Execute statement
+    Execute FinacQL query statement
 
     Currenly only function call statements are supported:
 
@@ -270,19 +270,24 @@ def exec_query(q, _grafana=False):
 
         e.g.
 
-        SELECT account_balance("current.usd")
+        SELECT account_balance("myaccount")
 
     Supported core functions:
-        get_version
-        asset_list
-        asset_list_rates
-        asset_rate
-        asset_rate_range
-        account_info
-        account_statement
-        account_list
-        account_balance
-        account_balance_range
+
+    * get_version
+    * asset_list
+    * asset_list_rates
+    * asset_rate
+    * asset_rate_range^
+    * account_info
+    * account_statement
+    * account_list
+    * account_balance^
+    * account_balance_range^
+
+    Functions marked with "^" support data column assignment with "AS":
+
+        SELECT account_balance("myaccount") AS myacc
 
     Args:
         q: query to execute
@@ -294,6 +299,21 @@ def exec_query(q, _grafana=False):
         other: passed from called function as-is
     """
     q = q.strip()
+    override_dc_name = None
+    if ')' in q:
+        q, x = q.rsplit(')', 1)
+        q += ')'
+        x = x.strip()
+        if x.lower().startswith('as') and x[2] in (' ', '\t', '\n', '\r'):
+            override_dc_name = x.split(maxsplit=1)[-1]
+            if \
+                (override_dc_name.startswith('\'') and \
+                    override_dc_name.endswith('\'')) or \
+                (override_dc_name.startswith('\"') and \
+                    override_dc_name.endswith('\"')):
+                override_dc_name = override_dc_name[1:-1]
+        elif x:
+            raise ValueError('Invalid query')
     if q[:7].lower() != 'select ':
         raise RuntimeError('Unsupported statement')
     try:
@@ -328,15 +348,24 @@ def exec_query(q, _grafana=False):
         for row in account_list(*args, _grafana=_grafana, **kwargs):
             yield row
     elif fn == 'account_balance':
-        yield {'balance': account_balance(*args, _grafana=_grafana, **kwargs)}
+        yield {
+            override_dc_name if override_dc_name else 'balance':
+                account_balance(*args, _grafana=_grafana, **kwargs)
+        }
     elif fn == 'account_balance_range':
         times, data = account_balance_range(*args, _grafana=_grafana, **kwargs)
         for t, d in zip(times, data):
-            yield {'date': t, 'balance': d}
+            yield {
+                'date': t,
+                override_dc_name if override_dc_name else 'balance': d
+            }
     elif fn == 'asset_rate_range':
         times, data = asset_rate_range(*args, _grafana=_grafana, **kwargs)
         for t, d in zip(times, data):
-            yield {'date': t, 'rate': d}
+            yield {
+                'date': t,
+                override_dc_name if override_dc_name else 'rate': d
+            }
     else:
         raise RuntimeError('Unsupported query function')
 
