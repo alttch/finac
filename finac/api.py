@@ -89,6 +89,11 @@ def query(q=None,
 
     if q is None:
         q = request.args.get('q')
+    if isinstance(q, list) and _grafana:
+        need_ts = q[1]
+        q = q[0]
+    else:
+        need_ts = False
     logger.info(f'{log_from}, query: \'{q}\'')
     if q is None:
         return _response('q param is required', status=400)
@@ -99,27 +104,58 @@ def query(q=None,
         result = list(exec_query(q, _grafana=_grafana))
         t_spent = time.time() - t_start
         if _grafana:
-            gres = {'columns': [], 'rows': [], 'type': 'table'}
+            if need_ts:
+                gres = {}
+            else:
+                gres = {'columns': [], 'rows': [], 'type': 'table'}
             if result:
                 timecols = []
                 cols = [c for c in result[0]]
                 for c in cols:
-                    col = {'text': c}
+                    if not need_ts:
+                        col = {'text': c}
                     if isinstance(result[0][c], datetime.datetime):
-                        col['type'] = 'time'
-                        if c in ('date', 'time', 'created'):
-                            col['sort'] = True
-                            col['desc'] = True
+                        if not need_ts:
+                            col['type'] = 'time'
+                            if c in ('date', 'time', 'created'):
+                                col['sort'] = True
+                                col['desc'] = True
                         timecols.append(c)
-                    elif isinstance(result[0][c], int) or isinstance(
-                            result[0][c], float):
+                    elif not need_ts and (isinstance(result[0][c], int) or
+                                          isinstance(result[0][c], float)):
                         col['type'] = 'number'
-                    gres['columns'].append(col)
-                for r in result:
-                    gres['rows'].append([
-                        r[c].timestamp() * 1000 if c in timecols else r[c]
-                        for c in cols
-                    ])
+                    if not need_ts:
+                        gres['columns'].append(col)
+                if need_ts:
+                    if len(timecols) > 1 or (timecols and len(result[0]) > 2):
+                        return _response('Unsupported time series query',
+                                         status=405)
+                    else:
+                        if timecols:
+                            tc_name = timecols[0]
+                            for r in result[0]:
+                                if r != tc_name:
+                                    gres['target'] = r
+                                    dc_name = r
+                                    break
+                        else:
+                            tc_name = None
+                            dc_name = list(result[0])[0]
+                            gres['target'] = dc_name
+                            t = datetime.datetime.now().timestamp() * 1000
+                        dp = []
+                        for r in result:
+                            dp.append([
+                                r[dc_name], t if tc_name is None else
+                                r[tc_name].timestamp() * 1000
+                            ])
+                        gres['datapoints'] = dp
+                else:
+                    for r in result:
+                        gres['rows'].append([
+                            r[c].timestamp() * 1000 if c in timecols else r[c]
+                            for c in cols
+                        ])
             return gres if _return_raw else jsonify(gres)
         else:
             result = {
