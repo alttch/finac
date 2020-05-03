@@ -829,7 +829,10 @@ def asset_rate(asset_from,
                asset_to=None,
                date=None,
                _grafana=False,
+               asset=None,
                return_pair=False):
+    if asset:
+        asset_from = asset
     asset_from, asset_to = _parse_asset_pair(asset_from, asset_to)
     result = _asset_rate_lookup(asset_from,
                                 asset_to,
@@ -2311,6 +2314,7 @@ def asset_rate_range(start,
                      asset_to=None,
                      end=None,
                      step=1,
+                     asset=None,
                      return_timestamp=False,
                      _grafana=False):
     """
@@ -2325,6 +2329,8 @@ def asset_rate_range(start,
     Returns:
         tuple with time series list and corresponding asset rate
     """
+    if asset:
+        asset_from = asset
     return _run_steps_func(start=start,
                            end=end,
                            step=step,
