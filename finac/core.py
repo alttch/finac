@@ -2250,7 +2250,7 @@ def account_balance(account=None,
 
     Args:
         account: account code
-        tp: account type/types
+        tp: account type/types, value, list or values, separated with |
         base: base asset (if not specified, config.base_asset is used)
         date: get balance for specified date/time
     """
