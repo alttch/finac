@@ -908,8 +908,11 @@ def _asset_rate_lookup(asset_from, asset_to=None, date=None, _grafana=False):
             graph.setdefault(r['asset_from'], []).append(r['asset_to'])
         for k, v in rates.copy().items():
             if (k[1], k[0]) not in rates:
-                rates[(k[1], k[0])] = 1 / v
-                graph.setdefault(k[1], []).append(k[0])
+                try:
+                    rates[(k[1], k[0])] = 1 / v
+                    graph.setdefault(k[1], []).append(k[0])
+                except ZeroDivisionError:
+                    pass
         try:
             path = min(_find_path(graph, asset_from, asset_to), key=len)
         except (KeyError, ValueError):
