@@ -2316,34 +2316,22 @@ def asset_rate_range(start,
     """
     Get list of asset rates for the specified time range
 
+    step argument usage:
+
+        4, 4d - 4 days
+        2h - 2 hours
+        5a - split time range into 5 parts
+
     Returns:
         tuple with time series list and corresponding asset rate
     """
-    if _grafana:
-        if isinstance(start, int):
-            start = start / 1000
-        if isinstance(end, int):
-            end = end / 1000
-    times = []
-    data = []
-    dt = parse_date(start, return_timestamp=False)
-    end_date = parse_date(
-        end, return_timestamp=False) if end else datetime.datetime.now()
-    end_date += datetime.timedelta(days=1)
-    delta = datetime.timedelta(days=step)
-    last_record = False
-    while dt < end_date or not last_record:
-        if dt == end_date:
-            break
-        elif dt > end_date:
-            last_record = True
-            if _grafana:
-                dt = datetime.datetime.now()
-        times.append(dt.timestamp() if return_timestamp else dt)
-        b = _asset_rate_lookup(asset_from, asset_to, date=dt)
-        data.append(b)
-        dt += delta
-    return times, data
+    return _run_steps_func(start=start,
+                           end=end,
+                           step=step,
+                           return_timestamp=return_timestamp,
+                           fn=_asset_rate_lookup,
+                           args=(asset_from, asset_to),
+                           _grafana=_grafana)
 
 
 @core_method
@@ -2358,12 +2346,18 @@ def account_balance_range(start,
     """
     Get list of account balances for the specified time range
 
+    step argument usage:
+
+        4, 4d - 4 days
+        2h - 2 hours
+        5a - split time range into 5 parts
+
     Args:
         account: account code
         tp: account type/types
         start: start date/time, required
         end: end date/time, if not specified, current time is used
-        step: list step in days
+        step: time step
         return_timestamp: return dates as timestamps if True, otherwise as
             datetime objects. Default is False
 
@@ -2376,6 +2370,26 @@ def account_balance_range(start,
         tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
     elif tp and '|' in tp:
         tp = [x.strip() for x in tp.split('|')]
+    acc_info = {'account': account} if account else {'tp': tp}
+    return _run_steps_func(start=start,
+                           end=end,
+                           step=step,
+                           return_timestamp=return_timestamp,
+                           fn=account_balance,
+                           kwargs={
+                               **acc_info, 'base': base
+                           },
+                           _grafana=_grafana)
+
+
+def _run_steps_func(start,
+                    end,
+                    step,
+                    return_timestamp,
+                    fn,
+                    args=(),
+                    kwargs={},
+                    _grafana=False):
     if _grafana:
         if isinstance(start, int):
             start = start / 1000
@@ -2383,23 +2397,29 @@ def account_balance_range(start,
             end = end / 1000
     times = []
     data = []
-    acc_info = {'account': account} if account else {'tp': tp}
     dt = parse_date(start, return_timestamp=False)
     end_date = parse_date(
         end, return_timestamp=False) if end else datetime.datetime.now()
-    delta = datetime.timedelta(days=step)
-    end_date += datetime.timedelta(days=1)
-    last_record = False
-    while dt < end_date or not last_record:
-        if dt == end_date:
-            break
-        elif dt > end_date:
-            last_record = True
-            if _grafana:
-                dt = datetime.datetime.now()
+    if isinstance(step, str) and step.endswith('a'):
+        step = int(step[:-1])
+        delta = (end_date - dt) / (step - 1) if step > 1 else None
+        autosteps = True
+    else:
+        autosteps = False
+        if isinstance(step, str):
+            if step.endswith('h'):
+                delta = datetime.timedelta(hours=int(step[:-1]))
+            elif step.endswith('d'):
+                delta = datetime.timedelta(days=int(step[:-1]))
+            else:
+                delta = datetime.timedelta(days=int(step))
+        else:
+            delta = datetime.timedelta(days=step)
+    while dt <= end_date or (autosteps and len(data) < step):
         times.append(dt.timestamp() if return_timestamp else dt)
-        b = account_balance(**acc_info, base=base, date=dt)
-        data.append(b)
+        data.append(fn(*args, date=dt, **kwargs))
+        if delta is None:
+            break
         dt += delta
     return times, data
 
