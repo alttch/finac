@@ -2371,6 +2371,8 @@ def account_balance_range(start,
         raise ValueError('Account and type can not be specified together')
     elif not account and not tp:
         tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
+    elif tp and ',' in tp:
+        tp = [x.strip() for x in tp.split(',')]
     if _grafana:
         if isinstance(start, int):
             start = start / 1000
