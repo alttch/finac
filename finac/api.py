@@ -89,7 +89,7 @@ def query(q=None,
 
     if q is None:
         q = request.args.get('q')
-    if isinstance(q, list) and _time_ms:
+    if isinstance(q, list):
         need_ts = q[1]
         q = q[0]
     else:
