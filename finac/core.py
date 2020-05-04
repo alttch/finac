@@ -1940,7 +1940,8 @@ def account_list(asset=None,
 
     Args:
         asset: filter by asset
-        tp: filter by account type (or types)
+        tp: filter by account type (or types), value, list or values, separated
+            with |
         passive: list passive, active or all (if None) accounts
         code: filter by acocunt code (may contain '%' as a wildcards)
         date: get balances for the specified date
@@ -1953,6 +1954,8 @@ def account_list(asset=None,
         if isinstance(date, int):
             date = date / 1000
     if tp:
+        if '|' in tp:
+            tp = tp.split('|')
         tp = _safe_format(tp)
         if not isinstance(tp, (list, tuple)):
             if isinstance(tp, int):
