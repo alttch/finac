@@ -688,19 +688,15 @@ def asset_list_rates(asset=None,
     If asset is not specified, "end" is used as date to get rates for all
     assets
     """
-    if _grafana:
-        if isinstance(start, int):
-            start = start / 1000
-        if isinstance(end, int):
-            end = end / 1000
     if asset:
         cond = ''
         asset = _safe_format(asset.upper())
         if start:
-            dts = parse_date(start, return_timestamp=False)
+            dts = parse_date(start, return_timestamp=False, ms=_grafana)
             cond += (' and ' if cond else '') + 'd >= \'{}\''.format(dts)
-        dte = parse_date(end, return_timestamp=False) if end else parse_date(
-            return_timestamp=False)
+        dte = parse_date(end, return_timestamp=False,
+                         ms=_grafana) if end else parse_date(
+                             return_timestamp=False)
         cond += (' and ' if cond else '') + 'd <= \'{}\''.format(dte)
         if asset.find('/') != -1:
             asset_from, asset_to = _safe_format(asset.split('/'))
@@ -722,8 +718,9 @@ def asset_list_rates(asset=None,
                     where {cond} order by d
         """.format(cond=cond)))
     else:
-        d = parse_date(end, return_timestamp=False) if end else parse_date(
-            return_timestamp=False)
+        d = parse_date(end, return_timestamp=False,
+                       ms=_grafana) if end else parse_date(
+                           return_timestamp=False)
         r = get_db().execute(sql("""
             select
                 a1.code as asset_from,
@@ -882,13 +879,10 @@ def _asset_rate_lookup(asset_from, asset_to=None, date=None, _grafana=False):
 
     Function can be also called as e.g. asset_rate('EUR/USD')
     """
-    if _grafana:
-        if isinstance(date, int):
-            date = date / 1000
     if date is None:
         date = parse_date(return_timestamp=False)
     else:
-        date = parse_date(date, return_timestamp=False)
+        date = parse_date(date, return_timestamp=False, ms=_grafana)
     asset_from, asset_to = _parse_asset_pair(asset_from, asset_to)
     if asset_from == asset_to:
         return 1
@@ -1815,20 +1809,15 @@ def account_statement(account,
     Returns:
         generator object
     """
-    if _grafana:
-        if isinstance(start, int):
-            start = start / 1000
-        if isinstance(end, int):
-            end = end / 1000
     acc_info = account_info(account)
     cond = 'transact.deleted is null and transact.service is null'
     d_field = 'd_created' if pending else 'd'
     if start:
-        dts = parse_date(start, return_timestamp=False)
+        dts = parse_date(start, return_timestamp=False, ms=_grafana)
         cond += (' and ' if cond else '') + 'transact.{} >= \'{}\''.format(
             d_field, dts)
-    dte = parse_date(end, return_timestamp=False) if end else parse_date(
-        return_timestamp=False)
+    dte = parse_date(end, return_timestamp=False,
+                     ms=_grafana) if end else parse_date(return_timestamp=False)
     cond += (' and ' if cond else '') + 'transact.{} <= \'{}\''.format(
         d_field, dte)
     if tag is not None:
@@ -1966,9 +1955,6 @@ def account_list(asset=None,
             yield acc
         return
     cond = "transact.deleted is null"
-    if _grafana:
-        if isinstance(date, int):
-            date = date / 1000
     if tp:
         if '|' in tp:
             tp = tp.split('|')
@@ -2003,8 +1989,9 @@ def account_list(asset=None,
         cond += ')'
     else:
         cond += (' and ' if cond else '') + 'account.tp <= 1000'
-    dts = parse_date(date, return_timestamp=False) if date else parse_date(
-        return_timestamp=False)
+    dts = parse_date(date, return_timestamp=False,
+                     ms=_grafana) if date else parse_date(
+                         return_timestamp=False)
     cond += (' and '
              if cond else '') + 'transact.d_created <= \'{}\''.format(dts)
     if code:
@@ -2125,7 +2112,8 @@ def account_list_summary(asset=None,
                      hide_empty=hide_empty,
                      _grafana=_grafana))
     for a in accounts:
-        a['balance_bc'] = a['balance'] * asset_rate(a['asset'], base, date=date)
+        a['balance_bc'] = a['balance'] * asset_rate(
+            a['asset'], base, date=date, _grafana=_grafana)
     if group_by:
         res = []
         if group_by not in ('asset', 'tp', 'type'):
@@ -2152,9 +2140,9 @@ def account_list_summary(asset=None,
                     sum(
                         format_amount(d['balance'], d['asset'], d['passive'])
                         if d['asset'] == base else format_amount(
-                            d['balance'] *
-                            asset_rate(d['asset'], base, date=date), d['asset'],
-                            d['passive']) for d in accounts)
+                            d['balance'] * asset_rate(
+                                d['asset'], base, date=date, _grafana=_grafana),
+                            d['asset'], d['passive']) for d in accounts)
             }
         else:
             return {
@@ -2324,12 +2312,10 @@ def account_balance(account=None,
         tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
     elif tp and '|' in tp:
         tp = [x.strip() for x in tp.split('|')]
-    if _grafana:
-        if isinstance(date, int):
-            date = date / 1000
     cond = "transact.deleted is null"
-    dts = parse_date(date, return_timestamp=False) if date else parse_date(
-        return_timestamp=False)
+    dts = parse_date(date, return_timestamp=False,
+                     ms=_grafana) if date else parse_date(
+                         return_timestamp=False)
     cond += (' and '
              if cond else '') + 'transact.d_created <= \'{}\''.format(dts)
     balance = None
@@ -2364,7 +2350,8 @@ def account_balance(account=None,
                                         group_by='tp',
                                         date=date,
                                         base=base,
-                                        hide_empty=True)
+                                        hide_empty=True,
+                                        _grafana=_grafana)
         balance = accounts['total']
     return balance
 
@@ -2457,16 +2444,11 @@ def _run_steps_func(start,
                     args=(),
                     kwargs={},
                     _grafana=False):
-    if _grafana:
-        if isinstance(start, int):
-            start = start / 1000
-        if isinstance(end, int):
-            end = end / 1000
     times = []
     data = []
-    dt = parse_date(start, return_timestamp=False)
-    end_date = parse_date(
-        end, return_timestamp=False) if end else datetime.datetime.now()
+    dt = parse_date(start, return_timestamp=False, ms=_grafana)
+    end_date = parse_date(end, return_timestamp=False,
+                          ms=_grafana) if end else datetime.datetime.now()
     if isinstance(step, str) and step.endswith('a'):
         step = int(step[:-1])
         delta = (end_date - dt) / (step - 1) if step > 1 else None
