@@ -1933,6 +1933,7 @@ def account_list(asset=None,
                  date=None,
                  base=None,
                  order_by=['tp', 'asset', 'account', 'balance'],
+                 group_by=None,
                  hide_empty=False,
                  _grafana=False):
     """
@@ -1947,8 +1948,23 @@ def account_list(asset=None,
         date: get balances for the specified date
         base: convert account balances to base currency
         order_by: list ordering
+        group_by: 'asset' or 'type'
         hide_empty: hide accounts with zero balance, default is False
     """
+    if group_by is not None:
+        for acc in account_list_summary(asset=asset,
+                                        tp=tp,
+                                        passive=passive,
+                                        code=code,
+                                        date=date,
+                                        base=base,
+                                        order_by=order_by,
+                                        group_by=group_by,
+                                        hide_empty=hide_empty,
+                                        _grafana=_grafana,
+                                        _rsingle=True):
+            yield acc
+        return
     cond = "transact.deleted is null"
     if _grafana:
         if isinstance(date, int):
@@ -2073,7 +2089,9 @@ def account_list_summary(asset=None,
                          order_by=['tp', 'asset', 'account', 'balance'],
                          group_by=None,
                          hide_empty=False,
-                         base=None):
+                         base=None,
+                         _grafana=False,
+                         _rsingle=False):
     """
     List accounts and their balances plus return a total sum
 
@@ -2104,7 +2122,8 @@ def account_list_summary(asset=None,
                      code=code,
                      date=date,
                      order_by=order_by,
-                     hide_empty=hide_empty))
+                     hide_empty=hide_empty,
+                     _grafana=_grafana))
     for a in accounts:
         a['balance_bc'] = a['balance'] * asset_rate(a['asset'], base, date=date)
     if group_by:
@@ -2123,7 +2142,9 @@ def account_list_summary(asset=None,
                     zip(dk, (k, sum([z['balance_bc'] for z in val
                                     ]), sum([w['balance'] for w in val]))))
                 res.append(r)
-        if group_by == 'asset':
+        if _rsingle:
+            return res
+        elif group_by == 'asset':
             return {
                 'assets':
                     res,
@@ -2144,17 +2165,21 @@ def account_list_summary(asset=None,
                         format_amount(d['balance_bc'], base, d['passive'])
                         for d in accounts)
             }
-    return {
-        'accounts':
-            accounts,
-        'total':
-            sum(
-                format_amount(d['balance'], d['asset'], d['passive']
-                             ) if d['asset'] == base else format_amount(
-                                 d['balance'] *
-                                 asset_rate(d['asset'], base, date=date),
-                                 d['asset'], d['passive']) for d in accounts)
-    }
+    if _rsingle:
+        return accounts
+    else:
+        return {
+            'accounts':
+                accounts,
+            'total':
+                sum(
+                    format_amount(d['balance'], d['asset'], d['passive']
+                                 ) if d['asset'] == base else format_amount(
+                                     d['balance'] *
+                                     asset_rate(d['asset'], base, date=date),
+                                     d['asset'], d['passive'])
+                    for d in accounts)
+        }
 
 
 @core_method
