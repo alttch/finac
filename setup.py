@@ -18,7 +18,7 @@ setuptools.setup(
     license='MIT',
     install_requires=[
         'rapidtables', 'python-dateutil', 'neotermcolor', 'sqlalchemy',
-        'pyyaml', 'cachetools', 'flask', 'requests', 'pyaltt2'
+        'pyyaml', 'cachetools', 'flask', 'requests', 'pyaltt2>=0.0.86'
     ],
     classifiers=('Programming Language :: Python :: 3',
                  'License :: OSI Approved :: MIT License',
