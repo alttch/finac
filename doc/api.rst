@@ -28,7 +28,7 @@ production it's recommended to use WSGI server, e.g. **gunicorn**:
 
 .. code:: bash
 
-   gunicorn -b 0.0.0.0:80 server
+   gunicorn -b 0.0.0.0:80 server:application
 
 Finac client
 ============
