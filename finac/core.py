@@ -260,7 +260,7 @@ def get_version():
 
 
 @core_method
-def exec_query(q, _grafana=False):
+def exec_query(q, _time_ms=False):
     """
     Execute FinacQL query statement
 
@@ -326,11 +326,11 @@ def exec_query(q, _grafana=False):
         for row in asset_list(*args, **kwargs):
             yield row
     elif fn == 'asset_list_rates':
-        for row in asset_list_rates(*args, _grafana=_grafana, **kwargs):
+        for row in asset_list_rates(*args, _time_ms=_time_ms, **kwargs):
             yield row
     elif fn == 'asset_rate':
         result = asset_rate(*args,
-                            _grafana=_grafana,
+                            _time_ms=_time_ms,
                             return_pair=True,
                             **kwargs)
         yield {'pair': result[0], 'rate': result[1]}
@@ -342,25 +342,25 @@ def exec_query(q, _grafana=False):
             for row in result:
                 yield row
     elif fn == 'account_statement':
-        for row in account_statement(*args, _grafana=_grafana, **kwargs):
+        for row in account_statement(*args, _time_ms=_time_ms, **kwargs):
             yield row
     elif fn == 'account_list':
-        for row in account_list(*args, _grafana=_grafana, **kwargs):
+        for row in account_list(*args, _time_ms=_time_ms, **kwargs):
             yield row
     elif fn == 'account_balance':
         yield {
             override_dc_name if override_dc_name else 'balance':
-                account_balance(*args, _grafana=_grafana, **kwargs)
+                account_balance(*args, _time_ms=_time_ms, **kwargs)
         }
     elif fn == 'account_balance_range':
-        times, data = account_balance_range(*args, _grafana=_grafana, **kwargs)
+        times, data = account_balance_range(*args, _time_ms=_time_ms, **kwargs)
         for t, d in zip(times, data):
             yield {
                 'date': t,
                 override_dc_name if override_dc_name else 'balance': d
             }
     elif fn == 'asset_rate_range':
-        times, data = asset_rate_range(*args, _grafana=_grafana, **kwargs)
+        times, data = asset_rate_range(*args, _time_ms=_time_ms, **kwargs)
         for t, d in zip(times, data):
             yield {
                 'date': t,
@@ -679,7 +679,7 @@ def asset_list_rates(asset=None,
                      start=None,
                      end=None,
                      datefmt=False,
-                     _grafana=False):
+                     _time_ms=False):
     """
     List asset rates
 
@@ -692,10 +692,10 @@ def asset_list_rates(asset=None,
         cond = ''
         asset = _safe_format(asset.upper())
         if start:
-            dts = parse_date(start, return_timestamp=False, ms=_grafana)
+            dts = parse_date(start, return_timestamp=False, ms=_time_ms)
             cond += (' and ' if cond else '') + 'd >= \'{}\''.format(dts)
         dte = parse_date(end, return_timestamp=False,
-                         ms=_grafana) if end else parse_date(
+                         ms=_time_ms) if end else parse_date(
                              return_timestamp=False)
         cond += (' and ' if cond else '') + 'd <= \'{}\''.format(dte)
         if asset.find('/') != -1:
@@ -719,7 +719,7 @@ def asset_list_rates(asset=None,
         """.format(cond=cond)))
     else:
         d = parse_date(end, return_timestamp=False,
-                       ms=_grafana) if end else parse_date(
+                       ms=_time_ms) if end else parse_date(
                            return_timestamp=False)
         r = get_db().execute(sql("""
             select
@@ -858,7 +858,7 @@ def _parse_asset_pair(asset_from, asset_to):
 def asset_rate(asset_from=None,
                asset_to=None,
                date=None,
-               _grafana=False,
+               _time_ms=False,
                asset=None,
                return_pair=False):
     if asset:
@@ -867,11 +867,11 @@ def asset_rate(asset_from=None,
     result = _asset_rate_lookup(asset_from,
                                 asset_to,
                                 date=date,
-                                _grafana=_grafana)
+                                _time_ms=_time_ms)
     return (f'{asset_from}/{asset_to}', result) if return_pair else result
 
 
-def _asset_rate_lookup(asset_from, asset_to=None, date=None, _grafana=False):
+def _asset_rate_lookup(asset_from, asset_to=None, date=None, _time_ms=False):
     """
     Get asset rate for the specified date
 
@@ -882,7 +882,7 @@ def _asset_rate_lookup(asset_from, asset_to=None, date=None, _grafana=False):
     if date is None:
         date = parse_date(return_timestamp=False)
     else:
-        date = parse_date(date, return_timestamp=False, ms=_grafana)
+        date = parse_date(date, return_timestamp=False, ms=_time_ms)
     asset_from, asset_to = _parse_asset_pair(asset_from, asset_to)
     if asset_from == asset_to:
         return 1
@@ -1797,7 +1797,7 @@ def account_statement(account,
                       tag=None,
                       pending=True,
                       datefmt=False,
-                      _grafana=False):
+                      _time_ms=False):
     """
     Args:
         account: account code
@@ -1813,11 +1813,11 @@ def account_statement(account,
     cond = 'transact.deleted is null and transact.service is null'
     d_field = 'd_created' if pending else 'd'
     if start:
-        dts = parse_date(start, return_timestamp=False, ms=_grafana)
+        dts = parse_date(start, return_timestamp=False, ms=_time_ms)
         cond += (' and ' if cond else '') + 'transact.{} >= \'{}\''.format(
             d_field, dts)
     dte = parse_date(end, return_timestamp=False,
-                     ms=_grafana) if end else parse_date(return_timestamp=False)
+                     ms=_time_ms) if end else parse_date(return_timestamp=False)
     cond += (' and ' if cond else '') + 'transact.{} <= \'{}\''.format(
         d_field, dte)
     if tag is not None:
@@ -1924,7 +1924,7 @@ def account_list(asset=None,
                  order_by=['tp', 'asset', 'account', 'balance'],
                  group_by=None,
                  hide_empty=False,
-                 _grafana=False):
+                 _time_ms=False):
     """
     List accounts and their balances
 
@@ -1950,7 +1950,7 @@ def account_list(asset=None,
                                         order_by=order_by,
                                         group_by=group_by,
                                         hide_empty=hide_empty,
-                                        _grafana=_grafana,
+                                        _time_ms=_time_ms,
                                         _rsingle=True):
             yield acc
         return
@@ -1990,7 +1990,7 @@ def account_list(asset=None,
     else:
         cond += (' and ' if cond else '') + 'account.tp <= 1000'
     dts = parse_date(date, return_timestamp=False,
-                     ms=_grafana) if date else parse_date(
+                     ms=_time_ms) if date else parse_date(
                          return_timestamp=False)
     cond += (' and '
              if cond else '') + 'transact.d_created <= \'{}\''.format(dts)
@@ -2077,7 +2077,7 @@ def account_list_summary(asset=None,
                          group_by=None,
                          hide_empty=False,
                          base=None,
-                         _grafana=False,
+                         _time_ms=False,
                          _rsingle=False):
     """
     List accounts and their balances plus return a total sum
@@ -2110,10 +2110,10 @@ def account_list_summary(asset=None,
                      date=date,
                      order_by=order_by,
                      hide_empty=hide_empty,
-                     _grafana=_grafana))
+                     _time_ms=_time_ms))
     for a in accounts:
         a['balance_bc'] = a['balance'] * asset_rate(
-            a['asset'], base, date=date, _grafana=_grafana)
+            a['asset'], base, date=date, _time_ms=_time_ms)
     if group_by:
         res = []
         if group_by not in ('asset', 'tp', 'type'):
@@ -2141,7 +2141,7 @@ def account_list_summary(asset=None,
                         format_amount(d['balance'], d['asset'], d['passive'])
                         if d['asset'] == base else format_amount(
                             d['balance'] * asset_rate(
-                                d['asset'], base, date=date, _grafana=_grafana),
+                                d['asset'], base, date=date, _time_ms=_time_ms),
                             d['asset'], d['passive']) for d in accounts)
             }
         else:
@@ -2296,7 +2296,7 @@ def account_balance(account=None,
                     base=None,
                     date=None,
                     _natural=False,
-                    _grafana=False):
+                    _time_ms=False):
     """
     Get account balance
 
@@ -2314,7 +2314,7 @@ def account_balance(account=None,
         tp = [x.strip() for x in tp.split('|')]
     cond = "transact.deleted is null"
     dts = parse_date(date, return_timestamp=False,
-                     ms=_grafana) if date else parse_date(
+                     ms=_time_ms) if date else parse_date(
                          return_timestamp=False)
     cond += (' and '
              if cond else '') + 'transact.d_created <= \'{}\''.format(dts)
@@ -2351,7 +2351,7 @@ def account_balance(account=None,
                                         date=date,
                                         base=base,
                                         hide_empty=True,
-                                        _grafana=_grafana)
+                                        _time_ms=_time_ms)
         balance = accounts['total']
     return balance
 
@@ -2364,7 +2364,7 @@ def asset_rate_range(start,
                      step=1,
                      asset=None,
                      return_timestamp=False,
-                     _grafana=False):
+                     _time_ms=False):
     """
     Get list of asset rates for the specified time range
 
@@ -2385,7 +2385,7 @@ def asset_rate_range(start,
                            return_timestamp=return_timestamp,
                            fn=_asset_rate_lookup,
                            args=(asset_from, asset_to),
-                           _grafana=_grafana)
+                           _time_ms=_time_ms)
 
 
 @core_method
@@ -2396,7 +2396,7 @@ def account_balance_range(start,
                           step=1,
                           return_timestamp=False,
                           base=None,
-                          _grafana=False):
+                          _time_ms=False):
     """
     Get list of account balances for the specified time range
 
@@ -2433,7 +2433,7 @@ def account_balance_range(start,
                            kwargs={
                                **acc_info, 'base': base
                            },
-                           _grafana=_grafana)
+                           _time_ms=_time_ms)
 
 
 def _run_steps_func(start,
@@ -2443,12 +2443,12 @@ def _run_steps_func(start,
                     fn,
                     args=(),
                     kwargs={},
-                    _grafana=False):
+                    _time_ms=False):
     times = []
     data = []
-    dt = parse_date(start, return_timestamp=False, ms=_grafana)
+    dt = parse_date(start, return_timestamp=False, ms=_time_ms)
     end_date = parse_date(end, return_timestamp=False,
-                          ms=_grafana) if end else datetime.datetime.now()
+                          ms=_time_ms) if end else datetime.datetime.now()
     if isinstance(step, str) and step.endswith('a'):
         step = int(step[:-1])
         delta = (end_date - dt) / (step - 1) if step > 1 else None

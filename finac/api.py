@@ -58,7 +58,7 @@ def query_post():
                   _return_raw=True,
                   _check_perm=False,
                   log_from=log_from,
-                  _grafana=request.args.get('grafana') == '1')
+                  _time_ms=request.args.get('time_ms') == '1')
             for q in request.json
             if q
         ]
@@ -72,7 +72,7 @@ def query(q=None,
           _return_raw=False,
           _check_perm=True,
           log_from=None,
-          _grafana=None):
+          _time_ms=None):
 
     def _response(text, status):
         if _return_raw:
@@ -89,7 +89,7 @@ def query(q=None,
 
     if q is None:
         q = request.args.get('q')
-    if isinstance(q, list) and _grafana:
+    if isinstance(q, list) and _time_ms:
         need_ts = q[1]
         q = q[0]
     else:
@@ -98,12 +98,12 @@ def query(q=None,
     if q is None:
         return _response('q param is required', status=400)
     try:
-        if _grafana is None:
-            _grafana = request.args.get('grafana') == '1'
+        if _time_ms is None:
+            _time_ms = request.args.get('time_ms') == '1'
         t_start = time.time()
-        result = list(exec_query(q, _grafana=_grafana))
+        result = list(exec_query(q, _time_ms=_time_ms))
         t_spent = time.time() - t_start
-        if _grafana:
+        if _time_ms:
             if need_ts:
                 gres = {}
             else:
