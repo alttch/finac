@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.4.35'
+__version__ = '0.4.36'
 
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
@@ -277,7 +277,7 @@ def exec_query(q, _time_ms=False):
     * get_version
     * asset_list
     * asset_list_rates
-    * asset_rate
+    * asset_rate^
     * asset_rate_range^
     * account_info
     * account_statement
@@ -333,7 +333,12 @@ def exec_query(q, _time_ms=False):
                             _time_ms=_time_ms,
                             return_pair=True,
                             **kwargs)
-        yield {'pair': result[0], 'rate': result[1]}
+        yield {
+            override_dc_name: result[1]
+        } if override_dc_name else {
+            'pair': result[0],
+            'rate': result[1]
+        }
     elif fn == 'account_info':
         result = account_info(*args, **kwargs)
         if isinstance(result, dict):
