@@ -1,4 +1,4 @@
-__version__ = '0.4.36'
+__version__ = '0.4.37'
 
 import setuptools
 
@@ -18,7 +18,7 @@ setuptools.setup(
     license='MIT',
     install_requires=[
         'rapidtables', 'python-dateutil', 'neotermcolor', 'sqlalchemy',
-        'pyyaml', 'cachetools', 'flask', 'requests', 'pyaltt2>=0.0.86'
+        'pyyaml', 'cachetools', 'flask', 'requests', 'pyaltt2>=0.0.89'
     ],
     classifiers=('Programming Language :: Python :: 3',
                  'License :: OSI Approved :: MIT License',
