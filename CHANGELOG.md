@@ -2,9 +2,9 @@
 
 ## 0.5.0
 
-* New feature: Queries
+* New feature: queries
 
-* New feature: Custom account types
+* New feature: custom account types
 
 ## 0.4.27
 
