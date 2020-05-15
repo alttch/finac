@@ -7,6 +7,7 @@
     core
     accounts
     api
+    queries
 
 .. include:: readme.rst
 

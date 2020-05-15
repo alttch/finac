@@ -268,31 +268,6 @@ def exec_query(q, _time_ms=False):
     """
     Execute FinacQL query statement
 
-    Currenly only function call statements are supported:
-
-        SELECT <function>([args, kwargs])
-
-        e.g.
-
-        SELECT account_balance("myaccount")
-
-    Supported core functions:
-
-    * get_version
-    * asset_list
-    * asset_list_rates
-    * asset_rate^
-    * asset_rate_range^
-    * account_info
-    * account_statement
-    * account_list
-    * account_balance^
-    * account_balance_range^
-
-    Functions marked with "^" support data column assignment with "AS":
-
-        SELECT account_balance("myaccount") AS myacc
-
     Args:
         q: query to execute
 

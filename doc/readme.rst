@@ -54,7 +54,7 @@ Starting from 0.4, Finac uses DateTime columns for:
 
 Depending to your database type, it’s REQUIRED to convert these columns
 to either DATETIME (SQLite, for MySQL DATETIME(6) recommended) or
-TIMESTAMP (PostgreSQL, with timezone).
+TIMESTAMPTZ (PostgreSQL, with timezone).
 
 How to use in interactive mode
 ------------------------------
