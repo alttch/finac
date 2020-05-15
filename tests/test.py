@@ -29,6 +29,18 @@ dir_me = Path(__file__).absolute().parent.as_posix()
 result = SimpleNamespace()
 config = SimpleNamespace(remote=False)
 
+CUSTOM_ACCOUNT_TYPES = [{
+    'name': 'hr_bond',
+    'code': 801
+}, {
+    'name': 'lr_bond',
+    'code': 802
+}, {
+    'name': 'ebond',
+    'code': 1801,
+    'passive': True
+}]
+
 
 class Test(unittest.TestCase):
 
@@ -365,10 +377,10 @@ class Test(unittest.TestCase):
                                               return_timestamp=False)
         self.assertEqual(dt1[-4], 4140)
         self.assertEqual(dt1[-2], 5580)
-        res = list(finac.exec_query(
-            'SELECT account_balance_range('
-            'start="2019-01-05", '
-            'tp="current|cash", end="2019-8-07", base="usd")'))
+        res = list(
+            finac.exec_query('SELECT account_balance_range('
+                             'start="2019-01-05", '
+                             'tp="current|cash", end="2019-8-07", base="usd")'))
         self.assertEqual(res[-4]['balance'], 4140)
         self.assertEqual(res[-2]['balance'], 5580)
 
@@ -743,6 +755,18 @@ class Test(unittest.TestCase):
         self.assertEqual(finac.asset_rate('CA1/CA3'), 6)
         finac.core._CacheRateListKeyError = KeyError
 
+    def test902_custom_account_types(self):
+        if config.remote:
+            return
+        finac.account_create('hrb1', 'USD', 'hr_bond')
+        finac.account_create('lrb1', 'USD', 'lr_bond')
+        finac.account_create('emission1', 'USD', 'ebond')
+        finac.tr('hrb1', 5000)
+        finac.tr('lrb1', 6000)
+        finac.tr('emission1', 1000)
+        self.assertEqual(
+            finac.account_balance(tp=['hr_bond', 'lr_bond', 'ebond']), 10000)
+
 
 if __name__ == '__main__':
     import argparse
@@ -829,7 +853,8 @@ if __name__ == '__main__':
                    redis_host='localhost' if a.redis else None,
                    redis_db=9,
                    insecure=True,
-                   rate_cache_ttl=0.5)
+                   rate_cache_ttl=0.5,
+                   custom_account_types=CUSTOM_ACCOUNT_TYPES)
         finac.core.rate_cache = None
     test_suite = unittest.TestLoader().loadTestsFromTestCase(Test)
     test_result = unittest.TextTestRunner().run(test_suite)

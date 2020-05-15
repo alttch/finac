@@ -50,3 +50,30 @@ Taxes
 
 All tax accounts have the same type: **tax**. Taxes are included in listings by
 default, all tax accounts are passive (unless changed).
+
+Custom accounts
+---------------
+
+ID ranges 800-899 (included in account lists by default) and 1800-1899 are
+reserved for custom account types.
+
+To use custom account types, call *finac.init* with *custom_account_types
+option*:
+
+.. code:: python
+
+    CUSTOM_ACCOUNT_TYPES = [
+        {
+            'name': 'mytype1',
+            'code': 800
+        },
+        {
+            'name': 'mytype2',
+            'code': 801
+            'passive': True
+        }
+    ]
+
+    import finac as f
+    f.init( # general options,
+            custom_account_types=CUSTOM_ACCOUNT_TYPES)

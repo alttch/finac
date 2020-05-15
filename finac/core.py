@@ -43,8 +43,12 @@ ACCOUNT_METAL = 403
 
 ACCOUNT_REALITY = 500
 
+# IDs 800 - 899 reserved for custom account types
+
 # taxes
 ACCOUNT_TAX = 1000
+
+# IDs 1800 - 1899 reserved for custom account types
 
 # special
 ACCOUNT_TRANSIT = 2000
@@ -581,6 +585,7 @@ def init(db=None, **kwargs):
         redis_db: Redis database (default: 0)
         redis_timeout: Redis server timeout
         redis_blocking_timeout: Redis lock acquisition timeout
+        custom_account_types: custom account types dict
 
     Note: if Redis server is specified, Finac will use it for integrity locking
           (if enabled). In this case, lock tokens become Redis lock objects.
@@ -592,6 +597,35 @@ def init(db=None, **kwargs):
             rate_cache_ttl = v
         elif k == 'rate_cache_size':
             rate_cache_size = v
+        elif k == 'custom_account_types':
+            for act in v:
+                try:
+                    account_name = act['name']
+                except KeyError:
+                    raise RuntimeError('Custom account name is not specified')
+                if account_name in ACCOUNT_TYPE_NAMES:
+                    raise RuntimeError(
+                        'Account type {} is already registered'.format(
+                            account_name))
+                try:
+                    code = act['code']
+                except KeyError:
+                    raise RuntimeError(
+                        'Account code is not specified for {}'.format(
+                            account_name))
+                if code in ACCOUNT_TYPE_IDS:
+                    raise RuntimeError(
+                        'Account code {} is already in use'.format(code))
+                elif (code < 800 or code > 899) and (code < 1800 or
+                                                     code > 1899):
+                    raise RuntimeError(
+                        ('Account code {} is invalid: should '
+                         'be in ranges 800..899 or 1800..1899').format(code))
+                else:
+                    ACCOUNT_TYPE_NAMES[code] = account_name
+                    ACCOUNT_TYPE_IDS[account_name] = code
+                    if act.get('passive'):
+                        PASSIVE_ACCOUNTS.append(code)
         elif not hasattr(config, k):
             raise RuntimeError('Parameter {} is invalid'.format(k))
         setattr(config, k, v)
