@@ -1,5 +1,11 @@
 # FINAC CHANGELOG
 
+## 0.5.0
+
+* New feature: Queries
+
+* New feature: Custom account types
+
 ## 0.4.27
 
 * Fixed range steps, added auto and hourly steps
