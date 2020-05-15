@@ -311,3 +311,8 @@ details.
 
 See [Finac documentation](https://finac.readthedocs.io/) for server mode and
 HTTP API details.
+
+## Enterprise server and support
+
+Want to integrate Finac into your enterprise app or service? Need a support?
+Check [Finac Enterprise Server](https://www.altertech.com/products/fes/)
