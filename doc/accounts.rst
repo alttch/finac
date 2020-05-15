@@ -57,6 +57,10 @@ Custom accounts
 ID ranges 800-899 (included in account lists by default) and 1800-1899 are
 reserved for custom account types.
 
+.. warning::
+
+    Custom account type codes should be constant.
+
 To use custom account types, call *finac.init* with *custom_account_types
 option*:
 
