@@ -33,7 +33,7 @@ from finac.core import account_info
 
 from finac.core import account_update
 
-from finac.core import archive_account
+from finac.core import archive_transactions
 
 # transaction methods
 from finac.core import transaction_create, transaction_complete

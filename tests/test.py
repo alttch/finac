@@ -802,7 +802,7 @@ class Test(unittest.TestCase):
         self.assertEqual(len(list(finac.account_statement('testap1'))), 4)
         _test_balances()
         for acc in ['testa1', 'testa2', 'testa3', 'testap1']:
-            finac.archive_account(acc, due_date=d)
+            finac.archive_transactions(acc, due_date=d)
             _test_balances()
         self.assertEqual(len(list(finac.account_statement('testa1'))), 6)
         self.assertEqual(len(list(finac.account_statement('testa2'))), 2)

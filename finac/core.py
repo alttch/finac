@@ -2321,10 +2321,10 @@ def _account_summary(balance_type,
 
 
 @core_method
-def archive_account(account,
-                    due_date=None,
-                    keep_deleted=False,
-                    lock_token=None):
+def archive_transactions(account,
+                         due_date=None,
+                         keep_deleted=False,
+                         lock_token=None):
     """
     Archive account transactions
 
