@@ -233,7 +233,7 @@ For the simple transactions (*f.tr(...))*), use *target=*.
 
 ### Transaction templates
 
-Example: you have a recurrent payment orders in your bank, which pay office
+Example: you have a repeating payment orders in your bank, which pay office
 utility bills every 5th day of month, plus automatically moves $100 to saving
 account. To fill this into accounting, just create YAML transaction template:
 
@@ -257,7 +257,7 @@ transactions:
 then create a cron job which calls *f.transaction_apply("/path/to/file.yml")*
 and that's it.
 
-Actually, transaction templates are useful for any recurrent operations. You
+Actually, transaction templates are useful for any repeating operations. You
 may specify all same arguments, as for the core functions.
 
 ### Number formatting
