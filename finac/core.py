@@ -2325,6 +2325,23 @@ def archive_account(account,
                     due_date=None,
                     keep_deleted=False,
                     lock_token=None):
+    """
+    Archive account transactions
+
+    Combines account transactions to due_date to a single service transaction.
+    After archiving process is finished, cleanup() method should be called to
+    remove archived transactions from the database.
+
+    Only completed transactions are archived.
+
+    WARNING: backing up database is always recommended before performing
+    archiving procedure
+
+    Args:
+        account: account to archive
+        due_date: archivation date (default: now)
+        keep_deleted: keep deleted transactions
+    """
     token = account_lock(account, lock_token)
     account = account.upper()
     due_date = parse_date(due_date, return_timestamp=False)
