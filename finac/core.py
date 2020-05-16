@@ -2340,12 +2340,12 @@ def archive_account(account,
     Args:
         account: account to archive
         due_date: archivation date (default: now)
-        keep_deleted: keep deleted transactions
+        keep_deleted: keep deleted transactions (default: False)
     """
-    token = account_lock(account, lock_token)
     account = account.upper()
     due_date = parse_date(due_date, return_timestamp=False)
     db = get_db()
+    token = account_lock(account, lock_token)
     try:
         balance = account_balance(account, date=due_date)
         logger.info('Archiving account transactions for {}'.format(account))
