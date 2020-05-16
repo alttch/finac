@@ -2329,13 +2329,14 @@ def archive_transactions(account,
     Archive account transactions
 
     Combines account transactions to due_date to a single service transaction.
-    After archiving process is finished, cleanup() method should be called to
+    After archivation process is finished, cleanup() method should be called to
     remove archived transactions from the database.
 
     Only completed transactions are archived.
 
     WARNING: backing up database is always recommended before performing
-    archiving procedure
+    archiving procedure. If copy of archived transactions is required, it
+    should be performed manually.
 
     Args:
         account: account to archive
