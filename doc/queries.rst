@@ -70,6 +70,8 @@ special URI **/query**.
 The URI can be requested either via GET (with param q=<query>) or via POST
 (with list of queries in JSON payload).
 
+Finac API key should be put into *X-Auth-Key* request header variable.
+
 The response format is:
 
 .. code:: javascript
