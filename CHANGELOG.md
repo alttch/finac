@@ -1,5 +1,9 @@
 # FINAC CHANGELOG
 
+## 0.5.1
+
+* New feature: account transaction archiving out-of-the-box
+
 ## 0.5.0
 
 * New feature: queries
