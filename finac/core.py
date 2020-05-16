@@ -2369,7 +2369,7 @@ def archive_account(account,
                        account_id=account_id,
                        tag='archive',
                        note='acrhived {}'.format(d.strftime('%Y-%m-%d %T')),
-                       amount=abs(balance),
+                       amount=_multiply(abs(balance)),
                        d=d,
                        d_dcreated=d,
                        s=True)
