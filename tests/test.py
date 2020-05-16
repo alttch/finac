@@ -781,7 +781,7 @@ class Test(unittest.TestCase):
         finac.mv(dt='testa1', ct='testap1', amount=2500)
         finac.mv(dt='testa1', ct='testap1', amount=2500)
 
-        d = datetime.datetime.now()
+        d = time.time()
 
         finac.mv(dt='testa1', ct='testa2', amount=500)
         finac.mv(dt='testa1', ct='testa2', amount=500)
