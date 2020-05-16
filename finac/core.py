@@ -1929,6 +1929,20 @@ def purge():
 
 
 @core_method
+def cleanup():
+    """
+    Cleanup database
+    """
+    # cleanup archived transactions
+    get_db().execute(
+        sql("""
+        DELETE FROM transact WHERE
+            account_debit_id IS NULL AND
+            account_credit_id IS NULL
+    """))
+
+
+@core_method
 def account_list(asset=None,
                  tp=None,
                  passive=None,
@@ -2302,6 +2316,71 @@ def _account_summary(balance_type,
             row[balance_type + '_balance'] = _demultiply(row[balance_type +
                                                              '_balance'])
             yield row
+
+
+@core_method
+def archive_account(account,
+                    due_date=None,
+                    keep_deleted=False,
+                    lock_token=None):
+    token = account_lock(account, lock_token)
+    account = account.upper()
+    due_date = parse_date(due_date, return_timestamp=False)
+    db = get_db()
+    try:
+        balance = account_balance(account, date=due_date)
+        logger.info('Archiving account transactions for {}'.format(account))
+        if balance:
+            dbt = db.begin()
+            d = datetime.datetime.now()
+            account_id = db.execute(sql("""
+                    SELECT id FROM account WHERE code=:account
+                """),
+                                    account=account).fetchone().id
+            acc_info = account_info(account)
+            if balance > 0:
+                acc_tpt = 'credit' if acc_info['passive'] else 'debit'
+            else:
+                acc_tpt = 'debit' if acc_info['passive'] else 'credit'
+            db.execute(sql("""
+            INSERT INTO transact(
+                account_{}_id, tag, note, amount, d, d_created, service)
+            VALUES (:account_id, :tag, :note, :amount, :d, :d, :s)
+            """.format(acc_tpt)),
+                       account_id=account_id,
+                       tag='archive',
+                       note='acrhived {}'.format(d.strftime('%Y-%m-%d %T')),
+                       amount=abs(balance),
+                       d=d,
+                       d_dcreated=d,
+                       s=True)
+            db.execute(sql("""
+                        UPDATE transact SET
+                        account_debit_id=NULL
+                        WHERE
+                            service is NULL
+                            AND d_created <= :d
+                            AND d IS NOT NULL
+                            AND account_debit_id=:account_id
+                            {}
+                    """.format(' AND deleted IS NULL' if keep_deleted else '')),
+                       d=due_date,
+                       account_id=account_id)
+            db.execute(sql("""
+                        UPDATE transact SET
+                        account_credit_id=NULL
+                        WHERE
+                            service IS NULL
+                            AND d_created <= :d
+                            AND d IS NOT NULL
+                            AND account_credit_id=:account_id
+                            {}
+                    """.format(' AND deleted IS NULL' if keep_deleted else '')),
+                       d=due_date,
+                       account_id=account_id)
+            dbt.commit()
+    finally:
+        account_unlock(account, token)
 
 
 @core_method

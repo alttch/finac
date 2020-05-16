@@ -767,6 +767,49 @@ class Test(unittest.TestCase):
         self.assertEqual(
             finac.account_balance(tp=['hr_bond', 'lr_bond', 'ebond']), 10000)
 
+    def test903_archive_account(self):
+        finac.account_create('testa1', 'USD')
+        finac.account_create('testa2', 'USD')
+        finac.account_create('testa3', 'USD')
+        finac.account_create('testap1', 'USD', passive=True)
+        finac.tr('testa1', 10000)
+        finac.tr('testa2', 10000)
+        finac.mv(dt='testa1', ct='testa2', amount=2500)
+        finac.mv(dt='testa1', ct='testa2', amount=2500)
+        finac.mv(dt='testa1', ct='testa3', amount=2500)
+        finac.mv(dt='testa1', ct='testa3', amount=2500)
+        finac.mv(dt='testa1', ct='testap1', amount=2500)
+        finac.mv(dt='testa1', ct='testap1', amount=2500)
+
+        d = datetime.datetime.now()
+
+        finac.mv(dt='testa1', ct='testa2', amount=500)
+        finac.mv(dt='testa1', ct='testa2', amount=500)
+        finac.mv(dt='testa1', ct='testa3', amount=500)
+        finac.mv(dt='testa1', ct='testa3', amount=500)
+        finac.mv(dt='testa1', ct='testap1', amount=500)
+        finac.mv(dt='testa1', ct='testap1', amount=500)
+
+        def _test_balances():
+            self.assertEqual(finac.account_balance('testa1'), 28000)
+            self.assertEqual(finac.account_balance('testa2'), 4000)
+            self.assertEqual(finac.account_balance('testa3'), -6000)
+            self.assertEqual(finac.account_balance('testap1'), 6000)
+
+        self.assertEqual(len(list(finac.account_statement('testa1'))), 13)
+        self.assertEqual(len(list(finac.account_statement('testa2'))), 5)
+        self.assertEqual(len(list(finac.account_statement('testa3'))), 4)
+        self.assertEqual(len(list(finac.account_statement('testap1'))), 4)
+        _test_balances()
+        for acc in ['testa1', 'testa2', 'testa3', 'testap1']:
+            finac.archive_account(acc, due_date=d)
+            _test_balances()
+        self.assertEqual(len(list(finac.account_statement('testa1'))), 6)
+        self.assertEqual(len(list(finac.account_statement('testa2'))), 2)
+        self.assertEqual(len(list(finac.account_statement('testa3'))), 2)
+        self.assertEqual(len(list(finac.account_statement('testap1'))), 2)
+        finac.cleanup()
+
 
 if __name__ == '__main__':
     import argparse
