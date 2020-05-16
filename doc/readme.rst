@@ -38,7 +38,7 @@ from 0.4.10
 .. code:: sql
 
    ALTER TABLE transact ADD service bool;
-   UPDATE transact SET service=True WHERE d_created<'1970-01-03';
+   UPDATE transact SET service=true WHERE d_created<'1970-01-03';
    ALTER TABLE transact ADD FOREIGN KEY(chain_transact_id)
      REFERENCES transact(id) ON DELETE SET null;
 
@@ -249,7 +249,7 @@ For the simple transactions (*f.tr(…))*), use *target=*.
 Transaction templates
 ~~~~~~~~~~~~~~~~~~~~~
 
-Example: you have a recurrent payment orders in your bank, which pay
+Example: you have a repeating payment orders in your bank, which pay
 office utility bills every 5th day of month, plus automatically moves
 $100 to saving account. To fill this into accounting, just create YAML
 transaction template:
@@ -274,7 +274,7 @@ transaction template:
 then create a cron job which calls
 *f.transaction_apply(“/path/to/file.yml”)* and that’s it.
 
-Actually, transaction templates are useful for any recurrent operations.
+Actually, transaction templates are useful for any repeating operations.
 You may specify all same arguments, as for the core functions.
 
 Number formatting
@@ -335,3 +335,10 @@ Client-server mode and HTTP API
 
 See `Finac documentation <https://finac.readthedocs.io/>`__ for server
 mode and HTTP API details.
+
+Enterprise server and support
+-----------------------------
+
+Want to integrate Finac into your enterprise app or service? Need a
+support? Check `Finac Enterprise
+Server <https://www.altertech.com/products/fes/>`__.
