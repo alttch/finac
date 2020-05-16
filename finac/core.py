@@ -207,8 +207,8 @@ def core_method(f):
             if 'error' in result:
                 raise _exceptions.get(result['error']['code'], RuntimeError)(
                     result['error'].get('message'))
-            logging.debug('API response {} {}'.format(result['id'],
-                                                      result['result']))
+            logger.debug('API response {} {}'.format(result['id'],
+                                                     result['result']))
             return result['result']
 
     return do
@@ -810,7 +810,7 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
         date = parse_date(date, return_timestamp=False)
     if asset_from.find('/') != -1 and asset_to is None:
         asset_from, asset_to = asset_from.split('/')
-    logging.info('Setting rate for {}/{} to {} for {}'.format(
+    logger.info('Setting rate for {}/{} to {} for {}'.format(
         asset_from.upper(), asset_to.upper(), value, format_date(date)))
     get_db().execute(sql("""
     insert into asset_rate (asset_from_id, asset_to_id, d, value)
@@ -839,8 +839,9 @@ def asset_delete_rate(asset_from, asset_to=None, date=None):
     if asset_from.find('/') != -1 and asset_to is None:
         asset_from, asset_to = asset_from.split('/')
     date = parse_date(date, return_timestamp=False)
-    logging.info('Deleting rate for {}/{} for {}'.format(
-        asset_from.upper(), asset_to.upper(), format_date(date)))
+    logger.info('Deleting rate for {}/{} for {}'.format(asset_from.upper(),
+                                                        asset_to.upper(),
+                                                        format_date(date)))
     if not get_db().execute(sql("""
     delete from asset_rate where
         asset_from_id=(select id from asset where code=:f)
@@ -1644,7 +1645,7 @@ def transaction_complete(transaction_ids,
         transaction_ids: single or list/tuple of transaction ID
         completion_date: completion date (default: now)
     """
-    logging.info('Completing transaction {}'.format(transaction_ids))
+    logger.info('Completing transaction {}'.format(transaction_ids))
     if completion_date is None:
         completion_date = parse_date(return_timestamp=False)
     if config.keep_integrity:
@@ -1671,7 +1672,7 @@ def transaction_complete(transaction_ids,
                 update transact set d=:d where id=:id"""),
                                         d=completion_date,
                                         id=transaction_id).rowcount:
-                    logging.error(
+                    logger.error(
                         'Transaction {} not found'.format(transaction_id))
                     raise ResourceNotFound
             finally:
@@ -1685,7 +1686,7 @@ def transaction_delete(transaction_ids):
     """
     Delete (mark deleted) transaction
     """
-    logging.warning('Deleting transaction {}'.format(transaction_ids))
+    logger.warning('Deleting transaction {}'.format(transaction_ids))
     ids = transaction_ids if isinstance(transaction_ids,
                                         (list, tuple)) else [transaction_ids]
     for transaction_id in ids:
@@ -1696,7 +1697,7 @@ def transaction_delete(transaction_ids):
             service IS null"""),
                                 ts=parse_date(return_timestamp=False),
                                 id=transaction_id).rowcount:
-            logging.error('Transaction {} not found'.format(transaction_id))
+            logger.error('Transaction {} not found'.format(transaction_id))
             raise ResourceNotFound
         chid = tinfo.get('chain_transact_id')
         if chid:
@@ -1715,7 +1716,7 @@ def transaction_purge(_lock=True):
     try:
         db = get_db()
         dbt = db.begin()
-        logging.info('Purging deleted transactions')
+        logger.info('Purging deleted transactions')
         try:
             db.execute(
                 sql("""delete from transact where
@@ -1922,7 +1923,7 @@ def purge():
     """
     Purge deleted resources
     """
-    logging.info('Purge requested')
+    logger.info('Purge requested')
     with lock_purge:
         result = {'transaction': transaction_purge(_lock=False)}
         return result
@@ -1934,6 +1935,7 @@ def cleanup():
     Cleanup database
     """
     # cleanup archived transactions
+    logger.info('Cleanup requested')
     get_db().execute(
         sql("""
         DELETE FROM transact WHERE

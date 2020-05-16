@@ -1,5 +1,4 @@
 def init_db(engine):
-    import logging
     from sqlalchemy import (Table, Column, Integer, String, MetaData, TEXT,
                             Float, ForeignKey, text as sql, Index, Boolean,
                             DateTime)
