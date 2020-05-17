@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.5.3'
+__version__ = '0.5.4'
 
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
@@ -2368,7 +2368,7 @@ def archive_transactions(account,
             """.format(acc_tpt)),
                        account_id=account_id,
                        tag='archive',
-                       note='acrhived {}'.format(d.strftime('%Y-%m-%d %T')),
+                       note='archived {}'.format(d.strftime('%Y-%m-%d %T')),
                        amount=_multiply(abs(balance)),
                        d=d,
                        d_dcreated=d,
