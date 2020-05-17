@@ -2328,9 +2328,9 @@ def archive_transactions(account,
     """
     Archive account transactions
 
-    Combines account transactions to due_date to a single service transaction.
-    After archivation process is finished, cleanup() method should be called to
-    remove archived transactions from the database.
+    Combines account transactions to due_date into a single service
+    transaction. After archivation process is finished, cleanup() method should
+    be called to remove archived transactions from the database.
 
     Only completed transactions are archived.
 
@@ -2339,9 +2339,8 @@ def archive_transactions(account,
     should be performed manually.
 
     Args:
-        account: account to archive
-        due_date: archivation date (default: now)
-        keep_deleted: keep deleted transactions (default: False)
+        account: account to archive transactions on due_date: archivation date
+        (default: now) keep_deleted: keep deleted transactions (default: False)
     """
     account = account.upper()
     due_date = parse_date(due_date, return_timestamp=False)
