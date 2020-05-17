@@ -1986,7 +1986,7 @@ def account_list(asset=None,
         return
     cond = "transact.deleted is null"
     if tp:
-        if '|' in tp:
+        if isinstance(tp, str) and '|' in tp:
             tp = tp.split('|')
         tp = _safe_format(tp)
         if not isinstance(tp, (list, tuple)):
@@ -2321,10 +2321,13 @@ def _account_summary(balance_type,
 
 
 @core_method
-def archive_transactions(account,
+def archive_transactions(account=None,
+                         tp=None,
                          due_date=None,
                          keep_deleted=False,
-                         lock_token=None):
+                         lock_token=None,
+                         _open_dbt=True,
+                         _db=None):
     """
     Archive account transactions
 
@@ -2340,66 +2343,102 @@ def archive_transactions(account,
 
     Args:
         account: account to archive transactions on due_date: archivation date
+        tp: or account type (types)
         (default: now) keep_deleted: keep deleted transactions (default: False)
     """
-    account = account.upper()
-    due_date = parse_date(due_date, return_timestamp=False)
-    db = get_db()
-    token = account_lock(account, lock_token)
-    try:
-        balance = account_balance(account, date=due_date)
-        logger.info('Archiving account transactions for {}'.format(account))
-        if balance:
+    if account and tp:
+        raise ValueError('Account and type can not be specified together')
+    elif not account and not tp:
+        raise ValueError('Specify either account or type')
+    if tp:
+        if not due_date:
+            due_date = datetime.datetime.now()
+        db = _db if _db else get_db()
+        if _open_dbt:
             dbt = db.begin()
-            d = datetime.datetime.now()
-            account_id = db.execute(sql("""
-                    SELECT id FROM account WHERE code=:account
-                """),
-                                    account=account).fetchone().id
-            acc_info = account_info(account)
-            if balance > 0:
-                acc_tpt = 'credit' if acc_info['passive'] else 'debit'
+        if isinstance(tp, str) and '|' in tp:
+            tp = tp.split('|')
+        if not isinstance(tp, list):
+            tp = [tp]
+        for act in tp:
+            if isinstance(tp, int):
+                tp_id = act
             else:
-                acc_tpt = 'debit' if acc_info['passive'] else 'credit'
-            db.execute(sql("""
-            INSERT INTO transact(
-                account_{}_id, tag, note, amount, d, d_created, service)
-            VALUES (:account_id, :tag, :note, :amount, :d, :d, :s)
-            """.format(acc_tpt)),
-                       account_id=account_id,
-                       tag='archive',
-                       note='archived {}'.format(d.strftime('%Y-%m-%d %T')),
-                       amount=_multiply(abs(balance)),
-                       d=d,
-                       d_dcreated=d,
-                       s=True)
-            db.execute(sql("""
-                        UPDATE transact SET
-                        account_debit_id=NULL
-                        WHERE
-                            service is NULL
-                            AND d_created <= :d
-                            AND d IS NOT NULL
-                            AND account_debit_id=:account_id
-                            {}
-                    """.format(' AND deleted IS NULL' if keep_deleted else '')),
-                       d=due_date,
-                       account_id=account_id)
-            db.execute(sql("""
-                        UPDATE transact SET
-                        account_credit_id=NULL
-                        WHERE
-                            service IS NULL
-                            AND d_created <= :d
-                            AND d IS NOT NULL
-                            AND account_credit_id=:account_id
-                            {}
-                    """.format(' AND deleted IS NULL' if keep_deleted else '')),
-                       d=due_date,
-                       account_id=account_id)
+                tp_id = ACCOUNT_TYPE_IDS[act]
+            for acc in db.execute(sql("""
+                SELECT code FROM account WHERE tp=:tp_id
+                """),
+                                  tp_id=tp_id).fetchall():
+                archive_transactions(account=acc.code,
+                                     due_date=due_date,
+                                     keep_deleted=keep_deleted,
+                                     _open_dbt=False,
+                                     _db=db)
+        if _open_dbt:
             dbt.commit()
-    finally:
-        account_unlock(account, token)
+    else:
+        account = account.upper()
+        due_date = parse_date(due_date, return_timestamp=False)
+        db = _db if _db else get_db()
+        token = account_lock(account, lock_token)
+        try:
+            balance = account_balance(account, date=due_date)
+            logger.info('Archiving account transactions for {}'.format(account))
+            if balance:
+                if _open_dbt:
+                    dbt = db.begin()
+                d = datetime.datetime.now()
+                account_id = db.execute(sql("""
+                        SELECT id FROM account WHERE code=:account
+                    """),
+                                        account=account).fetchone().id
+                acc_info = account_info(account)
+                if balance > 0:
+                    acc_tpt = 'credit' if acc_info['passive'] else 'debit'
+                else:
+                    acc_tpt = 'debit' if acc_info['passive'] else 'credit'
+                db.execute(sql("""
+                INSERT INTO transact(
+                    account_{}_id, tag, note, amount, d, d_created, service)
+                VALUES (:account_id, :tag, :note, :amount, :d, :d, :s)
+                """.format(acc_tpt)),
+                           account_id=account_id,
+                           tag='archive',
+                           note='archived {}'.format(d.strftime('%Y-%m-%d %T')),
+                           amount=_multiply(abs(balance)),
+                           d=d,
+                           d_dcreated=d,
+                           s=True)
+                db.execute(sql("""
+                            UPDATE transact SET
+                            account_debit_id=NULL
+                            WHERE
+                                service is NULL
+                                AND d_created <= :d
+                                AND d IS NOT NULL
+                                AND account_debit_id=:account_id
+                                {}
+                        """.format(
+                    ' AND deleted IS NULL' if keep_deleted else '')),
+                           d=due_date,
+                           account_id=account_id)
+                db.execute(sql("""
+                            UPDATE transact SET
+                            account_credit_id=NULL
+                            WHERE
+                                service IS NULL
+                                AND d_created <= :d
+                                AND d IS NOT NULL
+                                AND account_credit_id=:account_id
+                                {}
+                        """.format(
+                    ' AND deleted IS NULL' if keep_deleted else '')),
+                           d=due_date,
+                           account_id=account_id)
+                if _open_dbt:
+                    dbt.commit()
+        finally:
+            account_unlock(account, token)
 
 
 @core_method
@@ -2422,7 +2461,7 @@ def account_balance(account=None,
         raise ValueError('Account and type can not be specified together')
     elif not account and not tp:
         tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
-    elif tp and '|' in tp:
+    elif tp and isinstance(tp, str) and '|' in tp:
         tp = [x.strip() for x in tp.split('|')]
     cond = "transact.deleted is null"
     dts = parse_date(date, return_timestamp=False,
