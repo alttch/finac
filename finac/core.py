@@ -2443,6 +2443,7 @@ def archive_transactions(account=None,
 
 @core_method
 def account_balance(account=None,
+                    asset=None,
                     tp=None,
                     base=None,
                     date=None,
@@ -2453,12 +2454,13 @@ def account_balance(account=None,
 
     Args:
         account: account code
+        asset: account asset filter
         tp: account type/types, value, list or values, separated with |
         base: base asset (if not specified, config.base_asset is used)
         date: get balance for specified date/time
     """
-    if account and tp:
-        raise ValueError('Account and type can not be specified together')
+    if account and (tp or asset):
+        raise ValueError('Account and asset/type can not be specified together')
     elif not account and not tp:
         tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
     elif tp and isinstance(tp, str) and '|' in tp:
@@ -2494,10 +2496,11 @@ def account_balance(account=None,
             balance = format_amount(balance, acc_info['asset'])
         if not _natural and acc_info['passive'] and balance:
             balance *= -1
-    elif tp:
+    elif asset or tp:
         if not base:
             base = config.base_asset
-        accounts = account_list_summary(tp=tp,
+        accounts = account_list_summary(asset=asset,
+                                        tp=tp,
                                         group_by='tp',
                                         date=date,
                                         base=base,
@@ -2542,6 +2545,7 @@ def asset_rate_range(start,
 @core_method
 def account_balance_range(start,
                           account=None,
+                          asset=None,
                           tp=None,
                           end=None,
                           step=1,
@@ -2559,6 +2563,7 @@ def account_balance_range(start,
 
     Args:
         account: account code
+        asset: account asset filter
         tp: account type/types
         start: start date/time, required
         end: end date/time, if not specified, current time is used
@@ -2569,13 +2574,13 @@ def account_balance_range(start,
     Returns:
         tuple with time series list and corresponding balance list
     """
-    if account and tp:
-        raise ValueError('Account and type can not be specified together')
+    if account and (tp or asset):
+        raise ValueError('Account and asset/type can not be specified together')
     elif not account and not tp:
         tp = [k for k in ACCOUNT_TYPE_IDS if ACCOUNT_TYPE_IDS[k] <= 1000]
     elif tp and '|' in tp:
         tp = [x.strip() for x in tp.split('|')]
-    acc_info = {'account': account} if account else {'tp': tp}
+    acc_info = {'account': account} if account else {'tp': tp, 'asset': asset}
     return _run_steps_func(start=start,
                            end=end,
                            step=step,
