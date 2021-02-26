@@ -2,7 +2,7 @@ __author__ = 'Altertech, https://www.altertech.com/'
 __copyright__ = 'Copyright (C) 2019 Altertech'
 __license__ = 'MIT'
 
-__version__ = '0.5.5'
+__version__ = '0.5.6'
 
 from sqlalchemy.exc import IntegrityError
 from cachetools import TTLCache
@@ -1784,17 +1784,26 @@ def transaction_copy(transaction_ids,
                                             'chain_transact_id'] is not None\
                                             else {'chain_transact_id': None}
             params = {
-                'ct': tinfo['ct'],
-                'dt': tinfo['dt'],
-                '_ct_info': ct_info,
-                '_dt_info': dt_info,
-                'amount': parse_number(amount) if amount else tinfo['amount'],
-                'tag': tinfo['tag'],
-                'note': tinfo['note'],
-                'date': date if date is not None else None,
+                'ct':
+                    tinfo['ct'],
+                'dt':
+                    tinfo['dt'],
+                '_ct_info':
+                    ct_info,
+                '_dt_info':
+                    dt_info,
+                'amount':
+                    parse_number(amount) if amount else tinfo['amount'],
+                'tag':
+                    tinfo['tag'],
+                'note':
+                    tinfo['note'],
+                'date':
+                    date if date is not None else None,
                 'completion_date':
                     (completion_date if completion_date is not None else None),
-                'mark_completed': mark_completed,
+                'mark_completed':
+                    True if mark_completed or mark_completed is None else False,
                 **chain
             }
             new_tr = _transaction_move(**params)
