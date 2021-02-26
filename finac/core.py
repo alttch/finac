@@ -1793,8 +1793,7 @@ def transaction_copy(transaction_ids,
                 'note': tinfo['note'],
                 'date': date if date is not None else None,
                 'completion_date':
-                    (completion_date
-                     if completion_date is not None else tinfo['completed']),
+                    (completion_date if completion_date is not None else None),
                 'mark_completed': mark_completed,
                 **chain
             }
