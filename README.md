@@ -1,6 +1,6 @@
 # Finac - financial accounting for humans
 
-Finac is a library and function set for Jupyter/ipython, which provides a
+Finac is a library and function set for Jupyter/ipython, which provides the
 double-entry bookkeeping database.
 
 Finac is simple, open and free. It can work with SQLite or any database
@@ -8,14 +8,14 @@ supported by SQLAlchemy (tested: SQLite, MySQL, PostgreSQL).
 
 <img src="https://img.shields.io/pypi/v/finac.svg" /> <img src="https://img.shields.io/badge/license-MIT-green" /> <img src="https://img.shields.io/badge/python-3.5%20%7C%203.6%20%7C%203.7%20%7C%203.8-blue.svg" />
 
-You can use Finac either in interactive mode with
+Finac can be used either in the interactive mode with
 [Jupyter](https://jupyter.org/), [Spyder-IDE](https://www.spyder-ide.org/),
-ipython or other similar environment or embed Finac library into own projects.
-The library may be used in accounting applications as well it's useful for the
-fin-tech services.
+ipython or other similar environment or Finac library can be embedded into 3rd
+party projects. The library can be used in accounting applications and is
+useful for fin-tech services.
 
 Finac supports multiple currencies, simple transactions, double-entry
-bookkeeping transactions, watches overdrafts, balance limits and has many
+bookkeeping transactions, watches overdrafts, balance limits and has got many
 useful features, which make accounting simple and fun.
 
 ## Install
@@ -48,28 +48,28 @@ Starting from 0.4, Finac uses DateTime columns for:
 * transact.d_created
 * transact.deleted
 
-Depending to your database type, it's REQUIRED to convert these columns to
+Depending to the database type, it's REQUIRED to convert these columns to
 either DATETIME (SQLite, for MySQL DATETIME(6) recommended) or TIMESTAMPTZ
 (PostgreSQL, with timezone).
 
 ## How to use in interactive mode
 
-Finac database contain 3 entity types:
+Finac database contains 3 entity types:
 
 * **asset** currency, ISIN, stock code etc., currencies "USD" and "EUR" are
-  created automatically. Finac doesn't divide assets into currencies, property
-  and other. This allows creating applications for the various areas using the
-  single library.
+  created automatically. Finac does not separate assets into currencies,
+  property and other. This allows creating applications for various areas using
+  the single library.
 
 * **account** bank account, counterparty account, tax account, special account
   etc. Everything is accounts :)
 
 * **transaction** movements from (credit) / to (debit) and between accounts
 
-Assets have **rates** - value of one asset, relative to other.
+Assets have got **rates** - the value of one asset, relative to other.
 
 Transactions can be simple (no counterparty) or classic double-entry
-bookkeeping (between debit and credit account)
+bookkeeping (between debit and credit account).
 
 ```python
 import finac as f
@@ -134,24 +134,24 @@ Total: 7 000.00 USD
 
 ```python
 # display assets pie chart, (wrapper for matplotlib.pyplot, requires Jupyter,
-# Spyder-IDE or similar interactive environment)
+# Spyder-IDE or a similar interactive environment)
 f.pie()
 ```
 <img src="https://github.com/alttch/finac/blob/master/doc/images/pie.png?raw=true" width="400" />
 
 Note: when addressing currencies and accounts both in interactive and API mode,
-you should use account and asset codes as object identifiers. **All codes
-are case-insensitive**.
+account and asset codes should be used as object identifiers. **All codes are
+case-insensitive**.
 
-Inside database, Finac uses numeric IDs to connect objects, so all their codes
-can be changed without any problems.
+Inside database Finac uses numeric IDs to connect objects, so the codes can be
+changed without any problems.
 
 ## Special features
 
 ### Lazy exchange
 
-Finac can automatically move assets between accounts with different currencies,
-if exchange rate is set or specified in transaction details:
+Finac can automatically move assets between accounts having different
+currencies if exchange rate is set or specified in the transaction details:
 
 ```python
 # create EUR account
@@ -161,7 +161,7 @@ f.asset_set_rate('eur/usd', value=1.1)
 f.mv(dt='acc5', ct='acc1', amount=100)
 ```
 
-hoorah, account acc5 got 100 EUR! And exchange rate was 1.1. Let's check:
+hoorah, account acc5 have got 100 EUR! And exchange rate was 1.1. Check it:
 
     >>> f.ls('acc1')
 
@@ -186,26 +186,26 @@ Debit turnover: 100.00, credit turnover: 0.00
 Net profit/loss: 100.00 EUR
 ```
 
-As you see, there's no counterparty account in lazy exchange. This feature is
-useful for personal accounting and special applications, but for the
-professional accounting, you should create counterparty exchange account and
-perform buy-sell transactions with it.
+As shown, there is no a counterparty account in the lazy exchange. This feature
+is useful for personal accounting and special applications, but for
+professional accounting, create counterparty exchange accounts should be
+created and buy-sell transactions should be performed between them.
 
 ### Targets
 
-Targets is a feature I wrote Finac for. You have account balances in bank and
-in accounting. They differ by some amount and you are going to record this with
-a single transaction.
+Targets is a feature I have created Finac for. Consider there are account
+balances in a bank and in the accounting. They differ in some amount and this
+need to be recorded in the accounting with a single transaction.
 
-But the problem is there's a lot of transactions you should sum up. Or
-calculate the difference between bank balance and accounting. Pretty common,
-eh? Don't do this, we have targets.
+But the problem is: there is a lot of transactions which should be sum up. Or
+the difference between bank balance and accounting must be calculated manually.
+Pretty common, eh? Don't do this, Finac has got targets.
 
-Specifying targets instead of amount tells Finac to calculate transaction
-amount by itself.
+Specifying targets instead of amount asks Finac to calculate transaction amount
+by itself.
 
-After the previous operation, we have *4,890.00* USD on "acc1" and want to move
-all except $1000 to "acc2". Let's do it:
+After the previous operation, there is *4,890.00* USD on "acc1" and consider
+all except $1000 should be moved to "acc2". Let us do it:
 
     >>> f.mv(dt='acc2', ct='acc1', target_ct=1000)
 
@@ -224,18 +224,19 @@ Net profit/loss: 1 000.00 USD
 
 The transaction amount is automatically calculated. Lazy people are happy :)
 
-If you want to specify a debit account balance target instead, use *target_dt*
-function argument. Note: calculated transaction amount should be always greater
-than zero (if you try specifying credit account target higher than its current
-balance, you get *ValueError* exception)
+If the debit account balance target should be specified, *target_dt*
+function argument can be used. Note: calculated transaction amount must be
+always greater than zero (if credit account target higher than its current
+balance is specified, *ValueError* is raised)
 
-For the simple transactions (*f.tr(...))*), use *target=*.
+For simple transactions (*f.tr(...))*), use *target=*.
 
 ### Transaction templates
 
-Example: you have a repeating payment orders in your bank, which pay office
-utility bills every 5th day of month, plus automatically moves $100 to saving
-account. To fill this into accounting, just create YAML transaction template:
+Example: there is a repeating payment orders in a bank, which pay office
+utility bills every 5th day of month, plus automatically move $100 to a saving
+account. To fill this into accounting, YAML transaction template can be
+used:
 
 ```yaml
 transactions:
@@ -255,17 +256,17 @@ transactions:
 ```
 
 then create a cron job which calls *f.transaction_apply("/path/to/file.yml")*
-and that's it.
+and that is it.
 
-Actually, transaction templates are useful for any repeating operations. You
-may specify all same arguments, as for the core functions.
+Actually, transaction templates are useful for any repeating operations. The
+same arguments, as for the core functions, can be specified.
 
 ### Number formatting
 
-Finac doesn't use system locale. If you input amounts and targets as strings,
-you may input them in any format and Finac will try converting it to the float
-numeric automatically. The following values for amounts and targets are valid
-and will be automatically parsed:
+Finac does not use system locale. If amounts and targets are inputted as
+strings, they can be specified in any format and Finac tries converting strings
+into float numeric automatically. The following values for amounts and
+targets are valid and are automatically parsed:
 
 * 1 000,00 = 1000.0
 * 1,000.00 = 1000.0
@@ -277,7 +278,7 @@ and will be automatically parsed:
 ### Passive accounts
 
 If account is passive, its assets are decremented from totals. To create
-passive account, use *passive* argument:
+passive account, *passive* argument must be used:
 
 ```python
 f.account_create('passive1', 'usd', passive=True)
@@ -287,20 +288,20 @@ Accounts of types "tax", "supplier" and "finagent" are passive by default.
 
 ### Data multiplier
 
-Depending on data, it may be useful to store numeric values in database as
-integers instead of floats. Finac library has built-in data multiplier feature,
-to enable it, set *multiplier=N* in *finac.init()* method, e.g.
-*multiplier=1000* if you want to store integers in tables and have data with
-max precision 3 digits after comma.
+Depending on data, it may be useful to store numeric values in the database as
+integers instead of floats. Finac library has got a built-in data multiplier
+feature. To enable it, set *multiplier=N* in *finac.init()* method, e.g.
+*multiplier=1000*. This makes Finac to store integers into tables and use the
+max precision of 3 digits after comma.
 
-Note: you must manually convert table fields to numeric/integer types, and
-multiply them if performing data multiplier implementation on living database.
+Note: table fields must be manually converted to numeric/integer types. In 
+production databases the field values must be also manually multiplied.
 
-Full list of tables and fields is available in dict
-*finac.core.multiply_fields*.
+Full list of tables and fields, required to be converted, is available in the
+dict *finac.core.multiply_fields*.
 
-Note: multiplier can be used only with integer and numeric(X) field types, as
-core conversion functions always return rounded value.
+Note: the multiplier can be used only with integer and numeric(X) field types,
+as core conversion functions always return rounded value.
 
 ## How to embed Finac library into own project
 
@@ -314,5 +315,5 @@ HTTP API details.
 
 ## Enterprise server and support
 
-Want to integrate Finac into your enterprise app or service? Need a support?
+Want to integrate Finac into an own enterprise app or service? Need a support?
 Check [Finac Enterprise Server](https://www.altertech.com/products/fes/).
