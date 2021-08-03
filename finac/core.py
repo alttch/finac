@@ -493,18 +493,15 @@ class AccountLocker:
                 self.token = None
 
 
-class ForeignKeysListener(sa.interfaces.PoolListener):
-
-    def connect(self, dbapi_con, con_record):
-        try:
-            dbapi_con.execute('pragma foreign_keys=ON')
-        except:
-            pass
-
-
 def get_db_engine(db_uri):
+
+    def _fk_pragma_on_connect(dbapi_con, con_record):
+        dbapi_con.execute('pragma foreign_keys=ON')
+
     if db_uri.startswith('sqlite:///'):
-        return sa.create_engine(db_uri, listeners=[ForeignKeysListener()])
+        engine = sa.create_engine(db_uri)
+        sa.event.listen(engine, 'connect', _fk_pragma_on_connect)
+        return engine
     else:
         return sa.create_engine(db_uri,
                                 pool_size=config.db_pool_size,
