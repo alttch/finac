@@ -1,0 +1,10 @@
+rapidtables
+neotermcolor
+SQLAlchemy<2
+cachetools
+pyaltt2
+requests
+redis
+python-dateutil
+pandas
+PyYAML
