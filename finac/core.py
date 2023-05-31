@@ -360,7 +360,7 @@ def _asset_precision(asset=None):
         if asset in _asset_precision_cache:
             return _asset_precision_cache[asset]
         d = get_db().execute(sql('select precs from asset where code=:code'),
-                             code=asset.upper()).fetchone()
+                             dict(code=asset.upper())).fetchone()
         if not d:
             raise ResourceNotFound
         precs = int(d.precs)
@@ -659,10 +659,10 @@ def asset_create(asset, precision=2):
             raise ResourceNotFound
     logger.info('Creating asset {}'.format(asset))
     try:
-        get_db().execute(sql("""
+        get_db().execute(
+            sql("""
         insert into asset(code, precs) values(:code, :precision)"""),
-                         code=asset,
-                         precision=precision)
+            dict(code=asset, precision=precision))
     except IntegrityError:
         raise ResourceAlreadyExists(asset)
 
@@ -732,7 +732,8 @@ def asset_list_rates(asset=None,
         d = parse_date(end, return_timestamp=False,
                        ms=_time_ms) if end else parse_date(
                            return_timestamp=False)
-        r = get_db().execute(sql("""
+        r = get_db().execute(
+            sql("""
             select
                 a1.code as asset_from,
                 a2.code as asset_to,
@@ -750,8 +751,7 @@ def asset_list_rates(asset=None,
                 join asset_rate as ar on ar.asset_from_id=fr
                     and ar.asset_to_id=t and ar.d=m
                 order by asset_from, asset_to
-                    """),
-                             d=d)
+                    """), dict(d=d))
     while True:
         d = r.fetchone()
         if not d:
@@ -774,8 +774,7 @@ def asset_delete(asset):
     """
     logger.warning('Deleting asset {}'.format(asset.upper()))
     if not get_db().execute(sql("""
-    delete from asset where code=:code"""),
-                            code=asset.upper()).rowcount:
+    delete from asset where code=:code"""), dict(code=asset.upper())).rowcount:
         logger.error('Asset {} not found'.format(asset.upper()))
         raise ResourceNotFound
 
@@ -809,7 +808,8 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
         asset_from, asset_to = asset_from.split('/')
     logger.info('Setting rate for {}/{} to {} for {}'.format(
         asset_from.upper(), asset_to.upper(), value, format_date(date)))
-    get_db().execute(sql("""
+    get_db().execute(
+        sql("""
     insert into asset_rate (asset_from_id, asset_to_id, d, value)
     values
     (
@@ -819,10 +819,10 @@ def asset_set_rate(asset_from, asset_to=None, value=None, date=None):
         :value
     )
     """),
-                     f=asset_from.upper(),
-                     t=asset_to.upper(),
-                     d=date,
-                     value=_multiply(value))
+        dict(f=asset_from.upper(),
+             t=asset_to.upper(),
+             d=date,
+             value=_multiply(value)))
 
 
 @deletion_method
@@ -839,16 +839,14 @@ def asset_delete_rate(asset_from, asset_to=None, date=None):
     logger.info('Deleting rate for {}/{} for {}'.format(asset_from.upper(),
                                                         asset_to.upper(),
                                                         format_date(date)))
-    if not get_db().execute(sql("""
+    if not get_db().execute(
+            sql("""
     delete from asset_rate where
         asset_from_id=(select id from asset where code=:f)
         and
         asset_to_id=(select id from asset where code=:t)
         and d=:d
-        """),
-                            f=asset_from.upper(),
-                            t=asset_to.upper(),
-                            d=date).rowcount:
+        """), dict(f=asset_from.upper(), t=asset_to.upper(), d=date)).rowcount:
         logger.error('Asset rate {}/{} for {} not found'.format(
             asset_from.upper(), asset_to.upper(), format_date(date)))
         raise ResourceNotFound
@@ -905,16 +903,14 @@ def _asset_rate_lookup(asset_from, asset_to=None, date=None, _time_ms=False):
         try:
             return _cache.rate[(cf, ct, key)]
         except _CacheRateKeyError:
-            r = db.execute(sql("""
+            r = db.execute(
+                sql("""
                 select value from asset_rate
                     join asset as cfrom on asset_from_id=cfrom.id
                     join asset as cto on asset_to_id=cto.id
                 where d <= :d and cfrom.code = :f and cto.code = :t
                 order by d desc limit 1
-                """),
-                           d=date,
-                           f=cf,
-                           t=ct)
+                """), dict(d=date, f=cf, t=ct))
             d = r.fetchone()
             if d:
                 value = _demultiply(d.value)
@@ -1015,25 +1011,26 @@ def account_create(account,
     account = account.upper()
     asset = asset.upper()
     if not db.execute(sql("""select id from asset where code=:code"""),
-                      code=asset).fetchone():
+                      dict(code=asset)).fetchone():
         raise ResourceNotFound('asset {}'.format(asset))
     dbt = db.begin()
     logger.info('Creating account {}, asset: {}'.format(account, asset))
     try:
-        r = db.execute(sql("""
+        r = db.execute(
+            sql("""
         insert into account(code, note, tp, passive, asset_id, max_overdraft,
         max_balance) values
         (:code, :note, :tp, :passive,
             (select id from asset where code=:asset),
             :max_overdraft, :max_balance) {}""".format(
-            '' if _db.use_lastrowid else 'returning id')),
-                       code=account,
-                       note=note,
-                       tp=tp_id,
-                       passive=passive,
-                       asset=asset,
-                       max_overdraft=_multiply(max_overdraft),
-                       max_balance=_multiply(max_balance))
+                '' if _db.use_lastrowid else 'returning id')),
+            dict(code=account,
+                 note=note,
+                 tp=tp_id,
+                 passive=passive,
+                 asset=asset,
+                 max_overdraft=_multiply(max_overdraft),
+                 max_balance=_multiply(max_balance)))
         acc_id = r.lastrowid if _db.use_lastrowid else r.fetchone().id
         db.execute(sql("""
             INSERT INTO transact
@@ -1181,7 +1178,7 @@ def transaction_apply(fname):
         pass
     result = []
     with open(fname) as fh:
-        transactions = yaml.load(fh)['transactions']
+        transactions = yaml.safe_load(fh)['transactions']
     for t in transactions:
         if 'account' in t:
             result.append(transaction_create(**t))

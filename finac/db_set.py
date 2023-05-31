@@ -94,8 +94,9 @@ def init_db(engine):
     conn = engine.connect()
     for cur in ('EUR', 'USD'):
         try:
-            conn.execute(sql("""
+            conn.execute(
+                sql("""
                 INSERT INTO asset(code, precs) VALUES(:code, 2)"""),
-                         code=cur)
+                dict(code=cur))
         except IntegrityError:
             pass

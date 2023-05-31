@@ -19,6 +19,8 @@ import requests
 import sqlalchemy
 import datetime
 
+from sqlalchemy import text as sql
+
 from types import SimpleNamespace
 from textwrap import dedent
 
@@ -901,7 +903,7 @@ if __name__ == '__main__':
     dbconn = sqlalchemy.create_engine(db_uri).connect()
     for tbl in ['transact', 'account', 'asset_rate', 'asset']:
         try:
-            dbconn.execute('drop table {}'.format(tbl))
+            dbconn.execute(sql('drop table {}'.format(tbl)))
         except (sqlalchemy.exc.ProgrammingError,
                 sqlalchemy.exc.OperationalError):
             pass

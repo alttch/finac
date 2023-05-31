@@ -10,3 +10,4 @@ tests/2222.py
 test_rate.db
 TODO.todo
 *.pyc
+venv
