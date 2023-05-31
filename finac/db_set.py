@@ -72,7 +72,6 @@ def init_db(engine):
                      Column('amount', Float(precision=32), nullable=False),
                      Column('tag', String(20)),
                      Index('transact_tag', 'tag'),
-                     Column('note', String(20)),
                      Column('note', String(1024), server_default=''),
                      Column('d_created',
                             DateTime(timezone=True),
