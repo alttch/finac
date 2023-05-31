@@ -1,0 +1,25 @@
+git:
+  url: https://github.com/alttch/finac
+  branch: master
+secret: null
+commands:
+  build: null
+  test: |
+    [ ! -d ./venv ] && python3 -m venv venv && ./venv/bin/pip install -r test_req.txt
+    export SQLALCHEMY_SILENCE_UBER_WARNING=1
+    ./venv/bin/python ./tests/test.py --redis
+    ./venv/bin/python ./tests/test.py --dbconn mysql://finac:123@localhost/finac
+    ./venv/bin/python ./tests/test.py --dbconn postgresql://finac:123@localhost/finac
+    ./venv/bin/python ./tests/test.py --multiplier 1000 --remote
+    ./venv/bin/python ./tests/test.py --dbconn mysql://finac:123@localhost/finac --multiplier 1000
+    ./venv/bin/python ./tests/test.py --dbconn postgresql://finac:123@localhost/finac --multiplier 1000 --remote
+  release: |
+    rm -rf dist build finac.egg-info
+    python3 setup.py sdist
+    twine upload dist/*
+on:
+  success: null
+  fail: null
+timeout: 600
+enabled: true
+
