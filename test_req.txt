@@ -10,3 +10,4 @@ pandas
 PyYAML
 mysqlclient
 psycopg2
+flask

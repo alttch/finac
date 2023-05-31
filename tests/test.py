@@ -926,7 +926,7 @@ if __name__ == '__main__':
         app = api.app
         app.run(host='127.0.0.1', port={service_port})
         """))
-        server = subprocess.Popen(['python3', server_file],
+        server = subprocess.Popen([sys.executable, server_file],
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE)
         for c in range(52):
