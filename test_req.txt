@@ -8,3 +8,5 @@ redis
 python-dateutil
 pandas
 PyYAML
+mysqlclient
+psycopg2
