@@ -272,7 +272,14 @@ def ls(account=None,
         else:
             kf = 'account_types'
             rt_align = (rapidtables.ALIGN_LEFT, rapidtables.ALIGN_RIGHT)
-        res = result[kf]
+        if hide_empty:
+            res = []
+            for r in result[kf]:
+                precs = asset_precision(asset=r['asset'])
+                if round(r['balance'], precs) > 0:
+                    res.append(r)
+        else:
+            res = result[kf]
         data = res.copy()
         bcp = asset_precision(asset=base)
         for i, r in enumerate(res):
